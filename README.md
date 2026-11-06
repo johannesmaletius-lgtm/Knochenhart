@@ -2,7 +2,7 @@
 
 Pixel-Volleyball mit Skeletten. Abwehren, schmettern, am Block vorbei, bis 15.
 
-**Spielen:** https://johannesmaletius-lgtm.github.io/knochenhart/
+**Spielen:** https://johannesmaletius-lgtm.github.io/Knochenhart/
 
 Aufs Handy holen:
 - iPhone: in Safari öffnen, Teilen, „Zum Home-Bildschirm“
