@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Knochenhart</title>
+<title>Volleyskull</title>
 <meta name="description" content="Pixel-Volleyball mit Skeletten.">
 <meta name="theme-color" content="#14211d">
 <meta name="color-scheme" content="dark">
@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Knochenhart">
+<meta name="apple-mobile-web-app-title" content="Volleyskull">
 <link rel="preload" href="fonts/silkscreen-700-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/jersey10-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -1155,7 +1155,7 @@ function drawBG() {
   ctx.fillStyle = C.wall2;
   for (let y = Math.max(0, wallY - 26); y < wallY; y++) { const dense = (y - (wallY - 26)) / 26; for (let x = (y & 1); x < W; x += 2) if (((x * 7 + y * 13) % 10) / 10 < dense) ctx.fillRect(x, y, 1, 1); }
   // banner
-  if (G.mode !== 'menu') { const bp = proj(0, 3.6, -12.5); text('KNOCHENHART', bp.x, bp.y - 3, C.crowd2, 1, 'c', null); }
+  if (G.mode !== 'menu') { const bp = proj(0, 3.6, -12.5); text('VOLLEYSKULL', bp.x, bp.y - 3, C.crowd2, 1, 'c', null); }
   // crowd
   for (const c of G.crowd) {
     const hop = G.hype > 0 ? Math.max(0, Math.sin(G.t * 14 + c.ph)) * 0.25 * Math.min(1, G.hype) : 0;
@@ -1365,7 +1365,7 @@ function render() {
   if (G.mode === 'play' || G.mode === 'over') drawHUD();
   if (G.mode === 'menu') {
     const bob = reduceMotion ? 0 : Math.round(Math.sin(G.t * 2) * 1.5);
-    text('KNOCHENHART', W / 2, 18 + bob, C.bone, 2, 'c');
+    text('VOLLEYSKULL', W / 2, 18 + bob, C.bone, 2, 'c');
   }
   drawPops();
 }
