@@ -152,7 +152,8 @@ html{background:var(--screen)}
         <dt><kbd>↙</kbd> <kbd>↘</kbd></dt><dd>Schmettern, wenn der Ring zugeht</dd>
         <dt><kbd>↑</kbd></dt><dd>Lob über den Block</dd>
         <dt>Tippen</dt><dd>Aufschlag, dann <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> wischen</dd>
-        <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Mehrspieler vorne: Block links, rechts, breit, zurück</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Mehrspieler vorne: Block links, rechts, breit, zurück. Tippen: springen, wenn der Ring zugeht</dd>
+        <dt>Tippen</dt><dd>Vorne beim Zuspiel: auf den Ring. <kbd>↑</kbd> legt den Ball als Finte über das Netz</dd>
       </dl>
       <p>Schlag dahin, wo der Block nicht ist. Volle Schädelleiste: Feuerball.</p>
       <button class="btn" id="howOk">Verstanden</button>
@@ -379,7 +380,13 @@ defP('rollR',   [.5,.5, .46,.42, .3,.46, .6,.4, .34,.3, .66,.28, .46,.2, .7,.2, 
 defP('kneel',   [0,1.18, 0,1.02, -.2,.96, .2,.96, -.3,.74, .3,.74, -.22,.54, .22,.54, 0,.56, -.28,.34, .2,.06, -.32,0, .3,.02]);
 defP('pancake', [0,.22, 0,.2, -.26,.22, .26,.22, -.44,.16, .4,.14, -.6,.1, .5,.06, 0,.3, -.18,.34, .18,.34, -.22,.5, .22,.5]);
 defP('huddle',  [0,1.6, 0,1.44, -.2,1.4, .2,1.4, -.34,1.2, .34,1.2, -.18,1.0, .18,1.0, 0,.92, -.16,.5, .16,.5, -.2,0, .2,0]);
-for (const n of ['reachR', 'shankR', 'slideR', 'rollR']) POSES[n.slice(0, -1) + 'L'] = Float32Array.from(mir(POSES[n]));
+defP('blockReady',[0,1.6, 0,1.44, -.2,1.38, .2,1.38, -.3,1.5, .3,1.5, -.22,1.74, .22,1.74, 0,.86, -.2,.48, .2,.48, -.25,0, .25,0]);
+defP('shuffleR',[.08,1.6, .08,1.44, -.12,1.38, .28,1.38, -.2,1.5, .38,1.5, -.14,1.74, .3,1.74, .08,.88, -.1,.48, .34,.46, -.22,0, .5,.04]);
+defP('slam',    [0,1.72, 0,1.55, -.2,1.5, .2,1.5, -.22,1.85, .22,1.85, -.12,2.0, .12,2.0, 0,.98, -.14,.5, .14,.5, -.18,.06, .18,.06]);
+defP('flex',    [0,1.78, 0,1.6, -.21,1.55, .21,1.55, -.45,1.6, .45,1.6, -.42,1.9, .42,1.9, 0,1.0, -.16,.52, .16,.52, -.2,0, .2,0]);
+defP('blockOw', [0,1.74, 0,1.58, -.2,1.53, .2,1.53, -.48,1.9, .48,1.9, -.78,2.1, .78,2.1, 0,1.0, -.14,.52, .14,.52, -.16,.04, .16,.04]);
+defP('shrug',   [0,1.74, 0,1.56, -.21,1.52, .21,1.52, -.38,1.3, .38,1.3, -.5,1.42, .5,1.42, 0,.98, -.12,.52, .12,.52, -.15,0, .15,0]);
+for (const n of ['reachR', 'shankR', 'slideR', 'rollR', 'shuffleR']) POSES[n.slice(0, -1) + 'L'] = Float32Array.from(mir(POSES[n]));
 POSES.diveL = Float32Array.from(mir(POSES.diveR));
 POSES.blockR = Float32Array.from(mir(POSES.blockL));
 for (const n of ['jump', 'spike', 'follow', 'lob', 'hold', 'toss']) POSES[n + 'M'] = Float32Array.from(mir(POSES[n]));
@@ -583,7 +590,7 @@ function D() {
 function shake(n) { if (!reduceMotion) G.shake = Math.max(G.shake, n); }
 function slowmo(s) { G.slow = Math.max(G.slow, s); }
 // gesture hints: icons only, shown the first few times, then never again
-const HINTS = { serve: 'TIPPEN', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← ↑ ↓ →' };
+const HINTS = { serve: 'TIPPEN', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← → ↑ ↓ TIPPEN', set: 'TIPPEN ↑' };
 const hintSeen = store.get('hints', {});
 let hint = '', hintT = 0;
 function setHint(key) {
@@ -1301,6 +1308,7 @@ function gameOver() {
   showOnly('over');
 }
 function togglePause(force) {
+  if (G.mode === 'mp') { mpPause(force != null ? force : !(MP.view && MP.view.paused)); return; }
   if (G.mode !== 'play') return;
   G.paused = force != null ? force : !G.paused;
   $('#pauseOv').hidden = !G.paused;
@@ -1309,7 +1317,7 @@ function togglePause(force) {
 function showOnly(id) {
   if (id === 'over' && !MP.net) $('#againBtn').hidden = false;
   for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv']) $('#' + k).hidden = k !== id;
-  $('#pauseBtn').hidden = G.mode !== 'play';
+  $('#pauseBtn').hidden = G.mode !== 'play' && G.mode !== 'mp';
   if (id === 'menu') updRecord();
 }
 function updRecord() {
@@ -1321,7 +1329,7 @@ function updRecord() {
 
 /* ---------------- input ---------------- */
 function onSwipe(dx, dy) {
-  if (G.mode === 'mp') return mpSwipe(dx, dy);
+  if (G.mode === 'mp') return G.paused ? undefined : mpSwipe(dx, dy);
   if (G.mode !== 'play' || G.paused) return;
   const ax = Math.abs(dx), ay = Math.abs(dy), ph = G.phase;
   if (ph === 'serveReady') { toss(); return; }
@@ -1338,7 +1346,7 @@ function onSwipe(dx, dy) {
   }
 }
 function onTap() {
-  if (G.mode === 'mp') { mpSend('tap', 0, 0); return; }
+  if (G.mode === 'mp') { if (!G.paused) mpSend('tap', 0, 0); return; }
   if (G.mode !== 'play' || G.paused) return;
   if (G.phase === 'serveReady') toss();
   else if (G.phase === 'serveToss') serveHit(0, false);
@@ -1381,7 +1389,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 addEventListener('keydown', e => {
   const k = e.key;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(k) && (G.mode === 'play' || G.mode === 'mp') && document.activeElement === document.body) e.preventDefault();
-  if (G.mode === 'mp') { if (e.repeat) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
+  if (G.mode === 'mp') { if (e.repeat) return; if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; } if (G.paused) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
   if (e.repeat) return;
   if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; }
   if (G.mode !== 'play' || G.paused) return;
@@ -1391,7 +1399,7 @@ addEventListener('keydown', e => {
   if (m) onSwipe(m[0], m[1]);
   else if (k === ' ' || k === 'Enter') onTap();
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play') togglePause(true); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && (G.mode === 'play' || G.mode === 'mp')) togglePause(true); });
 
 /* ---------------- UI wiring ---------------- */
 function setLevel(l) {
@@ -1408,7 +1416,7 @@ function openHow(next) { showOnly('how'); $('#how').scrollTop = 0; $('#howOk').d
 $('#howBtn').addEventListener('click', () => openHow('menu'));
 $('#howOk').addEventListener('click', () => { if ($('#howOk').dataset.next === 'play') startGame(); else showOnly('menu'); });
 $('#resumeBtn').addEventListener('click', () => togglePause(false));
-$('#quitBtn').addEventListener('click', () => { G.paused = false; menuScene(); });
+$('#quitBtn').addEventListener('click', () => { G.paused = false; $('#pauseOv').hidden = true; if (MP.net) mpLeave(); else menuScene(); });
 $('#againBtn').addEventListener('click', () => { if (MP.net) mpBegin(); else startGame(); });
 $('#menuBtn').addEventListener('click', () => { if (MP.net) mpLeave(); else menuScene(); });
 $('#pauseBtn').addEventListener('click', () => togglePause());
@@ -1698,7 +1706,7 @@ function mpIncoming(d, type, lane, T, md, q, extra) {
   st.phase = 'defend'; st.dash[d] = false; MP.snapT = 0;
   const b = tfig(d, 0), sl = slotOf(d, 0);
   if (!b.air && !b.lock && type !== 'block') { jump(b, 1.5); setPose(b, 'ready', 0.2, 20); }
-  if (human(sl)) { after(T + grace(sl), mpResolve); return; }
+  if (human(sl)) { after(T + grace(sl), mpResolve); return inc; }
   // computer defender: decide, then move there like a person would
   const dif = mpDiff();
   let p = type === 'serve' ? { perfect: 0.55, good: 0.75, weak: 0.9 }[q] : type === 'spike' ? { perfect: 0.3, good: 0.5, weak: 0.72 }[q]
@@ -1713,6 +1721,7 @@ function mpIncoming(d, type, lane, T, md, q, extra) {
     if (type === 'tip' && ok) mpDash(d, G.t);
   });
   after(T, mpResolve);
+  return inc;
 }
 function mpLane(t, dl, ht, abs) {
   const st = MP.st, b = tfig(t, 0);
@@ -1733,6 +1742,7 @@ function mpResolve() {
   inc.done = true; st.inc = null;
   const d = inc.d, b = tfig(d, 0);
   let ok, late;
+  if (inc.blkSave && inc.blkSave()) { mpDig(d, inc, false, tfig(d, 1)); return; }
   if (inc.ai != null) { ok = inc.ai; late = ok && Math.random() < 0.25; }
   else {
     ok = st.lane[d] === inc.lane && (inc.type !== 'tip' || st.dash[d]) && !(inc.type !== 'tip' && st.dash[d]);
@@ -1774,18 +1784,66 @@ function mpDig(d, inc, late, digger) {
   after(0.6, () => setPose(set, 'setReady', 0.5));
   st.phase = 'pass';
   after(Math.max(0.4, Math.min(0.72, dur)), () => { b.lock = false; b.tx = lane2x(d, st.lane[d]); b.sx = 15; b.tz = s * APZ; b.sz = 7; setBase(b, 'ready'); });
-  after(1.0, () => mpSet(d));
+  // the setter: tap when the ring closes for a clean set, swipe up to dump it over the net
+  const tset = G.t + 1.0, ssl = slotOf(d, 1);
+  st.setq = { t: d, ts: tset };
+  MP.snapT = 0;
+  if (human(ssl)) at(tset + 0.18 + grace(ssl), () => mpSetGo(d, 'weak', false));
+  else {
+    const dif = mpDiff(), dump = Math.random() < 0.06 + 0.08 * dif;
+    at(tset, () => mpSetGo(d, Math.random() < 0.3 + 0.5 * dif ? 'perfect' : 'good', dump));
+  }
 }
-function mpSet(a) {
+function mpSetGo(d, q, dump) {
+  const st = MP.st; if (!st || !st.setq || st.setq.t !== d) return;
+  st.setq = null;
+  if (dump) mpDump(d); else mpSet(d, q);
+}
+function mpSetInput(t, ht, dump) {
+  const st = MP.st, sq = st.setq; if (!sq || sq.t !== t) return;
+  const dt = ht - sq.ts;
+  if (dt < -0.35) { S('err'); return; }
+  const adt = Math.abs(dt), q = adt < 0.08 ? 'perfect' : adt < 0.18 ? 'good' : 'weak';
+  mpSetGo(t, q, dump);
+}
+// setter dump: a soft push over the net while everyone expects a set
+function mpDump(d) {
+  const st = MP.st, o = 1 - d, set = tfig(d, 1), so = sgn(o);
+  jump(set, 3.2); setPose(set, PZ(set, 'lob'), 0.35, 30); setBase(set, 'ready'); S('lob');
+  fx({ k: 'pop', s: 'FINTE!', team: d });
+  const lane = (Math.random() * 3) | 0, T = 0.8;
+  mlaunch({ x: so * LX[lane] * 0.85, y: 0.4, z: so * 1.6 }, T, { spin: 2 });
+  st.rally++;
+  const D0 = st.dump = { o, save: false };
+  const inc = mpIncoming(o, 'tip', lane, T, 0.1, 'good');
+  inc.z = so * 1.7;
+  inc.blkSave = () => D0.save;
+  // the other team's front player can drop back and grab it (swipe down)
+  const bsl = slotOf(o, 1);
+  if (!human(bsl) && Math.random() < 0.2 + 0.35 * mpDiff()) after(rand(0.25, 0.45), () => mpDumpSave(o));
+  after(T + 0.3, () => { if (st.dump === D0) st.dump = null; });
+}
+function mpDumpSave(t) {
+  const st = MP.st, D0 = st.dump; if (!D0 || D0.o !== t || D0.save) return;
+  D0.save = true;
+  const blk = tfig(t, 1), inc = st.inc;
+  if (inc && inc.d === t) { blk.tx = inc.x; blk.tz = inc.z - sgn(t) * 0.3; blk.sx = blk.sz = 9; }
+  S('step');
+}
+function mpSet(a, sq) {
   const st = MP.st; if (!st || G.mode !== 'mp') return;
   const o = 1 - a, s = sgn(a), b = tfig(a, 0), set = tfig(a, 1), blk = tfig(o, 1), def = tfig(o, 0), dif = mpDiff();
+  sq = sq || 'good';
   setPose(set, 'set', 0.3); S('set');
+  if (sq === 'perfect') { jump(set, 2.0); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); msparks(5, ['accent', 'fire1']); }
+  else if (sq === 'weak') fx({ k: 'burst', c: 'bad' });
   const Cp = { x: s * (LX[st.lane[a]] + 0.12), y: CY, z: s * CZ };
   mlaunch(Cp, 0.9, { spin: 3 });
   const tc = G.t + 0.9;
-  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null };
+  // a clean set gives the hitter a wider timing window
+  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null, win: { perfect: 1.4, good: 1, weak: 0.8 }[sq], tb: tc - 0.3, bj: false, bq: null };
   st.phase = 'attack'; MP.snapT = 0;
-  blk.tx = clamp(Cp.x, -2.8, 2.8); blk.tz = sgn(o) * 0.5; blk.sx = blk.sz = 7; setBase(blk, 'setReady'); setPose(blk, 'setReady');
+  blk.tx = clamp(Cp.x, -2.8, 2.8); blk.tz = sgn(o) * 0.5; blk.sx = blk.sz = 7; setBase(blk, 'blockReady'); setPose(blk, 'blockReady');
   const bsl = slotOf(o, 1), asl = slotOf(a, 0), dsl = slotOf(o, 0);
   if (!human(bsl)) {
     // computer blocker: leans on what this hitter likes, sometimes shows one side and switches
@@ -1808,7 +1866,13 @@ function mpSet(a) {
   });
   at(tc - 0.8, () => { b.tz = s * 3.3; b.sz = Math.max(3, Math.abs(b.z - s * 3.3) / 0.4); b.lock = false; setBase(b, 'stand'); });
   at(tc - 0.43, () => { jump(b, 4.25); setPose(b, PZ(b, 'jump'), 0, 18); setBase(b, PZ(b, 'jump')); b.tz = s * 2.9; b.sz = 1.2; });
-  at(tc - 0.3, () => { if (st.atk === A && A.block != null && A.block !== 'D' && !blk.air) jump(blk, 3.4); });
+  // blocker jump: the front player taps when the ring closes; the computer has its own timing
+  if (human(bsl)) at(A.tb + 0.2, () => { if (st.atk === A && A.block != null && A.block !== 'D') mpBlockJump(A, null, 'weak'); });
+  else at(A.tb + rand(-0.06, 0.06), () => {
+    if (st.atk !== A || A.block == null || A.block === 'D') return;
+    const r = Math.random();
+    mpBlockJump(A, null, r < 0.2 + 0.4 * dif ? 'perfect' : r < 0.75 ? 'good' : 'weak');
+  });
   if (!human(asl)) at(tc + rand(-0.12, 0.12) * (1.25 - dif), () => {
     if (st.atk !== A || A.hit) return;
     // computer hitter reads the block (better on higher levels)
@@ -1822,16 +1886,37 @@ function mpSet(a) {
   at(tc + 0.2 + grace(asl), () => mpLateHit(A));
 }
 function mpBlock(A, v, ht) {
-  const st = MP.st; if (st.atk !== A || A.hit || (ht != null ? ht : G.t) > A.lockT) return;
+  const st = MP.st; if (st.atk !== A || A.hit || A.bj || (ht != null ? ht : G.t) > A.lockT) return;
   if (A.block === v) return;
+  const prev = A.block;
   A.block = v; S('tick'); MP.snapT = 0;
   const blk = tfig(1 - A.a, 1), so = sgn(1 - A.a);
   if (v === 'D') { blk.tz = so * 2.4; blk.sz = 5; setBase(blk, 'ready'); setPose(blk, 'ready'); return; }
-  blk.tz = so * 0.5; blk.sx = 7; blk.sz = 6;
-  blk.tx = clamp(A.C.x + (v === 'W' ? 0 : v * 0.45), -3, 3);
+  blk.tz = so * 0.5; blk.sx = 8; blk.sz = 6;
+  const nx = clamp(A.C.x + (v === 'W' ? 0 : v * 0.45), -3, 3);
+  const side = nx < blk.x - 0.1 ? -1 : nx > blk.x + 0.1 ? 1 : 0;
+  blk.tx = nx;
   const p = v === 'W' ? 'blockW' : v < 0 ? 'blockL' : 'blockR';
-  setBase(blk, p); setPose(blk, p, 0, 22);
-  if (G.t > A.tc - 0.3 && !blk.air) jump(blk, 3.4);
+  setBase(blk, p);
+  // quick side shuffle when the block moves over
+  if (side && prev !== 'D') seq(blk, [['shuffle' + (side < 0 ? 'L' : 'R'), 0.1, 30], [p, 0.05, 26]]);
+  else setPose(blk, p, 0, 22);
+}
+// the jump: on time it seals the net, too early and the ball goes over the hands
+function mpBlockJump(A, ht, q0) {
+  const st = MP.st; if (st.atk !== A || A.hit || A.bj) return;
+  if (A.block === 'D') return;
+  if (A.block == null) mpBlock(A, 'W', ht);
+  let q = q0;
+  if (!q) { const dt = (ht == null ? G.t : ht) - A.tb; q = dt < -0.3 ? 'miss' : Math.abs(dt) < 0.07 ? 'perfect' : Math.abs(dt) < 0.16 ? 'good' : 'weak'; }
+  A.bj = true; A.bq = q; MP.snapT = 0;
+  const blk = tfig(1 - A.a, 1);
+  blk.seq = null; blk.lock = false;
+  const p = A.block === 'W' ? 'blockW' : A.block < 0 ? 'blockL' : 'blockR';
+  jump(blk, q === 'perfect' ? 3.7 : 3.4); setPose(blk, p, 0, 30); setBase(blk, p); S('toss');
+  if (q === 'perfect') { fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); }
+  else if (q === 'miss') fx({ k: 'burst', c: 'bad' });
+  blk.onLand = () => { setBase(blk, 'ready'); fx({ k: 'dust', x: blk.x, z: blk.z, n: 4 }); };
 }
 function mpLateHit(A) {
   const st = MP.st; if (!st || st.atk !== A || A.hit) return;
@@ -1850,7 +1935,7 @@ function mpAttack(a, dir, ht) {
   if (dt < -0.3) { fx({ k: 'burst', c: 'bad' }); S('err'); return; }
   if (dt > 0.2) return;
   A.hit = true;
-  const adt = Math.abs(dt), q = adt < 0.075 ? 'perfect' : adt < 0.17 ? 'good' : 'weak';
+  const wn = A.win || 1, adt = Math.abs(dt), q = adt < 0.075 * wn ? 'perfect' : adt < 0.17 * wn ? 'good' : 'weak';
   const h = st.hist[a]; for (const k in h) h[k] *= 0.8; h[dir] += 1;
   if (q === 'perfect') { mpMeter(a, 1); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); } else if (q === 'good') fx({ k: 'burst', c: 'bone' });
   const b = tfig(a, 0), o = 1 - a, s = sgn(a);
@@ -1861,12 +1946,17 @@ function mpAttack(a, dir, ht) {
   const wx = dir === 'L' ? -s : s;
   if (st.fire[a] && dir !== 'LOB' && q !== 'weak') { mpFire(A, wx); return; }
   if (dir === 'LOB') { mpLob(A, q); return; }
-  const blocked = A.block === 'W' || A.block === wx;
+  const blk = tfig(o, 1);
+  const inLine = A.block === 'W' || A.block === wx;
+  const blocked = inLine && A.bj && A.bq !== 'miss';
   if (blocked) {
-    const r = Math.random(), tool = BAL.tool[q];
-    if (r < tool) mpBlockOut(A, wx); else if (r < tool + BAL.touch) mpTouch(A, wx); else mpStuff(A, wx);
+    const bq = A.bq, m = { perfect: [0.4, 0.6, 0.15], good: [1, 1, 0], weak: [1.6, 1.5, -0.15] }[bq];
+    const r = Math.random(), tool = BAL.tool[q] * m[0], touch = BAL.touch * m[1];
+    if (r < tool) mpBlockOut(A, wx); else if (r < tool + touch) mpTouch(A, wx); else mpStuff(A, wx, m[2]);
     return;
   }
+  // the ball got past the block: the blocker shrugs
+  if (A.bj || inLine) after(0.15, () => setPose(blk, 'shrug', 0.5, 16));
   S('spike'); fx({ k: 'shake', v: q === 'perfect' ? 3 : 2 }); fx({ k: 'vib', ms: 18, team: a }); msparks(q === 'perfect' ? 10 : 5);
   const tx = clamp(A.C.x + wx * rand(2.0, 2.8), -4.1, 4.1), lane = laneOfX(o, tx);
   const T = { perfect: 0.58, good: 0.68, weak: 0.8 }[q], md = { perfect: 0.14, good: 0.08, weak: 0.03 }[q] - (A.block === 'D' ? 0.03 : 0);
@@ -1909,7 +1999,7 @@ function mpHands(A, wx, cb) {
 function mpBlockOut(A, wx) {
   mpHands(A, wx, () => {
     S('touch'); S('block'); fx({ k: 'shake', v: 3 }); fx({ k: 'net', v: 0.7 }); fx({ k: 'burst', c: 'accent', big: true }); msparks(8, ['bone', 'accent']);
-    const o = 1 - A.a, blk = tfig(o, 1); setPose(blk, 'blockW', 0.25, 30);
+    const o = 1 - A.a, blk = tfig(o, 1); seq(blk, [['blockOw', 0.35, 30], ['ready', 0.25, 12]]);
     mlaunch({ x: wx * rand(5.6, 6.8), y: 0, z: sgn(o) * rand(5, 9) }, 0.8, { spin: 25 });
     after(0.45, () => defAnim(tfig(o, 0), 'lunge', wx));
     after(0.95, () => mpPoint(A.a, 'BLOCK-AUS!'));
@@ -1918,17 +2008,21 @@ function mpBlockOut(A, wx) {
 function mpTouch(A, wx) {
   mpHands(A, wx, () => {
     const o = 1 - A.a; S('touch'); fx({ k: 'net', v: 0.5 }); fx({ k: 'shake', v: 2 }); fx({ k: 'burst', c: 'bone' }); msparks(6, ['bone', 'accent']);
-    setPose(tfig(o, 1), wx < 0 ? 'blockL' : 'blockR', 0.2, 34);
+    seq(tfig(o, 1), [['blockOw', 0.18, 34], [wx < 0 ? 'blockL' : 'blockR', 0.15, 20]]);
     const lane = (Math.random() * 3) | 0;
     mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.0, { spin: 14 });
     mpIncoming(o, 'free', lane, 1.0, 0.12, 'good');
   });
 }
-function mpStuff(A, wx) {
+function mpStuff(A, wx, bonus) {
   mpHands(A, wx, () => {
-    const st = MP.st, a = A.a, sa = sgn(a);
+    const st = MP.st, a = A.a, sa = sgn(a), blk = tfig(1 - a, 1);
     S('block'); fx({ k: 'shake', v: 4 }); fx({ k: 'net', v: 1 }); fx({ k: 'vib', ms: 30 }); msparks(8, ['bone', 'bad']);
-    if (Math.random() < lerp(BAL.stuff[0], BAL.stuff[0] + BAL.stuff[1], mpDiff())) {
+    seq(blk, [['slam', 0.16, 42], ['blockW', 0.12, 20]]);
+    if (Math.random() < lerp(BAL.stuff[0], BAL.stuff[0] + BAL.stuff[1], mpDiff()) + (bonus || 0)) {
+      // monster block: the blocker flexes on the way down
+      fx({ k: 'burst', c: 'bad', big: true }); fx({ k: 'flash', v: 0.25 }); msparks(10, ['bone', 'bad', 'accent']);
+      blk.onLand = () => { seq(blk, [['flex', 0.7, 14]]); fx({ k: 'dust', x: blk.x, z: blk.z, n: 6 }); };
       const sx = ball.x + rand(-0.6, 0.6);
       mlaunch({ x: sx, y: 0, z: sa * rand(0.6, 1.6) }, 0.3, { spin: -20 });
       st.phase = 'dead';
@@ -1945,7 +2039,7 @@ function mpStuff(A, wx) {
 }
 function mpPoint(w, txt) {
   const st = MP.st; if (!st || st.phase === 'point' || G.mode !== 'mp') return;
-  G.ev.length = 0; st.phase = 'point'; st.inc = st.atk = st.srv = null;
+  G.ev.length = 0; st.phase = 'point'; st.inc = st.atk = st.srv = st.setq = st.dump = null;
   st.score[w]++;
   const l = 1 - w, long = st.rally >= 4;
   fx({ k: 'pop', s: txt, team: w });
@@ -1983,6 +2077,8 @@ function mpOverShow(sc) {
 /* ---------- input: every phone sends swipes and taps, the host decides ---------- */
 function hostInput(slot, k, dx, dy, ht) {
   const st = MP.st; if (!st) return;
+  if (k === 'pause') { mpSetPause(!!dx); return; }
+  if (st.paused) return;
   const t = slot >> 1, r = slot & 1, ph = st.phase, ax = Math.abs(dx || 0), ay = Math.abs(dy || 0);
   ht = ht == null ? G.t : Math.min(ht, G.t);
   if (r === 0) {
@@ -1997,10 +2093,17 @@ function hostInput(slot, k, dx, dy, ht) {
     if (ph === 'point' || ph === 'dead') return;
     if (ax >= ay * 0.8) mpLane(t, dx < 0 ? -1 : 1, ht);
     else if (dy < 0 && ph === 'defend') mpDash(t, ht);
-  } else if (k === 'swipe' && ph === 'attack' && st.atk && st.atk.a === 1 - t) {
-    // blocker: sideways = that side of the hitter, up = wide, down = drop back
-    const v = ay > ax * 1.1 ? (dy < 0 ? 'W' : 'D') : (dx < 0 ? -sgn(t) : sgn(t));
-    mpBlock(st.atk, v, ht);
+  } else {
+    // setter: tap on the ring = set, swipe up = dump over the net
+    if (st.setq && st.setq.t === t) { mpSetInput(t, ht, k === 'swipe' && dy < 0 && ay > ax * 1.1); return; }
+    // the other team dumped: swipe down to drop back and grab it
+    if (st.dump && st.dump.o === t && k === 'swipe' && dy > 0 && ay > ax) { mpDumpSave(t); return; }
+    if (ph === 'attack' && st.atk && st.atk.a === 1 - t) {
+      // blocker: sideways = that side of the hitter, up = wide, down = drop back, tap = jump
+      if (k === 'tap') { mpBlockJump(st.atk, ht); return; }
+      const v = ay > ax * 1.1 ? (dy < 0 ? 'W' : 'D') : (dx < 0 ? -sgn(t) : sgn(t));
+      mpBlock(st.atk, v, ht);
+    }
   }
 }
 function mpSwipe(dx, dy) {
@@ -2024,12 +2127,28 @@ function mpSend(k, dx, dy) {
 }
 
 /* ---------- state sync: host sends snapshots, phones draw them ---------- */
+function mpSetPause(v) {
+  const st = MP.st; if (!st || st.paused === v) return;
+  st.paused = v; MP.snapT = 0;
+  if (MP.view) MP.view.paused = v;
+  mpShowPause(v);
+}
+function mpShowPause(v) {
+  G.paused = v;
+  $('#pauseOv').hidden = !v;
+  if (v) SFX.tick();
+}
+function mpPause(v) {
+  if (MP.host) mpSetPause(v);
+  else if (MP.net) MP.net.toHost({ t: 'in', k: 'pause', dx: v ? 1 : 0 });
+}
 function mpSnapOut() {
   const st = MP.st; if (!st) return null;
   const f = FIGS.map(g => [+g.x.toFixed(3), +g.y.toFixed(3), +g.z.toFixed(3), g.tgt, g.rate, +g.lean.toFixed(2), g.lock ? 1 : 0]);
   const A = st.atk, I = st.inc, V = st.srv;
-  return { t: 's', T: G.t, ph: st.phase, sc: st.score, sv: st.server, m: st.meter, fi: st.fire, ln: st.lane, f,
-    a: A ? [A.a, A.tc, A.hit ? 1 : 0, A.block, A.C.x] : 0, i: I ? [I.x, I.z, I.tMark, I.d] : 0, v: V ? [V.t, V.tp, V.hit ? 1 : 0] : 0 };
+  const Q = st.setq;
+  return { t: 's', T: G.t, ph: st.phase, pz: st.paused ? 1 : 0, sq: Q ? [Q.t, Q.ts] : 0, sc: st.score, sv: st.server, m: st.meter, fi: st.fire, ln: st.lane, f,
+    a: A ? [A.a, A.tc, A.hit ? 1 : 0, A.block, A.C.x, A.tb, A.bj ? 1 : 0] : 0, i: I ? [I.x, I.z, I.tMark, I.d] : 0, v: V ? [V.t, V.tp, V.hit ? 1 : 0] : 0 };
 }
 function mpSnap(d) {
   const now = performance.now() / 1000;
@@ -2053,6 +2172,10 @@ function mpViewFrom(d) {
   v.ring = null;
   if (MP.role === 0 && d.a && d.a[0] === T && !d.a[2]) v.ring = d.a[1];
   if (MP.role === 0 && d.v && d.v[0] === T && !d.v[2] && d.ph === 'serveToss') v.ring = d.v[1];
+  // front player: ring for the set, ring for the block jump
+  if (MP.role === 1 && d.sq && d.sq[0] === T) v.ring = d.sq[1];
+  if (MP.role === 1 && d.a && d.a[0] !== T && !d.a[2] && !d.a[6] && d.a[3] !== 'D') v.ring = d.a[5];
+  if (!!d.pz !== !!v.paused) { v.paused = !!d.pz; if (!MP.host) mpShowPause(v.paused); }
   v.inc = d.i ? { x: d.i[0], z: d.i[1], tMark: d.i[2], done: false } : null;
   v.blk = d.a && d.a[3] != null && d.a[3] !== 'D' && !d.a[2] ? { cx: d.a[4], v: d.a[3], mine: d.a[0] === T } : null;
   // gesture hints, first few times only
@@ -2061,23 +2184,30 @@ function mpViewFrom(d) {
     MP.hintAtk = atkKey;
     if (d.a && !d.a[2]) setHint(MP.role === 1 && d.a[0] !== T ? 'block' : MP.role === 0 && d.a[0] === T ? 'attack' : '');
   }
+  const sqKey = d.sq ? d.sq[1] : null;
+  if (sqKey !== MP.hintSet) { MP.hintSet = sqKey; if (d.sq && MP.role === 1 && d.sq[0] === T) setHint('set'); }
 }
 function mpUpdate(dt) {
   if (G.fadeV) { G.fade = clamp(G.fade + G.fadeV * dt, 0, 1); if (G.fade <= 0 || G.fade >= 1) G.fadeV = 0; }
   G.stop = 0; G.slow = 0;
+  const frozen = MP.view && MP.view.paused;
   if (MP.host) {
-    G.t += dt;
-    runEv();
-    for (const f of FIGS) updFig(f, dt);
+    if (!frozen) {
+      G.t += dt;
+      runEv();
+      for (const f of FIGS) updFig(f, dt);
+    }
     MP.snapT -= dt;
     if (MP.snapT <= 0 && MP.net) { MP.snapT = 0.05; const s = mpSnapOut(); if (s) { MP.net.all(s); mpViewFrom(s); } }
+  } else if (frozen) {
+    MP.offOk = false; // resync the clock on resume
   } else {
     G.t = performance.now() / 1000 + MP.off;
     if (MP.net && performance.now() > MP.pingT) { MP.pingT = performance.now() + 2000; MP.net.toHost({ t: 'p', c: performance.now() }); }
     const k = Math.min(1, dt * 16);
     for (let i = 0; i < 4; i++) {
       const f = FIGS[i]; if (f.nx == null) continue;
-      const own = i === MP.mySlot && MP.role === 0 && performance.now() < MP.pred.until;
+      const own = MP.role === 0 && MP.mySlot >= 0 && f === tfig(MP.team, 0) && performance.now() < MP.pred.until;
       const px = f.x, wasAir = f.y > 0.03;
       f.x += ((own ? f.tx : f.nx) - f.x) * (own ? Math.min(1, dt * 22) : k);
       f.z += (f.nz - f.z) * k; f.y += (f.ny - f.y) * Math.min(1, dt * 24);
@@ -2088,6 +2218,7 @@ function mpUpdate(dt) {
       const tp = POSES[f.tgt]; if (tp) { const kk = Math.min(1, dt * (f.rate || 14)); for (let j = 0; j < 26; j++) f.pose[j] += (tp[j] - f.pose[j]) * kk; }
     }
   }
+  if (frozen) return;
   updBall(dt);
   updParts(dt);
   updCam(dt);
@@ -2170,6 +2301,7 @@ function drawFig(f) {
     JT[13] += s * 0.07; JT[15] += s2 * 0.07;
     const bob = Math.abs(Math.cos(f.ph)) * 0.04; for (let i = 1; i <= 17; i += 2) JT[i] += bob;
   }
+  if (f.tgt === 'blockReady' && !f.air) { const bo = Math.abs(Math.sin(G.t * 9)) * 0.05; for (let i = 1; i <= 17; i += 2) JT[i] -= bo; }
   if (f.lean) for (let j = 0; j < 8; j++) JT[j * 2] += f.lean * (j === 0 ? 0.36 : j >= 4 ? 0.34 : 0.26);
   const base = pv(f.x, 0, f.z), b = boostAt(base.d);
   const pts = [];
@@ -2381,7 +2513,7 @@ let last = performance.now();
 function frame(now) {
   let dt = (now - last) / 1000; last = now;
   if (dt > 0.05) dt = 0.05; if (dt < 0) dt = 0;
-  if (!G.paused && !G.freeze) update(dt);
+  if ((!G.paused || G.mode === 'mp') && !G.freeze) update(dt);
   render();
   requestAnimationFrame(frame);
 }
