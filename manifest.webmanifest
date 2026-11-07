@@ -1,8 +1,8 @@
 {
   "name": "Volleyskull",
   "short_name": "Volleyskull",
-  "description": "Pixel-Volleyball mit Skeletten",
-  "lang": "de",
+  "description": "Pixel volleyball with skeletons",
+  "lang": "en",
   "id": "./",
   "start_url": "./",
   "scope": "./",

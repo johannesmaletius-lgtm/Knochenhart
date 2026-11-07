@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Volleyskull</title>
-<meta name="description" content="Pixel-Volleyball mit Skeletten.">
+<meta name="description" content="Pixel volleyball with skeletons.">
 <meta name="theme-color" content="#14211d">
 <meta name="color-scheme" content="dark">
 <link rel="manifest" href="manifest.webmanifest">
@@ -148,97 +148,97 @@ html{background:var(--screen)}
 
 <div id="stage">
   <div id="frame">
-    <canvas id="cv" aria-label="Volleyball-Spielfeld"></canvas>
+    <canvas id="cv" aria-label="Volleyball court"></canvas>
 
     <button class="icon" id="pauseBtn" aria-label="Pause" hidden>
       <svg viewBox="0 0 8 8" aria-hidden="true"><rect x="1" y="1" width="2" height="6" fill="currentColor"/><rect x="5" y="1" width="2" height="6" fill="currentColor"/></svg>
     </button>
-    <button class="icon" id="soundBtn" aria-label="Ton aus">
+    <button class="icon" id="soundBtn" aria-label="Mute">
       <svg viewBox="0 0 8 8" aria-hidden="true"><rect x="0" y="3" width="2" height="2" fill="currentColor"/><rect x="2" y="2" width="1" height="4" fill="currentColor"/><rect x="3" y="1" width="1" height="6" fill="currentColor"/><g id="waves"><rect x="5" y="3" width="1" height="2" fill="currentColor"/><rect x="6" y="2" width="1" height="1" fill="currentColor"/><rect x="6" y="5" width="1" height="1" fill="currentColor"/><rect x="7" y="3" width="1" height="2" fill="currentColor"/></g><g id="mute" style="display:none"><rect x="5" y="2" width="1" height="1" fill="currentColor"/><rect x="6" y="3" width="1" height="2" fill="currentColor"/><rect x="7" y="2" width="1" height="1" fill="currentColor"/><rect x="5" y="5" width="1" height="1" fill="currentColor"/><rect x="7" y="5" width="1" height="1" fill="currentColor"/></g></svg>
     </button>
 
     <div class="ov" id="menu">
       <div class="panel">
-        <p class="coins" id="menuCoins" aria-label="Münzen"><span class="coin" aria-hidden="true"></span><span class="n">0</span></p>
-        <div class="seg" role="group" aria-label="Schwierigkeit">
-          <button id="lv0" data-lv="0" aria-pressed="false">Leicht</button>
+        <p class="coins" id="menuCoins" aria-label="Coins"><span class="coin" aria-hidden="true"></span><span class="n">0</span></p>
+        <div class="seg" role="group" aria-label="Difficulty">
+          <button id="lv0" data-lv="0" aria-pressed="false">Easy</button>
           <button id="lv1" data-lv="1" aria-pressed="true">Normal</button>
-          <button id="lv2" data-lv="2" aria-pressed="false">Schwer</button>
+          <button id="lv2" data-lv="2" aria-pressed="false">Hard</button>
         </div>
-        <button class="btn" id="playBtn">Spielen</button>
-        <button class="btn ghost" id="mpBtn">Mehrspieler</button>
+        <button class="btn" id="playBtn">Play</button>
+        <button class="btn ghost" id="mpBtn">Multiplayer</button>
         <button class="btn ghost" id="shopBtn">Shop</button>
-        <button class="btn ghost" id="howBtn">Anleitung</button>
+        <button class="btn ghost" id="howBtn">How to play</button>
         <p class="rec" id="rec"></p>
       </div>
     </div>
 
     <div class="ov dim" id="how" hidden>
-      <h2>So geht's</h2>
+      <h2>How to play</h2>
       <dl class="moves">
-        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Abwehr: dahin, wo das X blinkt</dd>
-        <dt><kbd>↑</kbd></dt><dd>Kurzer Ball: nach vorne hechten</dd>
-        <dt><kbd>↙</kbd> <kbd>↘</kbd></dt><dd>Schmettern, wenn der Ring zugeht</dd>
-        <dt><kbd>↑</kbd></dt><dd>Lob über den Block</dd>
-        <dt>Tippen</dt><dd>Aufschlag, dann <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> wischen</dd>
-        <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Mehrspieler vorne: Block links, rechts, breit, zurück. Tippen: springen, wenn der Ring zugeht</dd>
-        <dt>Tippen</dt><dd>Vorne beim Zuspiel: auf den Ring. <kbd>←</kbd> <kbd>→</kbd> schnelles Zuspiel, <kbd>↑</kbd> Finte über das Netz</dd>
-        <dt><kbd>↓</kbd></dt><dd>Vorne: Finte oder Lob vom Gegner abfangen. Tippen, wenn der eigene Angriff geblockt wird: absichern</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Defend: move to the blinking X</dd>
+        <dt><kbd>↑</kbd></dt><dd>Short ball: dive forward</dd>
+        <dt><kbd>↙</kbd> <kbd>↘</kbd></dt><dd>Spike when the ring closes</dd>
+        <dt><kbd>↑</kbd></dt><dd>Lob over the block</dd>
+        <dt>Tap</dt><dd>Serve, then swipe <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd></dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Multiplayer, front: block left, right, wide, drop back. Tap to jump when the ring closes</dd>
+        <dt>Tap</dt><dd>Front, setting: tap on the ring. <kbd>←</kbd> <kbd>→</kbd> quick set, <kbd>↑</kbd> dump over the net</dd>
+        <dt><kbd>↓</kbd></dt><dd>Front: grab a dump or lob. Tap when your hitter gets blocked to cover</dd>
       </dl>
-      <p>Schlag dahin, wo der Block nicht ist. Volle Schädelleiste: Feuerball. Volle Mauerleiste (vorne): der nächste Block sitzt.</p>
-      <p>Jeder Sieg bringt 10 Münzen für den Shop.</p>
-      <button class="btn" id="howOk">Verstanden</button>
+      <p>Hit where the block is not. Full skull bar: fireball. Full wall bar (front): your next block is a sure point.</p>
+      <p>Every win earns 10 coins for the shop.</p>
+      <button class="btn" id="howOk">Got it</button>
     </div>
 
     <div class="ov" id="shop" hidden>
       <div class="panel shop">
-        <p class="coins" aria-label="Münzen"><span class="coin" aria-hidden="true"></span><span class="n" id="shopCoins">0</span></p>
+        <p class="coins" aria-label="Coins"><span class="coin" aria-hidden="true"></span><span class="n" id="shopCoins">0</span></p>
         <div class="skins" id="skinList" role="group" aria-label="Skins"></div>
-        <button class="btn" id="shopAct">Anlegen</button>
-        <button class="btn ghost" id="shopOk">Fertig</button>
+        <button class="btn" id="shopAct">Equip</button>
+        <button class="btn ghost" id="shopOk">Done</button>
       </div>
     </div>
 
     <div class="ov dim" id="mpOv" hidden>
       <div class="panel" id="mpStart">
-        <button class="btn" id="mpCreate">Raum erstellen</button>
+        <button class="btn" id="mpCreate">Create room</button>
         <div class="join">
-          <input id="mpCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Raumcode">
-          <button class="btn ghost" id="mpJoin">Beitreten</button>
+          <input id="mpCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Room code">
+          <button class="btn ghost" id="mpJoin">Join</button>
         </div>
-        <button class="btn ghost" id="mpBack">Zurück</button>
+        <button class="btn ghost" id="mpBack">Back</button>
         <p class="rec" id="mpMsg" aria-live="polite"></p>
       </div>
       <div class="panel" id="mpLobby" hidden>
         <p class="room" id="mpRoom">----</p>
-        <div class="slots" role="group" aria-label="Plätze">
+        <div class="slots" role="group" aria-label="Positions">
           <span class="tm">A</span><span class="tm">B</span>
-          <button class="slot" id="slot0" aria-pressed="false"><i>Hinten</i><b>KI</b></button>
-          <button class="slot" id="slot2" aria-pressed="false"><i>Hinten</i><b>KI</b></button>
-          <button class="slot" id="slot1" aria-pressed="false"><i>Vorne</i><b>KI</b></button>
-          <button class="slot" id="slot3" aria-pressed="false"><i>Vorne</i><b>KI</b></button>
+          <button class="slot" id="slot0" aria-pressed="false"><i>Back</i><b>CPU</b></button>
+          <button class="slot" id="slot2" aria-pressed="false"><i>Back</i><b>CPU</b></button>
+          <button class="slot" id="slot1" aria-pressed="false"><i>Front</i><b>CPU</b></button>
+          <button class="slot" id="slot3" aria-pressed="false"><i>Front</i><b>CPU</b></button>
         </div>
-        <button class="btn ghost" id="mpShare">Link teilen</button>
+        <button class="btn ghost" id="mpShare">Share link</button>
         <button class="btn" id="mpGo">Start</button>
-        <button class="btn ghost" id="mpLeave">Verlassen</button>
+        <button class="btn ghost" id="mpLeave">Leave</button>
         <p class="rec" id="mpWait"></p>
       </div>
     </div>
 
     <div class="ov dim" id="pauseOv" hidden>
       <h2>PAUSE</h2>
-      <button class="btn" id="resumeBtn">Weiter</button>
-      <button class="btn ghost" id="quitBtn">Zum Menü</button>
+      <button class="btn" id="resumeBtn">Resume</button>
+      <button class="btn ghost" id="quitBtn">Menu</button>
     </div>
 
     <div class="ov dim" id="over" hidden>
-      <h2 id="ovTitle">Sieg!</h2>
+      <h2 id="ovTitle">Victory!</h2>
       <p class="score" id="ovScore">15 : 12</p>
       <p class="coins coinwin" id="ovCoins" hidden><span class="coin" aria-hidden="true"></span><span class="n">+10</span><small id="ovBonus"></small></p>
       <dl id="ovStats"></dl>
       <div class="next" id="ovNext"></div>
-      <button class="btn" id="againBtn">Nochmal</button>
-      <button class="btn ghost" id="menuBtn">Zum Menü</button>
+      <button class="btn" id="againBtn">Again</button>
+      <button class="btn ghost" id="menuBtn">Menu</button>
     </div>
   </div>
 </div>
@@ -633,7 +633,7 @@ function D() {
 function shake(n) { if (!reduceMotion) G.shake = Math.max(G.shake, n); }
 function slowmo(s) { G.slow = Math.max(G.slow, s); }
 // gesture hints: icons only, shown the first few times, then never again
-const HINTS = { serve: 'TIPPEN', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← → ↑ ↓ TIPPEN', set: 'TIPPEN ← → ↑' };
+const HINTS = { serve: 'TAP', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← → ↑ ↓ TAP', set: 'TAP ← → ↑' };
 const hintSeen = store.get('hints', {});
 let hint = '', hintT = 0;
 function setHint(key) {
@@ -897,12 +897,12 @@ function resolveDefense() {
     defAnim(me, inc.type === 'tip' ? 'missTip' : 'shank', side);
     SFX.dig(); dust(ball.x, ball.z, 5);
     launch({ x: ball.x + side * rand(4, 6), y: 0, z: rand(7, 11) }, 0.9, { spin: 18 });
-    after(0.7, () => point(1, 'ZU SPÄT!'));
+    after(0.7, () => point(1, 'LATE!'));
     return;
   }
   if (dx < 2.6) defAnim(me, inc.type === 'tip' ? 'missTip' : 'miss', side);
   else defAnim(me, 'lunge', side);
-  after(0.45, () => point(1, inc.type === 'block' ? 'GEBLOCKT!' : inc.type === 'tip' ? 'FINTE!' : 'VERFEHLT'));
+  after(0.45, () => point(1, inc.type === 'block' ? 'BLOCKED!' : inc.type === 'tip' ? 'TIP!' : 'MISSED'));
 }
 function ourDig(inc, late) {
   const clean = inc.type !== 'tip' && !late;
@@ -1056,7 +1056,7 @@ function spike(sideX, q) {
     oA.tx = lerp(oA.x, tx, 0.45); oA.sx = 6;
     const side = tx < oA.x ? -1 : 1;
     after(T * 0.6, () => defAnim(oA, Math.abs(oA.x - tx) < 2.4 ? 'miss' : 'lunge', side));
-    after(T + 0.25, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, q === 'perfect' ? 'KRACHER!' : 'PUNKT!'); });
+    after(T + 0.25, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, q === 'perfect' ? 'KILL!' : 'POINT!'); });
   }
 }
 function doBlocked(sideX) {
@@ -1076,7 +1076,7 @@ function doBlocked(sideX) {
       G.phase = 'dead'; setHint('');
       // the mate throws a hand out, too late
       after(0.12, () => defAnim(mate, Math.abs(mate.x - sx) < 1.6 ? 'miss' : 'lunge', sx < mate.x ? -1 : 1));
-      after(0.75, () => point(1, 'GEBLOCKT!'));
+      after(0.75, () => point(1, 'BLOCKED!'));
       return;
     }
     AI.blockResult(G.attack, 0.6);
@@ -1101,7 +1101,7 @@ function blockOut(sideX) {
     launch({ x: tx, y: 0, z: -rand(5, 9) }, 0.8, { spin: 25 });
     oA.tx = clamp(tx, -4.3, 4.3); oA.sx = 8;
     after(0.45, () => defAnim(oA, 'lunge', sideX));
-    after(0.95, () => { G.stats.kills++; point(0, 'BLOCK-AUS!'); });
+    after(0.95, () => { G.stats.kills++; point(0, 'BLOCK OUT!'); });
   });
 }
 // glanced off the fingertips, up into their court: their back defender has to chase it
@@ -1123,7 +1123,7 @@ function blockTouch(sideX) {
     if (save) after(T, () => { defAnim(oA, 'dive', tx < oA.x ? -1 : 1); SFX.dig(); AI.blockResult(A, 0.4); oppPass(false, true); });
     else {
       after(T * 0.8, () => defAnim(oA, 'miss', tx < oA.x ? -1 : 1));
-      after(T + 0.3, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, 'PUNKT!'); });
+      after(T + 0.3, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, 'POINT!'); });
     }
   });
 }
@@ -1146,7 +1146,7 @@ function lob(q) {
     launch({ x: tx, y: 0, z: tz }, T, { spin: 3 });
     oA.tx = lerp(oA.x, tx, 0.6); oA.tz = lerp(oA.z, tz, 0.5); oA.sx = oA.sz = 5;
     after(T * 0.8, () => defAnim(oA, 'missTip', 1));
-    after(T + 0.25, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, A.block === 'W' ? 'ÜBERLISTET!' : 'LOB-PUNKT!'); });
+    after(T + 0.25, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, A.block === 'W' ? 'OUTSMARTED!' : 'LOB POINT!'); });
   }
 }
 function fireball(sideX) {
@@ -1158,7 +1158,7 @@ function fireball(sideX) {
   sparks(ball.x, ball.y, ball.z, 16, [C.fire1, C.fire2, C.fire3]);
   after(0.2, () => setPose(oB, 'sad', 1.2));
   after(0.18, () => defAnim(oA, 'miss', tx < oA.x ? -1 : 1));
-  after(0.7, () => { G.stats.kills++; point(0, 'PUNKT!'); });
+  after(0.7, () => { G.stats.kills++; point(0, 'POINT!'); });
 }
 
 /* ---------------- opponent offense: blocker sets, server attacks ---------------- */
@@ -1265,7 +1265,7 @@ function serveHit(h, auto) {
     launch({ x: tx, y: 0, z: tz }, T, { spin: 14 });
     oA.tx = lerp(oA.x, tx, 0.55); oA.sx = 6;
     after(T * 0.72, () => defAnim(oA, 'miss', tx < oA.x ? -1 : 1));
-    after(T + 0.3, () => { G.stats.aces++; addMeter(1); point(0, 'ASS!'); });
+    after(T + 0.3, () => { G.stats.aces++; addMeter(1); point(0, 'ACE!'); });
   } else {
     launch({ x: tx, y: 0.8, z: tz }, T, { spin: 14 });
     oA.tx = tx; oA.tz = tz + 0.15; oA.sx = oA.sz = 8;
@@ -1299,7 +1299,7 @@ function point(w, txt) {
     G.hype = long ? 2.4 : 1.4;
    
     // point runs: the crowd gets louder
-    if (G.streak === 3 || G.streak === 5 || G.streak === 8) { popup(G.streak + ' IN FOLGE', G.streak >= 5 ? C.fire1 : C.accent); G.hype = 3.5; after(0.2, () => SFX.crowd()); vib(40); }
+    if (G.streak === 3 || G.streak === 5 || G.streak === 8) { G.hype = 3.5; after(0.2, () => SFX.crowd()); vib(40); }
     react(me, 'cheer', 1.3, 12); SFX.win(); vib(25);
     addMeter(long ? 2 : 1);
   } else {
@@ -1316,7 +1316,7 @@ function point(w, txt) {
     after(1.8, gameOver); return;
   }
   after(1.15, () => { G.fadeV = 6; });
-  after(1.35, () => { startRally(); if (Math.max(a, b) >= 14 && a !== b) popup('MATCHBALL', C.accent); });
+  after(1.35, () => { startRally(); if (Math.max(a, b) >= 14 && a !== b) popup('MATCH POINT', C.accent); });
 }
 
 /* ---------------- menu demo ---------------- */
@@ -1355,11 +1355,11 @@ function gameOver() {
   const rec = store.get('rec', { 0: [0, 0], 1: [0, 0], 2: [0, 0] });
   rec[G.level] = rec[G.level] || [0, 0]; rec[G.level][win ? 0 : 1]++;
   store.set('rec', rec);
-  $('#ovTitle').textContent = win ? 'Sieg!' : 'Niederlage';
+  $('#ovTitle').textContent = win ? 'Victory!' : 'Defeat';
   $('#ovTitle').className = win ? 'win' : 'lose';
   $('#ovScore').textContent = G.score[0] + ' : ' + G.score[1];
   const s = G.stats;
-  const rows = [['Perfekt', s.perfect], ['Längste Rallye', s.maxRally], ['Feuerbälle', s.fires]];
+  const rows = [['Perfect', s.perfect], ['Longest rally', s.maxRally], ['Fireballs', s.fires]];
   $('#ovStats').innerHTML = rows.map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('');
   showCoinWin(win);
   updOverMeta();
@@ -1383,7 +1383,7 @@ function showOnly(id) {
 function updRecord() {
   const rec = store.get('rec', null);
   const r = rec && rec[G.level];
-  $('#rec').textContent = r && (r[0] + r[1]) ? r[0] + ' Siege · ' + r[1] + ' Niederlagen' : '';
+  $('#rec').textContent = r && (r[0] + r[1]) ? r[0] + ' wins · ' + r[1] + ' losses' : '';
   $('#rec').hidden = !$('#rec').textContent;
 }
 
@@ -1480,7 +1480,7 @@ $('#quitBtn').addEventListener('click', () => { G.paused = false; $('#pauseOv').
 $('#againBtn').addEventListener('click', () => { if (MP.net) mpBegin(); else startGame(); });
 $('#menuBtn').addEventListener('click', () => { if (MP.net) mpLeave(); else menuScene(); });
 $('#pauseBtn').addEventListener('click', () => togglePause());
-function updSoundIcon() { $('#waves').style.display = muted ? 'none' : ''; $('#mute').style.display = muted ? '' : 'none'; $('#soundBtn').setAttribute('aria-label', muted ? 'Ton an' : 'Ton aus'); }
+function updSoundIcon() { $('#waves').style.display = muted ? 'none' : ''; $('#mute').style.display = muted ? '' : 'none'; $('#soundBtn').setAttribute('aria-label', muted ? 'Unmute' : 'Mute'); }
 $('#soundBtn').addEventListener('click', () => { muted = !muted; store.set('muted', muted); audioInit(); updSoundIcon(); });
 updSoundIcon();
 setLevel(G.level);
@@ -1488,16 +1488,16 @@ setLevel(G.level);
 /* ---------------- coins, skins, shop ---------------- */
 // bone color, headband, optional accessory; bought with coins (10 per win)
 const SKINS = [
-  { id: 'knochen', n: 'Knochen', p: 0, bone: '#dcdcd2', band: '#f2c25e' },
+  { id: 'knochen', n: 'Bone', p: 0, bone: '#dcdcd2', band: '#f2c25e' },
   { id: 'neon', n: 'Neon', p: 30, bone: '#8dffa8', band: '#ff5ad1' },
-  { id: 'nacht', n: 'Nacht', p: 40, bone: '#6f7f88', band: '#a77bff' },
-  { id: 'eis', n: 'Eis', p: 60, bone: '#a9dcff', band: '#ffffff' },
+  { id: 'nacht', n: 'Night', p: 40, bone: '#6f7f88', band: '#a77bff' },
+  { id: 'eis', n: 'Ice', p: 60, bone: '#a9dcff', band: '#ffffff' },
   { id: 'lava', n: 'Lava', p: 80, bone: '#ff8a4c', band: '#ffe08a', fx: 'ember' },
-  { id: 'pirat', n: 'Pirat', p: 100, bone: '#dcdcd2', band: '#d2482f', acc: 'bandana' },
-  { id: 'teufel', n: 'Teufel', p: 120, bone: '#e86a5a', band: '#2b0f0f', acc: 'horns' },
-  { id: 'kuerbis', n: 'Kürbis', p: 150, bone: '#dcdcd2', band: '#3d6b2f', acc: 'pumpkin' },
-  { id: 'geist', n: 'Geist', p: 180, bone: '#e8f4ff', band: '#9fd6ff', alpha: 0.55 },
-  { id: 'koenig', n: 'König', p: 250, bone: '#f2c25e', band: '#d2482f', acc: 'crown' }
+  { id: 'pirat', n: 'Pirate', p: 100, bone: '#dcdcd2', band: '#d2482f', acc: 'bandana' },
+  { id: 'teufel', n: 'Devil', p: 120, bone: '#e86a5a', band: '#2b0f0f', acc: 'horns' },
+  { id: 'kuerbis', n: 'Pumpkin', p: 150, bone: '#dcdcd2', band: '#3d6b2f', acc: 'pumpkin' },
+  { id: 'geist', n: 'Ghost', p: 180, bone: '#e8f4ff', band: '#9fd6ff', alpha: 0.55 },
+  { id: 'koenig', n: 'King', p: 250, bone: '#f2c25e', band: '#d2482f', acc: 'crown' }
 ];
 const SKIN = {}; for (const k of SKINS) SKIN[k.id] = k;
 let coins = store.get('coins', 0);
@@ -1513,7 +1513,7 @@ function showCoinWin(win) {
     if (bonus) store.set('bonusDay', today());
     addCoins(bonus ? 20 : 10);
     el.querySelector('.n').textContent = bonus ? '+20' : '+10';
-    $('#ovBonus').textContent = bonus ? 'Tagesbonus' : '';
+    $('#ovBonus').textContent = bonus ? 'Daily bonus' : '';
     setTimeout(() => { tone(1320, 0.06, 'square', 0.04); tone(1760, 0.1, 'square', 0.04, 0, 0.07); if (bonus) tone(2093, 0.14, 'square', 0.04, 0, 0.16); }, 450);
   }
 }
@@ -1524,7 +1524,7 @@ function nextHTML() {
   if (!k) return '';
   const f = Math.min(1, coins / k.p);
   return '<span class="sw" style="background:' + k.bone + '"></span>' + k.n + '<span class="bar"><i style="width:calc(' + (f * 100).toFixed(1) + '% - 2px)"></i></span>'
-    + (coins >= k.p ? 'im Shop!' : Math.min(coins, k.p) + '/' + k.p);
+    + (coins >= k.p ? 'in the shop!' : Math.min(coins, k.p) + '/' + k.p);
 }
 function updOverMeta() { $('#ovNext').innerHTML = nextHTML(); }
 // match-winning confetti
@@ -1540,11 +1540,11 @@ function shopDraw() {
     const have = owned.has(k.id);
     return '<button class="skin' + (have ? ' owned' : '') + (k.id === mySkin ? ' on' : '') + '" data-id="' + k.id + '" aria-pressed="' + (k.id === shopSel) + '">'
       + '<span class="sw" style="background:' + k.bone + ';--band:' + k.band + '"></span><span class="t"><b>' + k.n + '</b><em>'
-      + (k.id === mySkin ? 'aktiv' : have ? 'gekauft' : '<span class="coin"></span>' + k.p) + '</em></span></button>';
+      + (k.id === mySkin ? 'equipped' : have ? 'owned' : '<span class="coin"></span>' + k.p) + '</em></span></button>';
   }).join('');
   const k = SKIN[shopSel], have = owned.has(k.id), btn = $('#shopAct');
   btn.disabled = k.id === mySkin || (!have && coins < k.p);
-  btn.textContent = k.id === mySkin ? 'Aktiv' : have ? 'Anlegen' : coins >= k.p ? 'Kaufen · ' + k.p : 'Noch ' + (k.p - coins) + ' Münzen';
+  btn.textContent = k.id === mySkin ? 'Equipped' : have ? 'Equip' : coins >= k.p ? 'Buy · ' + k.p : (k.p - coins) + ' more coins';
   me.skin = shopSel; // live preview on the skeleton below
 }
 $('#skinList').addEventListener('click', e => { const b = e.target.closest('.skin'); if (!b) return; shopSel = b.dataset.id; SFX.tick(); shopDraw(); });
@@ -1639,7 +1639,7 @@ function mpOpen() { showOnly('mpOv'); $('#mpStart').hidden = false; $('#mpLobby'
 function mpNewCode() { let s = ''; for (let i = 0; i < 4; i++) s += MPCODE[(Math.random() * MPCODE.length) | 0]; return s; }
 async function mpCreate() {
   audioInit(); mpMsg('…');
-  try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('Keine Verbindung'); return; }
+  try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
   const code = mpNewCode();
   MP.host = true; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
   MP.net = netCreate(code, {
@@ -1656,7 +1656,7 @@ async function mpCreate() {
     },
     msg(id, d) { mpHostMsg(id, d); },
     gone(id) { const i = MP.slots.findIndex(s => s && s.id === id); if (i >= 0) { MP.slots[i] = null; mpLobbySync(); } },
-    fail(k) { if (k === 'taken') { MP.net.close(); mpCreate(); } else mpMsg('Keine Verbindung'); }
+    fail(k) { if (k === 'taken') { MP.net.close(); mpCreate(); } else mpMsg('No connection'); }
   });
 }
 async function mpJoin() {
@@ -1664,14 +1664,14 @@ async function mpJoin() {
   const code = $('#mpCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length !== 4) { $('#mpCode').focus(); return; }
   mpMsg('…');
-  try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('Keine Verbindung'); return; }
+  try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
   MP.host = false; MP.code = code; MP.mySlot = -1;
-  const t0 = setTimeout(() => { if (!MP.myId) mpMsg('Raum nicht gefunden'); }, 9000);
+  const t0 = setTimeout(() => { if (!MP.myId) mpMsg('Room not found'); }, 9000);
   MP.net = netJoin(code, {
     open(id) { clearTimeout(t0); MP.myId = id; MP.net.toHost({ t: 'skin', sk: mySkin }); },
     msg(d) { mpClientMsg(d); },
-    gone() { if (MP.net) { mpLeave(); popup('VERBINDUNG WEG', C.bad); } },
-    fail(k) { clearTimeout(t0); mpMsg(k === 'nofound' ? 'Raum nicht gefunden' : 'Keine Verbindung'); MP.net = null; }
+    gone() { if (MP.net) { mpLeave(); popup('DISCONNECTED', C.bad); } },
+    fail(k) { clearTimeout(t0); mpMsg(k === 'nofound' ? 'Room not found' : 'No connection'); MP.net = null; }
   });
 }
 function mpLeave() {
@@ -1692,13 +1692,13 @@ function mpLobbyDraw() {
   MP.mySlot = MP.slots.findIndex(s => s && s.id === MP.myId);
   for (let i = 0; i < 4; i++) {
     const s = MP.slots[i], b = $('#slot' + i);
-    b.querySelector('b').textContent = !s ? 'KI' : s.id === MP.myId ? 'DU' : 'P' + s.n;
+    b.querySelector('b').textContent = !s ? 'CPU' : s.id === MP.myId ? 'YOU' : 'P' + s.n;
     b.querySelector('b').style.color = s && s.sk && SKIN[s.sk] && i !== MP.mySlot ? SKIN[s.sk].bone : '';
     b.setAttribute('aria-pressed', String(i === MP.mySlot));
     b.classList.toggle('taken', !!s && i !== MP.mySlot);
   }
   $('#mpGo').hidden = !MP.host;
-  if (!/kopiert|http/.test($('#mpWait').textContent) || !MP.host) $('#mpWait').textContent = MP.host ? '' : 'Warte auf Start';
+  if (!/copied|http/.test($('#mpWait').textContent) || !MP.host) $('#mpWait').textContent = MP.host ? '' : 'Waiting for start';
 }
 function inviteURL() {
   const base = /github\.io$/.test(location.hostname) || location.hostname === 'localhost' ? location.origin + location.pathname : 'https://johannesmaletius-lgtm.github.io/Knochenhart/';
@@ -1706,8 +1706,8 @@ function inviteURL() {
 }
 async function mpShare() {
   const url = inviteURL();
-  try { if (navigator.share) { await navigator.share({ title: 'Volleyskull', text: 'Spiel mit mir Volleyskull!', url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
-  try { await navigator.clipboard.writeText(url); $('#mpWait').textContent = 'Link kopiert'; }
+  try { if (navigator.share) { await navigator.share({ title: 'Volleyskull', text: 'Play Volleyskull with me!', url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); $('#mpWait').textContent = 'Link copied'; }
   catch (e) { $('#mpWait').textContent = url; }
 }
 function mpPickSlot(i) {
@@ -1723,7 +1723,7 @@ function mpHostMsg(id, d) {
 }
 function mpClientMsg(d) {
   if (d.t === 'lobby') { MP.slots = d.slots; MP.code = d.code; MP.level = d.level; if (G.mode !== 'mp') mpLobbyShow(); else mpRoles(); }
-  else if (d.t === 'full') { mpMsg('Raum voll'); MP.net.close(); MP.net = null; }
+  else if (d.t === 'full') { mpMsg('Room full'); MP.net.close(); MP.net = null; }
   else if (d.t === 'start') { MP.level = d.level; mpEnter(); }
   else if (d.t === 's') mpSnap(d);
   else if (d.t === 'fx') applyFx(d.e);
@@ -1762,7 +1762,7 @@ const WALLMAX = 8;
 function mpWall(t, n) {
   const st = MP.st; if (!st || st.wall[t] >= WALLMAX) return;
   st.wall[t] = Math.min(WALLMAX, st.wall[t] + n); MP.snapT = 0;
-  if (st.wall[t] >= WALLMAX) { S('fire'); fx({ k: 'pop', s: 'MAUER BEREIT', team: t }); }
+  if (st.wall[t] >= WALLMAX) S('fire');
 }
 const stat = (slot, k, n = 1) => { const st = MP.st; if (st && st.stats[slot]) st.stats[slot][k] += n; };
 
@@ -1913,12 +1913,12 @@ function mpResolve() {
   if (ok) {
     defAnim(b, inc.type === 'tip' ? 'missTip' : 'shank', side); S('dig');
     mlaunch({ x: ball.x + side * rand(4, 6), y: 0, z: sgn(d) * rand(7, 11) }, 0.9, { spin: 18 });
-    after(0.7, () => mpPoint(1 - d, 'ZU SPÄT!'));
+    after(0.7, () => mpPoint(1 - d, 'LATE!'));
     return;
   }
   defAnim(b, Math.abs(b.x - inc.x) < 2.6 ? (inc.type === 'tip' ? 'missTip' : 'miss') : 'lunge', side);
   if (inc.by != null) stat(inc.by, 'p');
-  after(0.45, () => mpPoint(1 - d, inc.type === 'block' ? 'GEBLOCKT!' : inc.type === 'tip' ? 'FINTE!' : inc.type === 'serve' ? 'ASS!' : 'PUNKT!'));
+  after(0.45, () => mpPoint(1 - d, inc.type === 'block' ? 'BLOCKED!' : inc.type === 'tip' ? 'TIP!' : inc.type === 'serve' ? 'ACE!' : 'POINT!'));
 }
 function mpDig(d, inc, late, digger) {
   const st = MP.st, s = sgn(d), b = tfig(d, 0), set = tfig(d, 1);
@@ -1971,7 +1971,6 @@ function mpSetInput(t, ht, mode) {
 function mpDump(d) {
   const st = MP.st, o = 1 - d, set = tfig(d, 1), so = sgn(o);
   jump(set, 3.2); setPose(set, PZ(set, 'lob'), 0.35, 30); setBase(set, 'ready'); S('lob');
-  fx({ k: 'pop', s: 'FINTE!', team: d });
   const lane = (Math.random() * 3) | 0, T = 0.8;
   mlaunch({ x: so * LX[lane] * 0.85, y: 0.4, z: so * 1.6 }, T, { spin: 2 });
   st.rally++; stat(slotOf(d, 1), 'f');
@@ -1987,7 +1986,7 @@ function mpDump(d) {
 function mpDumpSave(t) {
   const st = MP.st, D0 = st.dump; if (!D0 || D0.o !== t || D0.save) return;
   if (D0.until && G.t > D0.until) { S('err'); return; }
-  D0.save = true; fx({ k: 'pop', s: 'ABGEFANGEN', team: t });
+  D0.save = true;
   const blk = tfig(t, 1), inc = st.inc;
   if (inc && inc.d === t) { blk.tx = inc.x; blk.tz = inc.z - sgn(t) * 0.3; blk.sx = blk.sz = 9; }
   S('step');
@@ -2116,7 +2115,7 @@ function mpAttack(a, dir, ht) {
   const blocked = inLine && A.bj && A.bq !== 'miss';
   if (blocked && st.wall[o] >= WALLMAX) {
     st.wall[o] = 0;
-    fx({ k: 'pop', s: 'MAUER!', team: o }); fx({ k: 'flash', v: 0.6 }); S('fire');
+    fx({ k: 'flash', v: 0.6 }); fx({ k: 'shake', v: 6 }); S('fire');
     mpStuff(A, wx, 2);
     return;
   }
@@ -2155,7 +2154,7 @@ function mpLob(A, q) {
     blk.tx = so * lx; blk.tz = so * 2.9; blk.sx = blk.sz = 7;
     if (Math.random() < BAL.lobD) { after(T, () => mpDig(o, { type: 'free', x: so * lx, lane }, false, blk)); return; }
     after(T * 0.8, () => defAnim(blk, 'missTip', 1));
-    after(T + 0.25, () => mpPoint(a, 'LOB-PUNKT!'));
+    after(T + 0.25, () => mpPoint(a, 'LOB POINT!'));
     return;
   }
   mlaunch({ x: so * LX[lane] * 0.85, y: 0.45, z: so * 3.0 }, T, { spin: 3 });
@@ -2178,7 +2177,7 @@ function mpBlockOut(A, wx) {
     const o = 1 - A.a, blk = tfig(o, 1); seq(blk, [['blockOw', 0.35, 30], ['ready', 0.25, 12]]);
     mlaunch({ x: wx * rand(5.6, 6.8), y: 0, z: sgn(o) * rand(5, 9) }, 0.8, { spin: 25 });
     after(0.45, () => defAnim(tfig(o, 0), 'lunge', wx));
-    after(0.95, () => { stat(slotOf(A.a, 0), 'p'); mpPoint(A.a, 'BLOCK-AUS!'); });
+    after(0.95, () => { stat(slotOf(A.a, 0), 'p'); mpPoint(A.a, 'BLOCK OUT!'); });
   });
 }
 function mpTouch(A, wx) {
@@ -2207,7 +2206,7 @@ function mpStuff(A, wx, bonus) {
       after(0.12, () => defAnim(set, Math.abs(set.x - sx) < 1.6 ? 'miss' : 'lunge', sx < set.x ? -1 : 1));
       stat(slotOf(1 - a, 1), 'b'); stat(slotOf(1 - a, 1), 'p');
       if ((bonus || 0) < 2) mpWall(1 - a, 2);
-      after(0.75, () => mpPoint(1 - a, 'GEBLOCKT!'));
+      after(0.75, () => mpPoint(1 - a, 'BLOCKED!'));
       return;
     }
     mpWall(1 - a, 1);
@@ -2234,7 +2233,6 @@ function mpPoint(w, txt) {
   G.ev.length = 0; st.phase = 'point'; st.inc = st.atk = st.srv = st.setq = st.dump = st.cover = null;
   st.score[w]++;
   const l = 1 - w, long = st.rally >= 4;
-  fx({ k: 'pop', s: txt, team: w });
   fx({ k: 'hype', v: long ? 2.4 : 1.4 });
   S('crowd'); fx({ k: 'res', w });
   mpMeter(w, long ? 2 : 1);
@@ -2243,7 +2241,7 @@ function mpPoint(w, txt) {
   st.server = w;
   const [x, y] = st.score;
   if ((x >= 15 || y >= 15) && Math.abs(x - y) >= 2) { after(1.8, mpOver); return; }
-  if (Math.max(x, y) >= 14 && x !== y) after(1.4, () => fx({ k: 'pop', s: 'MATCHBALL', team: x > y ? 0 : 1 }));
+  if (Math.max(x, y) >= 14 && x !== y) after(1.4, () => fx({ k: 'pop', s: 'MATCH POINT', team: x > y ? 0 : 1 }));
   after(1.15, () => fx({ k: 'fade', v: 6 }));
   after(1.35, mpRally);
 }
@@ -2256,11 +2254,11 @@ function mpOverShow(sc, stats) {
   G.mode = 'mpOver';
   const mine = sc[MP.team], theirs = sc[1 - MP.team], win = mine > theirs;
   SFX.match(win);
-  $('#ovTitle').textContent = win ? 'Sieg!' : 'Niederlage';
+  $('#ovTitle').textContent = win ? 'Victory!' : 'Defeat';
   $('#ovTitle').className = win ? 'win' : 'lose';
   $('#ovScore').textContent = mine + ' : ' + theirs;
   const my = stats && MP.mySlot >= 0 ? stats[MP.mySlot] : null;
-  const rows = !my ? [] : MP.role === 1 ? [['Blockpunkte', my.b], ['Gerettet', my.d], ['Perfekte Pässe', my.s], ['Finten', my.f]] : [['Punkte', my.p], ['Abwehr', my.d]];
+  const rows = !my ? [] : MP.role === 1 ? [['Block points', my.b], ['Saves', my.d], ['Perfect sets', my.s], ['Dumps', my.f]] : [['Points', my.p], ['Digs', my.d]];
   $('#ovStats').innerHTML = rows.map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('');
   showCoinWin(win && MP.mySlot >= 0);
   updOverMeta();
