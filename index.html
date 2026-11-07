@@ -178,6 +178,7 @@ html{background:var(--screen)}
       <dl class="moves">
         <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Defend: move to the blinking X</dd>
         <dt><kbd>↑</kbd></dt><dd>Short ball: dive forward</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Red X: the ball is going out. Get out of its way</dd>
         <dt><kbd>↙</kbd> <kbd>↘</kbd></dt><dd>Spike when the ring closes</dd>
         <dt><kbd>↑</kbd></dt><dd>Lob over the block</dd>
         <dt>Tap</dt><dd>Serve, then swipe <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd></dd>
@@ -429,6 +430,15 @@ defP('slam',    [0,1.72, 0,1.55, -.2,1.5, .2,1.5, -.22,1.85, .22,1.85, -.12,2.0,
 defP('flex',    [0,1.78, 0,1.6, -.21,1.55, .21,1.55, -.45,1.6, .45,1.6, -.42,1.9, .42,1.9, 0,1.0, -.16,.52, .16,.52, -.2,0, .2,0]);
 defP('blockOw', [0,1.74, 0,1.58, -.2,1.53, .2,1.53, -.48,1.9, .48,1.9, -.78,2.1, .78,2.1, 0,1.0, -.14,.52, .14,.52, -.16,.04, .16,.04]);
 defP('shrug',   [0,1.74, 0,1.56, -.21,1.52, .21,1.52, -.38,1.3, .38,1.3, -.5,1.42, .5,1.42, 0,.98, -.12,.52, .12,.52, -.15,0, .15,0]);
+defP('fist',     [0,1.76, 0,1.58, -.21,1.52, .21,1.52, -.3,1.25, .3,1.8, -.2,1.02, .22,2.08, 0,.98, -.12,.52, .12,.52, -.15,0, .15,0]);
+defP('pointFwd', [0,1.74, 0,1.56, -.21,1.5, .21,1.52, -.3,1.22, .46,1.56, -.28,.98, .72,1.62, 0,.98, -.14,.52, .14,.52, -.18,0, .2,0]);
+defP('headHands',[0,1.7, 0,1.53, -.21,1.48, .21,1.48, -.38,1.68, .38,1.68, -.12,1.8, .12,1.8, 0,.95, -.12,.5, .12,.5, -.15,0, .15,0]);
+defP('kneelSad', [0,1.0, 0,.86, -.2,.8, .2,.8, -.24,.56, .24,.56, -.16,.36, .16,.36, 0,.46, -.2,.06, .2,.06, -.28,.02, .28,.02]);
+defP('taunt',    [0,1.78, 0,1.6, -.21,1.55, .21,1.55, -.5,1.6, .5,1.6, -.72,1.78, .72,1.78, 0,1.0, -.16,.52, .16,.52, -.2,0, .2,0]);
+defP('duck',     [0,1.1, 0,.96, -.18,.92, .18,.92, -.22,.72, .22,.72, -.08,.9, .08,.9, 0,.6, -.34,.36, .34,.36, -.4,0, .4,0]);
+defP('letGo',    [0,1.72, 0,1.55, -.21,1.5, .21,1.5, -.42,1.3, .42,1.3, -.6,1.2, .6,1.2, 0,.96, -.14,.52, .14,.52, -.18,0, .18,0]);
+defP('floatServe',[0,1.74, 0,1.56, -.21,1.5, .21,1.54, -.3,1.22, .26,1.84, -.24,.98, .2,2.1, 0,.98, -.16,.52, .16,.52, -.26,0, .2,.02]);
+for (const n of ['fist', 'pointFwd', 'floatServe']) POSES[n + 'M'] = Float32Array.from(mir(POSES[n]));
 for (const n of ['reachR', 'shankR', 'slideR', 'rollR', 'shuffleR']) POSES[n.slice(0, -1) + 'L'] = Float32Array.from(mir(POSES[n]));
 POSES.diveL = Float32Array.from(mir(POSES.diveR));
 POSES.blockR = Float32Array.from(mir(POSES.blockL));
@@ -701,16 +711,19 @@ function addMeter(n) {
   G.meter = clamp(G.meter + n, 0, BAL.meterMax);
   if (G.meter >= BAL.meterMax) { G.fire = true; after(0.4, () => { G.flash = 0.5; SFX.fire(); }); }
 }
+// long rallies: the skeletons start to sweat
+function sweat() {
+  for (const f of FIGS) if (Math.random() < 0.5) G.parts.push({ x: f.x + f.pose[0] + rand(-0.1, 0.1), y: f.y + f.pose[1] + 0.12, z: f.z, vx: rand(-0.6, 0.6), vy: rand(0.6, 1.3), vz: 0, age: 0, life: rand(0.35, 0.6), c: pick(['#9fd6ff', '#cfeaff']) });
+}
 function rallyTick() {
   G.rally++;
+  if (G.rally >= 6) sweat();
   if (G.rally >= 4) { G.hype = Math.max(G.hype, 0.5 + G.rally * 0.05); if (G.rally % 2 === 0) SFX.crowd(); }
 }
 function timingPop(q) {
   if (q === 'perfect') {
     G.combo++; G.stats.perfect++; addMeter(1);
     burst(C.accent, true); sparks(ball.x, ball.y, ball.z, 6, [C.accent, C.fire1]); SFX.perfect(G.combo);
-    // perfect streak counter right at the ball
-    if (G.combo >= 2) { const q = pv(ball.x, ball.y, ball.z); popup('X' + G.combo, G.combo >= 5 ? C.fire1 : C.accent, G.combo >= 4 ? 2 : 1, q.x, q.y - 14, 0.8); }
     if (G.combo === 5 || G.combo === 8) { G.hype = 3; SFX.crowd(); }
    
   } else { G.combo = 0; if (q === 'good') burst(C.bone, false); }
@@ -799,13 +812,43 @@ AI.m = AI.fresh();
 /* ---------------- opponent serve ---------------- */
 function oppToss() {
   setPose(oA, 'tossM', 0.6); SFX.toss();
-  launch({ x: ball.x, y: ball.y + 0.05, z: ball.z + 0.25 }, 0.9);
+  // some serves are big jump serves, the rest standing floaters
+  G.oppJump = Math.random() < 0.45;
+  if (G.oppJump) {
+    launch({ x: ball.x, y: ball.y + 1.4, z: ball.z + 0.5 }, 0.9);
+    after(0.1, () => { jump(oA, 3.6); setPose(oA, 'jumpM', 0, 18); oA.tz = oA.z + 0.5; oA.sz = 1.2; });
+  } else launch({ x: ball.x, y: ball.y + 0.05, z: ball.z + 0.25 }, 0.9);
   after(0.45, oppServeHit);
 }
 function oppServeHit() {
   const d = D(), k = AI.k();
-  setPose(oA, 'spikeM', 0.25); SFX.serve();
+  setPose(oA, G.oppJump ? 'spikeM' : 'floatServeM', 0.3, 30); SFX.serve();
   const lane = pickLane();
+  const backToBase = () => after(0.35, () => { oA.tx = pick([-2.4, 0, 2.4]); oA.tz = LIB_Z; oA.sx = oA.sz = 6; setBase(oA, 'ready'); });
+  const err = [0.1, 0.07, 0.045][G.level] || 0.07, r = Math.random();
+  if (r < err * 0.5) {
+    // into the net
+    G.phase = 'served';
+    intoNet(-1, LX[lane] * 0.6, () => point(0, 'NET'));
+    after(0.5, () => react(oA, 'headHands', 1, 12));
+    backToBase(); return;
+  }
+  if (r < err) {
+    // long: let it go
+    outBall(lane === me.lane || Math.random() < 0.6 ? me.lane : lane, lerp(1.25, 0.95, d), 0.3);
+    backToBase(); return;
+  }
+  if (r < err + 0.07) {
+    // clips the tape and dribbles over: short ball
+    G.phase = 'served';
+    launch({ x: LX[lane] * 0.7, y: 2.47, z: -0.05 }, 0.75, { spin: 4 });
+    after(0.75, () => {
+      G.netWob = 0.6; SFX.tick(); sparks(ball.x, ball.y, ball.z, 4, [C.bone]);
+      launch({ x: LX[lane] * 0.85, y: 0.45, z: 2.1 }, 0.72, { spin: 2 });
+      incoming('tip', lane, LX[lane] * 0.85, 2.1, 0.72, 0.05);
+    });
+    backToBase(); return;
+  }
   const kind = AI.weighted({
     sNorm: 1,
     sFloat: (d > 0.3 ? 0.3 + 0.45 * d : 0.08 * k) * AI.adapt('sFloat'),
@@ -830,7 +873,7 @@ function pickLane() {
 function incoming(type, lane, x, z, T, markDelay) {
   const inc = G.incoming = { type, lane, x, z, tArr: G.t + T, tMark: G.t + markDelay, done: false, tac: null };
   G.phase = 'defend';
-  setHint(type === 'tip' ? 'tip' : 'defend');
+  setHint(type === 'tip' ? 'tip' : type === 'out' ? '' : 'defend');
   after(T, resolveDefense);
   // split step: a little hop as the ball is struck
   if (!me.air && !me.lock && type !== 'block') { jump(me, 1.5); setPose(me, 'ready', 0.2, 20); }
@@ -883,6 +926,7 @@ function defAnim(f, kind, side) {
 }
 function resolveDefense() {
   const inc = G.incoming; if (!inc || inc.done) return;
+  if (inc.type === 'out') { resolveOut(inc); return; }
   inc.done = true; G.incoming = null;
   const dx = Math.abs(me.x - inc.x), dz = Math.abs(me.z - inc.z);
   const ok = dx < 0.95 && dz < (inc.type === 'tip' ? 1.0 : 1.5);
@@ -904,6 +948,32 @@ function resolveDefense() {
   else defAnim(me, 'lunge', side);
   after(0.45, () => point(1, inc.type === 'block' ? 'BLOCKED!' : inc.type === 'tip' ? 'TIP!' : 'MISSED'));
 }
+// a ball flying out: whoever stays in its way touches it and loses the point
+function outBall(lane, T, md) {
+  launch({ x: LX[lane], y: 1.35, z: DZ + 0.1 }, T, { spin: 18 });
+  return incoming('out', lane, LX[lane], DZ + 0.1, T, md);
+}
+function resolveOut(inc) {
+  inc.done = true; G.incoming = null; G.phase = 'dead'; setHint('');
+  if (me.lane === inc.lane) {
+    setPose(me, 'reflex', 0.5, 40); SFX.dig(); sparks(ball.x, ball.y, ball.z, 5, [C.bone]);
+    launch({ x: ball.x + pick([-1, 1]) * rand(4, 6), y: 0, z: rand(8, 11) }, 0.7, { spin: 20 });
+    after(0.35, () => react(me, 'headHands', 1, 12));
+    after(0.75, () => point(1, 'TOUCHED'));
+  } else {
+    // good eyes: arms wide, the ball sails past
+    seq(me, [['letGo', 0.7, 22]]);
+    launch({ x: ball.x + rand(-0.3, 0.3), y: 0, z: DZ + 3.6 }, 0.32, { spin: 18 });
+    after(0.25, () => { SFX.bounce(); G.hype = 1.2; });
+    after(0.7, () => point(0, 'OUT'));
+  }
+}
+// the ball smacks into the net and drops down on the hitter's side
+function intoNet(fromZsign, x, cb) {
+  launch({ x, y: rand(1.6, 2.1), z: fromZsign * 0.12 }, 0.3, { spin: 20 });
+  after(0.3, () => { G.netWob = 1; SFX.block(); shake(2); launch({ x: x + rand(-0.4, 0.4), y: 0, z: fromZsign * rand(0.5, 1.1) }, 0.45, { spin: -6 }); });
+  after(1.0, cb);
+}
 function ourDig(inc, late) {
   const clean = inc.type !== 'tip' && !late;
   const side = me.moveDir < 0 ? -1 : 1, off = inc.x - me.x;
@@ -918,6 +988,7 @@ function ourDig(inc, late) {
   if (inc.type === 'tip') me.lane = inc.lane;
   SFX.dig(); dust(ball.x, ball.z, 6); sparks(ball.x, ball.y, ball.z, kind === 'dive' || kind === 'pancake' ? 7 : 4, [C.bone]); vib(12);
   G.stats.digs++; rallyTick();
+  if (kind === 'dive' && inc.type !== 'block' && Math.random() < 0.16) { ourOverpass(); return; }
   // scrambled digs drift off target and the setter has to chase them
   const wild = kind === 'dive' || kind === 'pancake' ? 1 : kind === 'reach' || kind === 'reflex' ? 0.45 : 0.12;
   const tgt = { x: clamp(MSET.x + rand(-1.3, 1.3) * wild, -2.6, 3.2), y: 2.55 + rand(0, .7) * wild, z: clamp(MSET.z + rand(-.2, 1.2) * wild, 0.5, 2.2) };
@@ -927,6 +998,22 @@ function ourDig(inc, late) {
   G.phase = 'pass'; setHint('');
   after(Math.max(0.4, Math.min(0.72, dur)), () => { me.lock = false; me.tx = LX[me.lane]; me.sx = 15; me.tz = APZ; me.sz = 7; setBase(me, 'ready'); });
   after(1.0, ourSet);
+}
+
+function ourOverpass() {
+  G.phase = 'oppPlay'; setHint('');
+  const x = clamp(rand(-1.6, 1.2), -2.5, 2.5);
+  launch({ x, y: 2.9, z: -0.8 }, 1.0, { spin: 6 });
+  oB.tx = x; oB.tz = -0.6; oB.sx = oB.sz = 7;
+  after(0.25, () => setPose(mate, 'headHands', 0.6, 14));
+  after(0.4, () => { me.lock = false; me.tx = LX[me.lane]; me.sx = 15; me.tz = DZ; me.sz = 7; setBase(me, 'ready'); });
+  after(0.58, () => { jump(oB, 3.8); setPose(oB, 'jumpM', 0, 18); });
+  after(1.0, () => {
+    setPose(oB, 'spikeM', 0.2, 40); setBase(oB, 'setReady'); SFX.spike(); shake(3); G.stop = 0.05; sparks(ball.x, ball.y, ball.z, 6, [C.bone, C.bad]);
+    const lane = (Math.random() * 3) | 0, T = lerp(0.62, 0.5, D());
+    launch({ x: LX[lane], y: 0.85, z: DZ + 0.1 }, T, { spin: 22 });
+    incoming('spike', lane, LX[lane], DZ + 0.1, T, 0.06);
+  });
 }
 
 /* ---------------- our attack ---------------- */
@@ -1037,6 +1124,17 @@ function lateHit() {
 function spike(sideX, q) {
   const A = G.attack, d = D();
   const tx = clamp(A.C.x + sideX * rand(2.0, 2.8), -4.1, 4.1), tz = -rand(6.0, 8.2);
+  if (q === 'weak' && Math.random() < 0.22) {
+    SFX.spike(); shake(1);
+    if (Math.random() < 0.5) intoNet(1, A.C.x + sideX * 0.6, () => point(1, 'NET'));
+    else {
+      launch({ x: tx * 1.1, y: 0, z: -rand(10, 11.5) }, 0.6, { spin: 20 });
+      after(0.3, () => seq(oA, [['letGo', 0.8, 20]]));
+      after(0.9, () => point(1, 'OUT'));
+    }
+    after(0.7, () => react(me, 'headHands', 1, 12));
+    return;
+  }
   const T = { perfect: 0.34, good: 0.42, weak: 0.54 }[q];
   const libDist = Math.abs(oA.tx - tx);
   let p = (libDist < 1.7 ? BAL.libNear : BAL.libFar)[q];
@@ -1049,8 +1147,19 @@ function spike(sideX, q) {
     after(T, () => {
       const far = libDist > 1.0;
       defAnim(oA, far ? 'dive' : libDist > 0.45 ? 'reach' : 'low', tx < oA.x ? -1 : 1);
-      SFX.dig(); AI.blockResult(A, 0.5); oppPass(false, far);
+      SFX.dig(); AI.blockResult(A, 0.5);
+      if (far && Math.random() < 0.22) oppOverpass(); else oppPass(false, far);
     });
+  } else if (libDist < 1.3 && Math.random() < 0.5) {
+    // gets a piece of it, but it flies off the arms into the stands
+    launch({ x: tx, y: 0.55, z: tz }, T, { spin: 20 });
+    oA.tx = tx; oA.tz = tz + 0.2; oA.sx = oA.sz = 10;
+    after(T, () => {
+      const sd = tx < 0 ? -1 : 1;
+      defAnim(oA, 'shank', sd); SFX.dig(); sparks(ball.x, ball.y, ball.z, 5, [C.bone]);
+      launch({ x: sd * rand(5.5, 7), y: 0, z: tz - rand(1, 3) }, 0.8, { spin: 24 });
+    });
+    after(T + 0.9, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, 'POINT!'); });
   } else {
     launch({ x: tx, y: 0, z: tz }, T, { spin: 20 });
     oA.tx = lerp(oA.x, tx, 0.45); oA.sx = 6;
@@ -1058,6 +1167,28 @@ function spike(sideX, q) {
     after(T * 0.6, () => defAnim(oA, Math.abs(oA.x - tx) < 2.4 ? 'miss' : 'lunge', side));
     after(T + 0.25, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, q === 'perfect' ? 'KILL!' : 'POINT!'); });
   }
+}
+// their dig flies straight over the net: our setter jumps and slams it
+function oppOverpass() {
+  G.phase = 'over'; rallyTick();
+  const x = clamp(rand(-1.2, 1.6), -2.5, 2.5);
+  launch({ x, y: 2.9, z: 0.8 }, 1.05, { spin: 6 });
+  mate.tx = x; mate.tz = 0.9; mate.sx = mate.sz = 6;
+  after(0.62, () => { jump(mate, 3.8); setPose(mate, 'jump', 0, 18); });
+  after(1.05, () => {
+    setPose(mate, 'spike', 0.2, 40); setBase(mate, 'stand'); SFX.spike(); shake(3); G.stop = 0.06; sparks(ball.x, ball.y, ball.z, 8);
+    const kx = rand(-3, 3), kz = -rand(2.5, 6);
+    oA.tx = lerp(oA.x, kx, 0.5); oA.sx = 8;
+    if (Math.random() < 0.85) {
+      launch({ x: kx, y: 0, z: kz }, 0.32, { spin: 24 });
+      after(0.2, () => defAnim(oA, 'miss', kx < oA.x ? -1 : 1));
+      after(0.7, () => { G.stats.kills++; point(0, 'POINT!'); });
+    } else {
+      launch({ x: kx, y: 0.55, z: kz }, 0.4, { spin: 24 });
+      oA.tx = kx; oA.tz = kz - 0.2; oA.sx = oA.sz = 12;
+      after(0.4, () => { defAnim(oA, 'dive', kx < oA.x ? -1 : 1); SFX.dig(); oppPass(false, true); });
+    }
+  });
 }
 function doBlocked(sideX) {
   const d = D();
@@ -1225,6 +1356,9 @@ function oppAttack(O, d) {
   setPose(oA, 'spikeM', 0.14, 40); setBase(oA, 'followM'); SFX.spike(); shake(2); G.stop = 0.04;
   sparks(ball.x, ball.y, ball.z, 5, [C.bone, C.bad]);
   const T = lerp(BAL.oppSpikeT[0], BAL.oppSpikeT[1], d) * (1 - AI.speed());
+  const err = [0.09, 0.06, 0.04][G.level] || 0.06, r = Math.random();
+  if (r < err * 0.45) { intoNet(-1, LX[al] * 0.5, () => point(0, 'NET')); after(0.6, () => react(oA, 'headHands', 1, 12)); G.phase = 'over'; return; }
+  if (r < err) { outBall(Math.random() < 0.6 ? me.lane : al, T * 1.2, lerp(BAL.markDelay[0], BAL.markDelay[1], d)); return; }
   launch({ x: LX[al], y: 0.85, z: DZ + 0.1 }, T, { spin: 22 });
   incoming('spike', al, LX[al], DZ + 0.1, T, lerp(BAL.markDelay[0], BAL.markDelay[1], d)).tac = O.fake ? 'aFake' : al === me.lane ? 'aNear' : 'aFar';
 }
@@ -1258,7 +1392,36 @@ function serveHit(h, auto) {
   const tx = clamp(aimX + rand(-0.5, 0.5), -4, 4), tz = LIB_Z - rand(0, 1.2);
   const T = { perfect: 0.9, good: 1.02, weak: 1.2 }[q];
   const d = D();
+  const fault = auto ? 0.3 : q === 'weak' ? 0.12 : 0.015;
+  if (Math.random() < fault) {
+    if (Math.random() < 0.6) { intoNet(1, tx * 0.4, () => point(1, 'NET')); after(0.5, () => react(me, 'headHands', 1, 12)); }
+    else {
+      // long, over everyone
+      launch({ x: tx, y: 0, z: -rand(10, 11.5) }, T * 1.05, { spin: 14 });
+      oA.tx = tx; oA.sx = 4; after(T * 0.5, () => seq(oA, [['letGo', 0.8, 20]]));
+      after(T + 0.4, () => point(1, 'OUT'));
+    }
+    return;
+  }
   let ace = BAL.ace[q];
+  if (q !== 'weak' && Math.random() < 0.06) {
+    // net cord: it hops over the tape and drops short
+    launch({ x: tx * 0.5, y: 2.47, z: 0.05 }, 0.6, { spin: 4 });
+    after(0.6, () => { G.netWob = 0.6; SFX.tick(); sparks(ball.x, ball.y, ball.z, 4, [C.bone]); });
+    const sx = tx * 0.6, sz = -rand(1.2, 2.0);
+    after(0.6, () => {
+      oA.tx = sx; oA.tz = sz - 0.2; oA.sx = oA.sz = 11;
+      if (Math.random() < 0.5) {
+        launch({ x: sx, y: 0.35, z: sz }, 0.6, { spin: 2 });
+        after(0.6, () => { defAnim(oA, 'pancake', 1); SFX.dig(); freeBall(); });
+      } else {
+        launch({ x: sx, y: 0, z: sz }, 0.6, { spin: 2 });
+        after(0.4, () => defAnim(oA, 'missTip', 1));
+        after(0.95, () => { G.stats.aces++; addMeter(1); point(0, 'ACE!'); });
+      }
+    });
+    return;
+  }
   if (Math.abs(oA.x - aimX) > 1.5 && q !== 'weak') ace += BAL.aceAway;
   ace *= 1.1 - 0.5 * d;
   if (Math.random() < ace) {
@@ -1283,10 +1446,17 @@ function freeBall() {
 }
 
 /* ---------------- points ---------------- */
+const WINP = ['cheer', 'fist', 'flex', 'pointFwd'], LOSEP = ['sad', 'headHands', 'kneelSad'];
+const mirP = (f, n) => f.front && POSES[n + 'M'] ? n + 'M' : n;
+function celebrate(f, win, long) {
+  const n = win ? pick(long ? ['cheer', 'flex', 'fist'] : WINP) : pick(long ? LOSEP : ['sad', 'headHands']);
+  react(f, mirP(f, n), 1.25, 12);
+  if (win && n === 'cheer' && !f.air && !f.lock) jump(f, 2.4);
+}
 function point(w, txt) {
   if (G.phase === 'point' || G.mode !== 'play') return;
   G.ev.length = 0; G.phase = 'point'; G.incoming = null; G.attack = null; G.serve = null; G.oppAtk = null;
-  G.score[w]++;
+  G.score[w]++; G.why = (w ? '-' : '+') + txt;
   AI.point(w);
   G.stats.maxRally = Math.max(G.stats.maxRally, G.rally);
  
@@ -1300,13 +1470,14 @@ function point(w, txt) {
    
     // point runs: the crowd gets louder
     if (G.streak === 3 || G.streak === 5 || G.streak === 8) { G.hype = 3.5; after(0.2, () => SFX.crowd()); vib(40); }
-    react(me, 'cheer', 1.3, 12); SFX.win(); vib(25);
+    celebrate(me, true, long); after(0.12, () => celebrate(mate, true, long)); SFX.win(); vib(25);
+    react(oA, mirP(oA, pick(LOSEP)), 1.1, 10); react(oB, mirP(oB, pick(['sad', 'headHands'])), 1.1, 10);
     addMeter(long ? 2 : 1);
   } else {
     if (!G.fire) G.meter = Math.max(0, G.meter - 3);
     G.combo = 0;
-    react(me, 'sad', 1.3, 10); SFX.lose();
-    react(oB, 'cheer', 1.1); react(oA, 'cheer', 1.1);
+    celebrate(me, false, long); react(mate, pick(['sad', 'headHands']), 1.1, 10); SFX.lose();
+    celebrate(oB, true, long); after(0.1, () => { celebrate(oA, true, long); if (Math.random() < 0.3) react(oA, 'taunt', 0.8, 14); });
   }
   G.server = w; // whoever wins the point serves next
   const [a, b] = G.score;
@@ -2485,9 +2656,9 @@ function drawShadow(x, z, w, a) {
 function drawMarker() {
   const inc = G.mode === 'mp' ? MP.view && MP.view.inc : G.incoming; if (!inc || inc.done || G.t < inc.tMark) return;
   const blink = ((G.t * 12) | 0) % 2 === 0;
-  for (const ex of [inc.x - 0.95, inc.x + 0.95]) for (let z = inc.z - 1.6; z <= inc.z + 1.7; z += 0.5) { const q = pv(ex, 0, z); rect(q.x, q.y, 1, 1, C.accent); }
+  for (const ex of [inc.x - 0.95, inc.x + 0.95]) for (let z = inc.z - 1.6; z <= inc.z + 1.7; z += 0.5) { const q = pv(ex, 0, z); rect(q.x, q.y, 1, 1, inc.type === 'out' ? C.bad : C.accent); }
   const p = pv(inc.x, 0, inc.z), s = Math.max(2, Math.round(0.2 * p.s));
-  const col = blink ? C.accent : C.fire2;
+  const col = inc.type === 'out' ? (blink ? C.bad : C.eye) : blink ? C.accent : C.fire2;
   line(p.x - s, p.y - s * 0.4, p.x + s, p.y + s * 0.4, col); line(p.x - s, p.y + s * 0.4, p.x + s, p.y - s * 0.4, col);
 }
 const JT = new Float32Array(26);
@@ -2502,6 +2673,7 @@ function drawFig(f) {
     JT[13] += s * 0.07; JT[15] += s2 * 0.07;
     const bob = Math.abs(Math.cos(f.ph)) * 0.04; for (let i = 1; i <= 17; i += 2) JT[i] += bob;
   }
+  if (!f.moving && !f.air && (f.tgt === 'ready' || f.tgt === 'stand' || f.tgt === 'setReady')) { const br = Math.sin(G.t * 3.2 + f.x * 1.7 + f.z) * 0.014; for (let i = 1; i <= 17; i += 2) JT[i] += br; }
   if (f.tgt === 'blockReady' && !f.air) { const bo = Math.abs(Math.sin(G.t * 9)) * 0.05; for (let i = 1; i <= 17; i += 2) JT[i] -= bo; }
   if (f.lean) for (let j = 0; j < 8; j++) JT[j * 2] += f.lean * (j === 0 ? 0.36 : j >= 4 ? 0.34 : 0.26);
   const base = pv(f.x, 0, f.z), b = boostAt(base.d);
