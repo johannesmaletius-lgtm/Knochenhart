@@ -112,6 +112,12 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .coinwin:not([hidden]){animation:coinpop .5s steps(4) both}
 @keyframes coinpop{0%{transform:translateY(8px) scale(.6);opacity:0}100%{transform:none;opacity:1}}
 @media (prefers-reduced-motion: reduce){.coinwin:not([hidden]){animation:none}}
+.coinwin small{font-family:var(--font-body);font-size:16px;color:var(--bone);letter-spacing:.04em}
+.next{display:flex;align-items:center;gap:7px;font-size:16px;color:var(--bone-dim);width:100%;justify-content:center}
+.next:empty{display:none}
+.next .bar{flex:1;max-width:110px;height:6px;background:var(--ink);box-shadow:inset 0 0 0 1px var(--edge);position:relative}
+.next .bar i{position:absolute;left:1px;top:1px;bottom:1px;background:var(--accent)}
+.next .sw{width:10px;height:10px;flex:none}
 #shop{justify-content:flex-start;padding-top:12px}
 .panel.shop{width:100%;max-width:330px;max-height:66%;gap:10px}
 .skins{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;overflow-y:auto;min-height:0;padding:2px}
@@ -228,8 +234,9 @@ html{background:var(--screen)}
     <div class="ov dim" id="over" hidden>
       <h2 id="ovTitle">Sieg!</h2>
       <p class="score" id="ovScore">15 : 12</p>
-      <p class="coins coinwin" id="ovCoins" hidden><span class="coin" aria-hidden="true"></span><span class="n">+10</span></p>
+      <p class="coins coinwin" id="ovCoins" hidden><span class="coin" aria-hidden="true"></span><span class="n">+10</span><small id="ovBonus"></small></p>
       <dl id="ovStats"></dl>
+      <div class="next" id="ovNext"></div>
       <button class="btn" id="againBtn">Nochmal</button>
       <button class="btn ghost" id="menuBtn">Zum Menü</button>
     </div>
@@ -621,7 +628,7 @@ function runEv() {
 function D() {
   const base = [0.1, 0.33, 0.5][G.level] || 0.33;
   const prog = (G.score[0] + G.score[1]) / 28, lead = (G.score[0] - G.score[1]) / 14;
-  return clamp(base + prog * 0.4 + lead * 0.2, 0, 1);
+  return clamp(base + prog * 0.4 + lead * 0.35, 0, 1);
 }
 function shake(n) { if (!reduceMotion) G.shake = Math.max(G.shake, n); }
 function slowmo(s) { G.slow = Math.max(G.slow, s); }
@@ -702,6 +709,10 @@ function timingPop(q) {
   if (q === 'perfect') {
     G.combo++; G.stats.perfect++; addMeter(1);
     burst(C.accent, true); sparks(ball.x, ball.y, ball.z, 6, [C.accent, C.fire1]); SFX.perfect(G.combo);
+    // perfect streak counter right at the ball
+    if (G.combo >= 2) { const q = pv(ball.x, ball.y, ball.z); popup('X' + G.combo, G.combo >= 5 ? C.fire1 : C.accent, G.combo >= 4 ? 2 : 1, q.x, q.y - 14, 0.8); }
+    if (G.combo === 5 || G.combo === 8) { G.hype = 3; SFX.crowd(); }
+   
   } else { G.combo = 0; if (q === 'good') burst(C.bone, false); }
 }
 
@@ -1278,12 +1289,17 @@ function point(w, txt) {
   G.score[w]++;
   AI.point(w);
   G.stats.maxRally = Math.max(G.stats.maxRally, G.rally);
+ 
   setHint('');
   me.lock = false; me.dash = false; oA.leanT = 0;
   const long = G.rally >= 4;
   G.bump[w] = G.t;
+  G.streak = w === 0 ? (G.streak || 0) + 1 : 0;
   if (w === 0) {
     G.hype = long ? 2.4 : 1.4;
+   
+    // point runs: the crowd gets louder
+    if (G.streak === 3 || G.streak === 5 || G.streak === 8) { popup(G.streak + ' IN FOLGE', G.streak >= 5 ? C.fire1 : C.accent); G.hype = 3.5; after(0.2, () => SFX.crowd()); vib(40); }
     react(me, 'cheer', 1.3, 12); SFX.win(); vib(25);
     addMeter(long ? 2 : 1);
   } else {
@@ -1294,7 +1310,11 @@ function point(w, txt) {
   }
   G.server = w; // whoever wins the point serves next
   const [a, b] = G.score;
-  if ((a >= 15 || b >= 15) && Math.abs(a - b) >= 2) { after(1.8, gameOver); return; }
+  if ((a >= 15 || b >= 15) && Math.abs(a - b) >= 2) {
+    // the winning point lingers: slow motion, confetti, the crowd goes up
+    if (w === 0) { slowmo(0.8); confetti(); G.hype = 5; SFX.crowd(); after(0.3, () => SFX.crowd()); }
+    after(1.8, gameOver); return;
+  }
   after(1.15, () => { G.fadeV = 6; });
   after(1.35, () => { startRally(); if (Math.max(a, b) >= 14 && a !== b) popup('MATCHBALL', C.accent); });
 }
@@ -1321,7 +1341,7 @@ function demoBump() {
 /* ---------------- game lifecycle ---------------- */
 function startGame() {
   audioInit();
-  G.mode = 'play'; G.paused = false; G.score = [0, 0]; G.server = 1; G.meter = 0; G.combo = 0; G.fire = false;
+  G.mode = 'play'; G.paused = false; G.score = [0, 0]; G.server = 1; G.meter = 0; G.combo = 0; G.fire = false; G.streak = 0;
   G.hist = { L: 0, R: 0, LOB: 0 }; G.stats = newStats(); AI.start(); G.pops.length = 0; G.ev.length = 0; G.fade = 1;
   showOnly(null);
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
@@ -1342,6 +1362,7 @@ function gameOver() {
   const rows = [['Perfekt', s.perfect], ['Längste Rallye', s.maxRally], ['Feuerbälle', s.fires]];
   $('#ovStats').innerHTML = rows.map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('');
   showCoinWin(win);
+  updOverMeta();
   if (win) { setPose(me, 'cheer', 0); setBase(me, 'cheer'); G.hype = 4; } else { setBase(me, 'sad'); setPose(me, 'sad', 0); }
   showOnly('over');
 }
@@ -1486,7 +1507,29 @@ function updCoins() { for (const el of document.querySelectorAll('#menuCoins .n,
 function addCoins(n) { coins += n; store.set('coins', coins); updCoins(); }
 function showCoinWin(win) {
   const el = $('#ovCoins'); el.hidden = !win;
-  if (win) { addCoins(10); setTimeout(() => { tone(1320, 0.06, 'square', 0.04); tone(1760, 0.1, 'square', 0.04, 0, 0.07); }, 450); }
+  if (win) {
+    // first win of the day pays double
+    const bonus = store.get('bonusDay', 0) !== today();
+    if (bonus) store.set('bonusDay', today());
+    addCoins(bonus ? 20 : 10);
+    el.querySelector('.n').textContent = bonus ? '+20' : '+10';
+    $('#ovBonus').textContent = bonus ? 'Tagesbonus' : '';
+    setTimeout(() => { tone(1320, 0.06, 'square', 0.04); tone(1760, 0.1, 'square', 0.04, 0, 0.07); if (bonus) tone(2093, 0.14, 'square', 0.04, 0, 0.16); }, 450);
+  }
+}
+const today = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+// progress toward the cheapest skin you do not have yet
+function nextHTML() {
+  const k = SKINS.filter(x => !owned.has(x.id)).sort((a, b) => a.p - b.p)[0];
+  if (!k) return '';
+  const f = Math.min(1, coins / k.p);
+  return '<span class="sw" style="background:' + k.bone + '"></span>' + k.n + '<span class="bar"><i style="width:calc(' + (f * 100).toFixed(1) + '% - 2px)"></i></span>'
+    + (coins >= k.p ? 'im Shop!' : Math.min(coins, k.p) + '/' + k.p);
+}
+function updOverMeta() { $('#ovNext').innerHTML = nextHTML(); }
+// match-winning confetti
+function confetti() {
+  for (let i = 0; i < 80; i++) G.parts.push({ x: rand(-4.5, 4.5), y: rand(2.5, 5.5), z: rand(-3, DZ), vx: rand(-0.6, 0.6), vy: rand(-0.5, 0.8), vz: rand(-0.3, 0.3), age: 0, life: rand(1.4, 2.6), c: pick([C.accent, C.bone, C.good, C.fire1, C.fire2]), g: 1.6 });
 }
 let shopSel = mySkin;
 function shopOpen() { shopSel = mySkin; showOnly('shop'); shopDraw(); }
@@ -2220,6 +2263,8 @@ function mpOverShow(sc, stats) {
   const rows = !my ? [] : MP.role === 1 ? [['Blockpunkte', my.b], ['Gerettet', my.d], ['Perfekte Pässe', my.s], ['Finten', my.f]] : [['Punkte', my.p], ['Abwehr', my.d]];
   $('#ovStats').innerHTML = rows.map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('');
   showCoinWin(win && MP.mySlot >= 0);
+  updOverMeta();
+  if (win) confetti();
   const b = tfig(MP.team, 0);
   if (win) { setBase(b, 'cheer'); setPose(b, 'cheer', 0); G.hype = 4; } else { setBase(b, 'sad'); setPose(b, 'sad', 0); }
   $('#againBtn').hidden = !MP.host;
