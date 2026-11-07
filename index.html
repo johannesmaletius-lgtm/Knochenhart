@@ -105,6 +105,27 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .slot.taken b{color:var(--bone)}
 .slot[aria-pressed="true"]{background:var(--accent);color:var(--ink);box-shadow:inset 0 0 0 2px var(--accent)}
 .slot[aria-pressed="true"] i{color:var(--ink)}
+.coins{display:flex;align-items:center;justify-content:center;gap:8px;margin:0;font-family:var(--font-display);font-size:16px;color:var(--accent);font-variant-numeric:tabular-nums}
+.coin{width:12px;height:12px;background:var(--accent);box-shadow:inset -3px -3px 0 #b8862e,inset 2px 2px 0 #ffe7a6;
+  clip-path:polygon(25% 0,75% 0,100% 25%,100% 75%,75% 100%,25% 100%,0 75%,0 25%)}
+.coinwin{font-size:22px}
+.coinwin:not([hidden]){animation:coinpop .5s steps(4) both}
+@keyframes coinpop{0%{transform:translateY(8px) scale(.6);opacity:0}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.coinwin:not([hidden]){animation:none}}
+#shop{justify-content:flex-start;padding-top:12px}
+.panel.shop{width:100%;max-width:330px;max-height:66%;gap:10px}
+.skins{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%;overflow-y:auto;min-height:0;padding:2px}
+.skin{font:inherit;display:flex;align-items:center;gap:8px;padding:6px 8px;border:0;cursor:pointer;text-align:left;
+  background:transparent;color:var(--bone);box-shadow:inset 0 0 0 2px var(--edge);min-height:44px}
+.skin .sw{flex:none;width:16px;height:16px;box-shadow:inset 0 -3px 0 var(--band,var(--accent))}
+.skin span.t{display:flex;flex-direction:column;line-height:1;gap:3px;min-width:0}
+.skin b{font-family:var(--font-display);font-size:11px;font-weight:400;letter-spacing:.02em;text-transform:uppercase}
+.skin em{font-style:normal;font-size:16px;color:var(--bone-dim);display:flex;align-items:center;gap:4px}
+.skin em .coin{width:9px;height:9px}
+.skin.owned em{color:var(--good)}
+.skin[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--accent)}
+.skin.on b{color:var(--accent)}
+#shopAct:disabled{opacity:.45;cursor:default}
 #pauseOv h2{font-family:var(--font-display);font-size:28px;margin:0;letter-spacing:.1em}
 @media (prefers-reduced-motion: reduce){ .btn:active{transform:none} }
 </style>
@@ -132,6 +153,7 @@ html{background:var(--screen)}
 
     <div class="ov" id="menu">
       <div class="panel">
+        <p class="coins" id="menuCoins" aria-label="Münzen"><span class="coin" aria-hidden="true"></span><span class="n">0</span></p>
         <div class="seg" role="group" aria-label="Schwierigkeit">
           <button id="lv0" data-lv="0" aria-pressed="false">Leicht</button>
           <button id="lv1" data-lv="1" aria-pressed="true">Normal</button>
@@ -139,6 +161,7 @@ html{background:var(--screen)}
         </div>
         <button class="btn" id="playBtn">Spielen</button>
         <button class="btn ghost" id="mpBtn">Mehrspieler</button>
+        <button class="btn ghost" id="shopBtn">Shop</button>
         <button class="btn ghost" id="howBtn">Anleitung</button>
         <p class="rec" id="rec"></p>
       </div>
@@ -153,10 +176,21 @@ html{background:var(--screen)}
         <dt><kbd>↑</kbd></dt><dd>Lob über den Block</dd>
         <dt>Tippen</dt><dd>Aufschlag, dann <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> wischen</dd>
         <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Mehrspieler vorne: Block links, rechts, breit, zurück. Tippen: springen, wenn der Ring zugeht</dd>
-        <dt>Tippen</dt><dd>Vorne beim Zuspiel: auf den Ring. <kbd>↑</kbd> legt den Ball als Finte über das Netz</dd>
+        <dt>Tippen</dt><dd>Vorne beim Zuspiel: auf den Ring. <kbd>←</kbd> <kbd>→</kbd> schnelles Zuspiel, <kbd>↑</kbd> Finte über das Netz</dd>
+        <dt><kbd>↓</kbd></dt><dd>Vorne: Finte oder Lob vom Gegner abfangen. Tippen, wenn der eigene Angriff geblockt wird: absichern</dd>
       </dl>
-      <p>Schlag dahin, wo der Block nicht ist. Volle Schädelleiste: Feuerball.</p>
+      <p>Schlag dahin, wo der Block nicht ist. Volle Schädelleiste: Feuerball. Volle Mauerleiste (vorne): der nächste Block sitzt.</p>
+      <p>Jeder Sieg bringt 10 Münzen für den Shop.</p>
       <button class="btn" id="howOk">Verstanden</button>
+    </div>
+
+    <div class="ov" id="shop" hidden>
+      <div class="panel shop">
+        <p class="coins" aria-label="Münzen"><span class="coin" aria-hidden="true"></span><span class="n" id="shopCoins">0</span></p>
+        <div class="skins" id="skinList" role="group" aria-label="Skins"></div>
+        <button class="btn" id="shopAct">Anlegen</button>
+        <button class="btn ghost" id="shopOk">Fertig</button>
+      </div>
     </div>
 
     <div class="ov dim" id="mpOv" hidden>
@@ -178,6 +212,7 @@ html{background:var(--screen)}
           <button class="slot" id="slot1" aria-pressed="false"><i>Vorne</i><b>KI</b></button>
           <button class="slot" id="slot3" aria-pressed="false"><i>Vorne</i><b>KI</b></button>
         </div>
+        <button class="btn ghost" id="mpShare">Link teilen</button>
         <button class="btn" id="mpGo">Start</button>
         <button class="btn ghost" id="mpLeave">Verlassen</button>
         <p class="rec" id="mpWait"></p>
@@ -193,6 +228,7 @@ html{background:var(--screen)}
     <div class="ov dim" id="over" hidden>
       <h2 id="ovTitle">Sieg!</h2>
       <p class="score" id="ovScore">15 : 12</p>
+      <p class="coins coinwin" id="ovCoins" hidden><span class="coin" aria-hidden="true"></span><span class="n">+10</span></p>
       <dl id="ovStats"></dl>
       <button class="btn" id="againBtn">Nochmal</button>
       <button class="btn ghost" id="menuBtn">Zum Menü</button>
@@ -590,7 +626,7 @@ function D() {
 function shake(n) { if (!reduceMotion) G.shake = Math.max(G.shake, n); }
 function slowmo(s) { G.slow = Math.max(G.slow, s); }
 // gesture hints: icons only, shown the first few times, then never again
-const HINTS = { serve: 'TIPPEN', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← → ↑ ↓ TIPPEN', set: 'TIPPEN ↑' };
+const HINTS = { serve: 'TIPPEN', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← → ↑ ↓ TIPPEN', set: 'TIPPEN ← → ↑' };
 const hintSeen = store.get('hints', {});
 let hint = '', hintT = 0;
 function setHint(key) {
@@ -1265,6 +1301,7 @@ function point(w, txt) {
 
 /* ---------------- menu demo ---------------- */
 function menuScene() {
+  me.skin = mySkin; mate.skin = oA.skin = oB.skin = null; mate.glow = oB.glow = false;
   G.mode = 'menu'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 0; G.fadeV = 0;
   resetCourt();
   me.lane = 1; place(me, 0, DZ); snapPose(me, 'ready'); setBase(me, 'ready');
@@ -1304,6 +1341,7 @@ function gameOver() {
   const s = G.stats;
   const rows = [['Perfekt', s.perfect], ['Längste Rallye', s.maxRally], ['Feuerbälle', s.fires]];
   $('#ovStats').innerHTML = rows.map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('');
+  showCoinWin(win);
   if (win) { setPose(me, 'cheer', 0); setBase(me, 'cheer'); G.hype = 4; } else { setBase(me, 'sad'); setPose(me, 'sad', 0); }
   showOnly('over');
 }
@@ -1316,9 +1354,10 @@ function togglePause(force) {
 }
 function showOnly(id) {
   if (id === 'over' && !MP.net) $('#againBtn').hidden = false;
-  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv']) $('#' + k).hidden = k !== id;
+  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop']) $('#' + k).hidden = k !== id;
   $('#pauseBtn').hidden = G.mode !== 'play' && G.mode !== 'mp';
-  if (id === 'menu') updRecord();
+  if (id === 'menu') { updRecord(); updCoins(); }
+  if (id !== 'over') $('#ovCoins').hidden = true;
 }
 function updRecord() {
   const rec = store.get('rec', null);
@@ -1425,6 +1464,59 @@ $('#soundBtn').addEventListener('click', () => { muted = !muted; store.set('mute
 updSoundIcon();
 setLevel(G.level);
 
+/* ---------------- coins, skins, shop ---------------- */
+// bone color, headband, optional accessory; bought with coins (10 per win)
+const SKINS = [
+  { id: 'knochen', n: 'Knochen', p: 0, bone: '#dcdcd2', band: '#f2c25e' },
+  { id: 'neon', n: 'Neon', p: 30, bone: '#8dffa8', band: '#ff5ad1' },
+  { id: 'nacht', n: 'Nacht', p: 40, bone: '#6f7f88', band: '#a77bff' },
+  { id: 'eis', n: 'Eis', p: 60, bone: '#a9dcff', band: '#ffffff' },
+  { id: 'lava', n: 'Lava', p: 80, bone: '#ff8a4c', band: '#ffe08a', fx: 'ember' },
+  { id: 'pirat', n: 'Pirat', p: 100, bone: '#dcdcd2', band: '#d2482f', acc: 'bandana' },
+  { id: 'teufel', n: 'Teufel', p: 120, bone: '#e86a5a', band: '#2b0f0f', acc: 'horns' },
+  { id: 'kuerbis', n: 'Kürbis', p: 150, bone: '#dcdcd2', band: '#3d6b2f', acc: 'pumpkin' },
+  { id: 'geist', n: 'Geist', p: 180, bone: '#e8f4ff', band: '#9fd6ff', alpha: 0.55 },
+  { id: 'koenig', n: 'König', p: 250, bone: '#f2c25e', band: '#d2482f', acc: 'crown' }
+];
+const SKIN = {}; for (const k of SKINS) SKIN[k.id] = k;
+let coins = store.get('coins', 0);
+const owned = new Set(store.get('skins', ['knochen']));
+let mySkin = SKIN[store.get('skin', 'knochen')] ? store.get('skin', 'knochen') : 'knochen';
+function updCoins() { for (const el of document.querySelectorAll('#menuCoins .n, #shopCoins')) el.textContent = coins; }
+function addCoins(n) { coins += n; store.set('coins', coins); updCoins(); }
+function showCoinWin(win) {
+  const el = $('#ovCoins'); el.hidden = !win;
+  if (win) { addCoins(10); setTimeout(() => { tone(1320, 0.06, 'square', 0.04); tone(1760, 0.1, 'square', 0.04, 0, 0.07); }, 450); }
+}
+let shopSel = mySkin;
+function shopOpen() { shopSel = mySkin; showOnly('shop'); shopDraw(); }
+function shopDraw() {
+  updCoins();
+  const list = $('#skinList');
+  list.innerHTML = SKINS.map(k => {
+    const have = owned.has(k.id);
+    return '<button class="skin' + (have ? ' owned' : '') + (k.id === mySkin ? ' on' : '') + '" data-id="' + k.id + '" aria-pressed="' + (k.id === shopSel) + '">'
+      + '<span class="sw" style="background:' + k.bone + ';--band:' + k.band + '"></span><span class="t"><b>' + k.n + '</b><em>'
+      + (k.id === mySkin ? 'aktiv' : have ? 'gekauft' : '<span class="coin"></span>' + k.p) + '</em></span></button>';
+  }).join('');
+  const k = SKIN[shopSel], have = owned.has(k.id), btn = $('#shopAct');
+  btn.disabled = k.id === mySkin || (!have && coins < k.p);
+  btn.textContent = k.id === mySkin ? 'Aktiv' : have ? 'Anlegen' : coins >= k.p ? 'Kaufen · ' + k.p : 'Noch ' + (k.p - coins) + ' Münzen';
+  me.skin = shopSel; // live preview on the skeleton below
+}
+$('#skinList').addEventListener('click', e => { const b = e.target.closest('.skin'); if (!b) return; shopSel = b.dataset.id; SFX.tick(); shopDraw(); });
+$('#shopAct').addEventListener('click', () => {
+  const k = SKIN[shopSel]; if (!k) return;
+  if (!owned.has(k.id)) {
+    if (coins < k.p) return;
+    addCoins(-k.p); owned.add(k.id); store.set('skins', [...owned]); SFX.win();
+  }
+  mySkin = k.id; store.set('skin', mySkin); shopDraw();
+});
+$('#shopBtn').addEventListener('click', () => { audioInit(); shopOpen(); });
+$('#shopOk').addEventListener('click', () => { me.skin = mySkin; showOnly('menu'); });
+updCoins();
+
 /* ================= multiplayer: up to 4 phones, 2 vs 2, one phone (the host) runs the match ================= */
 // slots: 0 team A back, 1 team A front, 2 team B back, 3 team B front; an empty slot is played by the computer
 // world: team A lives on z > 0, team B on z < 0; game logic works in team-local coordinates (lx, lz) and W() maps them
@@ -1506,7 +1598,7 @@ async function mpCreate() {
   audioInit(); mpMsg('…');
   try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('Keine Verbindung'); return; }
   const code = mpNewCode();
-  MP.host = true; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1 }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
+  MP.host = true; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
   MP.net = netCreate(code, {
     open() { mpLobbyShow(); },
     conn(id) {
@@ -1533,7 +1625,7 @@ async function mpJoin() {
   MP.host = false; MP.code = code; MP.mySlot = -1;
   const t0 = setTimeout(() => { if (!MP.myId) mpMsg('Raum nicht gefunden'); }, 9000);
   MP.net = netJoin(code, {
-    open(id) { clearTimeout(t0); MP.myId = id; },
+    open(id) { clearTimeout(t0); MP.myId = id; MP.net.toHost({ t: 'skin', sk: mySkin }); },
     msg(d) { mpClientMsg(d); },
     gone() { if (MP.net) { mpLeave(); popup('VERBINDUNG WEG', C.bad); } },
     fail(k) { clearTimeout(t0); mpMsg(k === 'nofound' ? 'Raum nicht gefunden' : 'Keine Verbindung'); MP.net = null; }
@@ -1558,11 +1650,22 @@ function mpLobbyDraw() {
   for (let i = 0; i < 4; i++) {
     const s = MP.slots[i], b = $('#slot' + i);
     b.querySelector('b').textContent = !s ? 'KI' : s.id === MP.myId ? 'DU' : 'P' + s.n;
+    b.querySelector('b').style.color = s && s.sk && SKIN[s.sk] && i !== MP.mySlot ? SKIN[s.sk].bone : '';
     b.setAttribute('aria-pressed', String(i === MP.mySlot));
     b.classList.toggle('taken', !!s && i !== MP.mySlot);
   }
   $('#mpGo').hidden = !MP.host;
-  $('#mpWait').textContent = MP.host ? '' : 'Warte auf Start';
+  if (!/kopiert|http/.test($('#mpWait').textContent) || !MP.host) $('#mpWait').textContent = MP.host ? '' : 'Warte auf Start';
+}
+function inviteURL() {
+  const base = /github\.io$/.test(location.hostname) || location.hostname === 'localhost' ? location.origin + location.pathname : 'https://johannesmaletius-lgtm.github.io/Knochenhart/';
+  return base + '?raum=' + MP.code + (useBC ? '&bc' : '');
+}
+async function mpShare() {
+  const url = inviteURL();
+  try { if (navigator.share) { await navigator.share({ title: 'Volleyskull', text: 'Spiel mit mir Volleyskull!', url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); $('#mpWait').textContent = 'Link kopiert'; }
+  catch (e) { $('#mpWait').textContent = url; }
 }
 function mpPickSlot(i) {
   if (MP.host) { if (MP.slots[i]) return; const me0 = MP.slots[MP.mySlot]; MP.slots[MP.mySlot] = null; MP.slots[i] = me0; mpLobbySync(); }
@@ -1572,6 +1675,7 @@ function mpHostMsg(id, d) {
   const i = MP.slots.findIndex(s => s && s.id === id);
   if (d.t === 'slot') { if (i >= 0 && !MP.slots[d.i] && G.mode !== 'mp') { MP.slots[d.i] = MP.slots[i]; MP.slots[i] = null; mpLobbySync(); } }
   else if (d.t === 'p') MP.net.send(id, { t: 'q', c: d.c });
+  else if (d.t === 'skin' && i >= 0 && SKIN[d.sk]) { MP.slots[i].sk = d.sk; mpLobbySync(); if (G.mode === 'mp') mpRoles(); }
   else if (d.t === 'in' && i >= 0 && G.mode === 'mp') hostInput(i, d.k, d.dx, d.dy, d.ht);
 }
 function mpClientMsg(d) {
@@ -1581,7 +1685,7 @@ function mpClientMsg(d) {
   else if (d.t === 's') mpSnap(d);
   else if (d.t === 'fx') applyFx(d.e);
   else if (d.t === 'q') { const r = (performance.now() - d.c) / 1000; MP.rtt = MP.rtt * 0.7 + r * 0.3; }
-  else if (d.t === 'over') mpOverShow(d.score);
+  else if (d.t === 'over') mpOverShow(d.score, d.stats);
 }
 
 /* ---------- entering a match (all phones) ---------- */
@@ -1589,7 +1693,7 @@ function mpRoles() {
   MP.mySlot = MP.slots.findIndex(s => s && s.id === MP.myId);
   MP.team = MP.mySlot >= 0 ? MP.mySlot >> 1 : 0; MP.role = MP.mySlot >= 0 ? MP.mySlot & 1 : 0;
   FLIP = MP.team === 1;
-  for (let i = 0; i < 4; i++) tfig(i >> 1, i & 1).band = i === MP.mySlot;
+  for (let i = 0; i < 4; i++) { const f = tfig(i >> 1, i & 1), sl = MP.slots[i]; f.band = i === MP.mySlot; f.skin = sl && sl.sk && SKIN[sl.sk] ? sl.sk : null; }
 }
 function mpEnter() {
   G.mode = 'mp'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 1; G.fadeV = -4; G.hype = 0;
@@ -1604,10 +1708,20 @@ function mpBegin() {
   MP.net.all({ t: 'start', level: MP.level });
   mpEnter();
   MP.st = { score: [0, 0], server: Math.random() < 0.5 ? 0 : 1, meter: [0, 0], fire: [false, false], phase: 'idle', inc: null, atk: null, srv: null,
-    hist: [{ L: 0, R: 0, LOB: 0 }, { L: 0, R: 0, LOB: 0 }], lane: [1, 1], arrive: [-9, -9], dash: [false, false], rally: 0 };
+    hist: [{ L: 0, R: 0, LOB: 0 }, { L: 0, R: 0, LOB: 0 }], lane: [1, 1], arrive: [-9, -9], dash: [false, false], rally: 0,
+    wall: [0, 0], stats: [0, 1, 2, 3].map(() => ({ p: 0, b: 0, d: 0, s: 0, f: 0 })) };
   for (const f of FIGS) f.seq = null;
   mpRally();
 }
+
+// the front player's wall bar: good blocking work fills it, a full bar makes the next block a sure point
+const WALLMAX = 8;
+function mpWall(t, n) {
+  const st = MP.st; if (!st || st.wall[t] >= WALLMAX) return;
+  st.wall[t] = Math.min(WALLMAX, st.wall[t] + n); MP.snapT = 0;
+  if (st.wall[t] >= WALLMAX) { S('fire'); fx({ k: 'pop', s: 'MAUER BEREIT', team: t }); }
+}
+const stat = (slot, k, n = 1) => { const st = MP.st; if (st && st.stats[slot]) st.stats[slot][k] += n; };
 
 /* ---------- host: effects that every phone plays ---------- */
 function fx(e) { applyFx(e); if (MP.host && MP.net) MP.net.all({ t: 'fx', e }); if (e.k === 'ball' || e.k === 'hold') MP.lastBall = e; }
@@ -1692,7 +1806,7 @@ function mpServeHit(t, h, ht) {
   const T = { perfect: 0.95, good: 1.05, weak: 1.2 }[q], md = { perfect: 0.32, good: 0.18, weak: 0.06 }[q];
   const o = q === 'perfect' && Math.random() < 0.5 ? { wob: rand(0.8, 1.2) * (Math.random() < 0.5 ? -1 : 1), wobF: Math.PI * 2 * rand(1, 1.5), spin: 1 } : { spin: 14 };
   mlaunch({ x: lane2x(r, lane), y: 0.85, z: sgn(r) * (DZ + 0.1) }, T, o);
-  mpIncoming(r, 'serve', lane, T, md, q);
+  mpIncoming(r, 'serve', lane, T, md, q).by = slotOf(t, 0);
 }
 function mpMeter(t, n) {
   const st = MP.st; if (st.fire[t]) return;
@@ -1760,6 +1874,7 @@ function mpResolve() {
     return;
   }
   defAnim(b, Math.abs(b.x - inc.x) < 2.6 ? (inc.type === 'tip' ? 'missTip' : 'miss') : 'lunge', side);
+  if (inc.by != null) stat(inc.by, 'p');
   after(0.45, () => mpPoint(1 - d, inc.type === 'block' ? 'GEBLOCKT!' : inc.type === 'tip' ? 'FINTE!' : inc.type === 'serve' ? 'ASS!' : 'PUNKT!'));
 }
 function mpDig(d, inc, late, digger) {
@@ -1773,6 +1888,8 @@ function mpDig(d, inc, late, digger) {
   else if (Math.abs(off) > 0.42) kind = 'reach';
   else kind = inc.type === 'spike' || inc.type === 'fire' ? 'low' : 'clean';
   const dur = defAnim(digger, kind, kind === 'reach' ? Math.sign(off) : (b.moveDir || 1));
+  stat(slotOf(d, digger === b ? 0 : 1), 'd');
+  if (digger !== b) mpWall(d, 1);
   if (inc.type === 'tip' && digger === b) st.lane[d] = inc.lane;
   S('dig'); fx({ k: 'dust', x: ball.x, z: ball.z, n: 6 }); msparks(kind === 'dive' || kind === 'pancake' ? 7 : 4, ['bone']); fx({ k: 'vib', ms: 12, team: d });
   st.rally++; if (st.rally >= 4) { fx({ k: 'hype', v: 0.5 + st.rally * 0.05 }); if (st.rally % 2 === 0) S('crowd'); }
@@ -1788,23 +1905,24 @@ function mpDig(d, inc, late, digger) {
   const tset = G.t + 1.0, ssl = slotOf(d, 1);
   st.setq = { t: d, ts: tset };
   MP.snapT = 0;
-  if (human(ssl)) at(tset + 0.18 + grace(ssl), () => mpSetGo(d, 'weak', false));
+  if (human(ssl)) at(tset + 0.18 + grace(ssl), () => mpSetGo(d, 'weak', 'high'));
   else {
-    const dif = mpDiff(), dump = Math.random() < 0.06 + 0.08 * dif;
-    at(tset, () => mpSetGo(d, Math.random() < 0.3 + 0.5 * dif ? 'perfect' : 'good', dump));
+    const dif = mpDiff(), r = Math.random();
+    at(tset, () => mpSetGo(d, Math.random() < 0.3 + 0.5 * dif ? 'perfect' : 'good', r < 0.06 + 0.08 * dif ? 'dump' : r < 0.3 + 0.1 * dif ? 'quick' : 'high'));
   }
 }
-function mpSetGo(d, q, dump) {
+function mpSetGo(d, q, mode) {
   const st = MP.st; if (!st || !st.setq || st.setq.t !== d) return;
   st.setq = null;
-  if (dump) mpDump(d); else mpSet(d, q);
+  if (q === 'perfect') stat(slotOf(d, 1), 's');
+  if (mode === 'dump') mpDump(d); else mpSet(d, q, mode === 'quick');
 }
-function mpSetInput(t, ht, dump) {
+function mpSetInput(t, ht, mode) {
   const st = MP.st, sq = st.setq; if (!sq || sq.t !== t) return;
   const dt = ht - sq.ts;
   if (dt < -0.35) { S('err'); return; }
   const adt = Math.abs(dt), q = adt < 0.08 ? 'perfect' : adt < 0.18 ? 'good' : 'weak';
-  mpSetGo(t, q, dump);
+  mpSetGo(t, q, mode);
 }
 // setter dump: a soft push over the net while everyone expects a set
 function mpDump(d) {
@@ -1813,10 +1931,10 @@ function mpDump(d) {
   fx({ k: 'pop', s: 'FINTE!', team: d });
   const lane = (Math.random() * 3) | 0, T = 0.8;
   mlaunch({ x: so * LX[lane] * 0.85, y: 0.4, z: so * 1.6 }, T, { spin: 2 });
-  st.rally++;
+  st.rally++; stat(slotOf(d, 1), 'f');
   const D0 = st.dump = { o, save: false };
   const inc = mpIncoming(o, 'tip', lane, T, 0.1, 'good');
-  inc.z = so * 1.7;
+  inc.z = so * 1.7; inc.by = slotOf(d, 1);
   inc.blkSave = () => D0.save;
   // the other team's front player can drop back and grab it (swipe down)
   const bsl = slotOf(o, 1);
@@ -1825,23 +1943,27 @@ function mpDump(d) {
 }
 function mpDumpSave(t) {
   const st = MP.st, D0 = st.dump; if (!D0 || D0.o !== t || D0.save) return;
-  D0.save = true;
+  if (D0.until && G.t > D0.until) { S('err'); return; }
+  D0.save = true; fx({ k: 'pop', s: 'ABGEFANGEN', team: t });
   const blk = tfig(t, 1), inc = st.inc;
   if (inc && inc.d === t) { blk.tx = inc.x; blk.tz = inc.z - sgn(t) * 0.3; blk.sx = blk.sz = 9; }
   S('step');
 }
-function mpSet(a, sq) {
+function mpSet(a, sq, quick) {
   const st = MP.st; if (!st || G.mode !== 'mp') return;
   const o = 1 - a, s = sgn(a), b = tfig(a, 0), set = tfig(a, 1), blk = tfig(o, 1), def = tfig(o, 0), dif = mpDiff();
   sq = sq || 'good';
   setPose(set, 'set', 0.3); S('set');
+  // quick set: low and fast, the block has almost no time to read it
+  if (quick) { S('set'); msparks(4, ['bone']); }
   if (sq === 'perfect') { jump(set, 2.0); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); msparks(5, ['accent', 'fire1']); }
   else if (sq === 'weak') fx({ k: 'burst', c: 'bad' });
   const Cp = { x: s * (LX[st.lane[a]] + 0.12), y: CY, z: s * CZ };
-  mlaunch(Cp, 0.9, { spin: 3 });
-  const tc = G.t + 0.9;
+  const TS = quick ? 0.62 : 0.9;
+  mlaunch(Cp, TS, { spin: quick ? 8 : 3 });
+  const tc = G.t + TS;
   // a clean set gives the hitter a wider timing window
-  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null, win: { perfect: 1.4, good: 1, weak: 0.8 }[sq], tb: tc - 0.3, bj: false, bq: null };
+  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null, win: { perfect: 1.4, good: 1, weak: 0.8 }[sq] * (quick ? 0.85 : 1), tb: tc - 0.3, bj: false, bq: null, quick: !!quick };
   st.phase = 'attack'; MP.snapT = 0;
   blk.tx = clamp(Cp.x, -2.8, 2.8); blk.tz = sgn(o) * 0.5; blk.sx = blk.sz = 7; setBase(blk, 'blockReady'); setPose(blk, 'blockReady');
   const bsl = slotOf(o, 1), asl = slotOf(a, 0), dsl = slotOf(o, 0);
@@ -1849,9 +1971,9 @@ function mpSet(a, sq) {
     // computer blocker: leans on what this hitter likes, sometimes shows one side and switches
     const h = st.hist[a], tot = h.L + h.R + h.LOB + 1;
     const w = { L: 1 + 1.4 * h.L / tot, R: 1 + 1.4 * h.R / tot, W: 0.35 + 0.5 * dif + 0.3 * (h.L + h.R) / tot, D: 0.15 + 0.3 * dif + 2 * h.LOB / tot };
-    const k = AI.weighted(w);
+    const k = quick ? pick(['L', 'R', 'W']) : AI.weighted(w);
     const v = k === 'L' ? -s : k === 'R' ? s : k; // attacker's left in world x
-    const lead = lerp(0.72, 0.4, dif);
+    const lead = quick ? 0.4 : lerp(0.72, 0.4, dif);
     if ((k === 'L' || k === 'R') && Math.random() < 0.3 * dif) {
       at(tc - 0.78, () => mpBlock(A, -v));
       at(tc - Math.max(0.36, lead * 0.8), () => mpBlock(A, v));
@@ -1870,7 +1992,7 @@ function mpSet(a, sq) {
   if (human(bsl)) at(A.tb + 0.2, () => { if (st.atk === A && A.block != null && A.block !== 'D') mpBlockJump(A, null, 'weak'); });
   else at(A.tb + rand(-0.06, 0.06), () => {
     if (st.atk !== A || A.block == null || A.block === 'D') return;
-    const r = Math.random();
+    const r = Math.random() + (quick ? 0.3 : 0);
     mpBlockJump(A, null, r < 0.2 + 0.4 * dif ? 'perfect' : r < 0.75 ? 'good' : 'weak');
   });
   if (!human(asl)) at(tc + rand(-0.12, 0.12) * (1.25 - dif), () => {
@@ -1914,7 +2036,7 @@ function mpBlockJump(A, ht, q0) {
   blk.seq = null; blk.lock = false;
   const p = A.block === 'W' ? 'blockW' : A.block < 0 ? 'blockL' : 'blockR';
   jump(blk, q === 'perfect' ? 3.7 : 3.4); setPose(blk, p, 0, 30); setBase(blk, p); S('toss');
-  if (q === 'perfect') { fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); }
+  if (q === 'perfect') { fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); mpWall(1 - A.a, 1); }
   else if (q === 'miss') fx({ k: 'burst', c: 'bad' });
   blk.onLand = () => { setBase(blk, 'ready'); fx({ k: 'dust', x: blk.x, z: blk.z, n: 4 }); };
 }
@@ -1949,6 +2071,12 @@ function mpAttack(a, dir, ht) {
   const blk = tfig(o, 1);
   const inLine = A.block === 'W' || A.block === wx;
   const blocked = inLine && A.bj && A.bq !== 'miss';
+  if (blocked && st.wall[o] >= WALLMAX) {
+    st.wall[o] = 0;
+    fx({ k: 'pop', s: 'MAUER!', team: o }); fx({ k: 'flash', v: 0.6 }); S('fire');
+    mpStuff(A, wx, 2);
+    return;
+  }
   if (blocked) {
     const bq = A.bq, m = { perfect: [0.4, 0.6, 0.15], good: [1, 1, 0], weak: [1.6, 1.5, -0.15] }[bq];
     const r = Math.random(), tool = BAL.tool[q] * m[0], touch = BAL.touch * m[1];
@@ -1961,7 +2089,7 @@ function mpAttack(a, dir, ht) {
   const tx = clamp(A.C.x + wx * rand(2.0, 2.8), -4.1, 4.1), lane = laneOfX(o, tx);
   const T = { perfect: 0.58, good: 0.68, weak: 0.8 }[q], md = { perfect: 0.14, good: 0.08, weak: 0.03 }[q] - (A.block === 'D' ? 0.03 : 0);
   mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, T, { spin: 22 });
-  mpIncoming(o, 'spike', lane, T, Math.max(0, md), q, (A.block === 'D' ? 0.15 : 0) + (A.defRead === lane ? 0.2 : 0));
+  mpIncoming(o, 'spike', lane, T, Math.max(0, md), q, (A.block === 'D' ? 0.15 : 0) + (A.defRead === lane ? 0.2 : 0)).by = slotOf(a, 0);
 }
 function mpFire(A, wx) {
   const st = MP.st, a = A.a, o = 1 - a;
@@ -1988,7 +2116,12 @@ function mpLob(A, q) {
     return;
   }
   mlaunch({ x: so * LX[lane] * 0.85, y: 0.45, z: so * 3.0 }, T, { spin: 3 });
-  mpIncoming(o, 'tip', lane, T, A.block === 'W' ? 0.4 : A.block != null ? 0.22 : 0.15, q);
+  const inc = mpIncoming(o, 'tip', lane, T, A.block === 'W' ? 0.4 : A.block != null ? 0.22 : 0.15, q);
+  inc.by = slotOf(a, 0);
+  const D0 = st.dump = { o, save: false, until: G.t + 0.5 };
+  inc.blkSave = () => D0.save;
+  if (!human(slotOf(o, 1)) && Math.random() < 0.12 + 0.2 * mpDiff()) after(rand(0.2, 0.4), () => mpDumpSave(o));
+  after(T + 0.3, () => { if (st.dump === D0) st.dump = null; });
 }
 function mpHands(A, wx, cb) {
   const blk = tfig(1 - A.a, 1);
@@ -2002,13 +2135,14 @@ function mpBlockOut(A, wx) {
     const o = 1 - A.a, blk = tfig(o, 1); seq(blk, [['blockOw', 0.35, 30], ['ready', 0.25, 12]]);
     mlaunch({ x: wx * rand(5.6, 6.8), y: 0, z: sgn(o) * rand(5, 9) }, 0.8, { spin: 25 });
     after(0.45, () => defAnim(tfig(o, 0), 'lunge', wx));
-    after(0.95, () => mpPoint(A.a, 'BLOCK-AUS!'));
+    after(0.95, () => { stat(slotOf(A.a, 0), 'p'); mpPoint(A.a, 'BLOCK-AUS!'); });
   });
 }
 function mpTouch(A, wx) {
   mpHands(A, wx, () => {
     const o = 1 - A.a; S('touch'); fx({ k: 'net', v: 0.5 }); fx({ k: 'shake', v: 2 }); fx({ k: 'burst', c: 'bone' }); msparks(6, ['bone', 'accent']);
     seq(tfig(o, 1), [['blockOw', 0.18, 34], [wx < 0 ? 'blockL' : 'blockR', 0.15, 20]]);
+    mpWall(o, 1);
     const lane = (Math.random() * 3) | 0;
     mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.0, { spin: 14 });
     mpIncoming(o, 'free', lane, 1.0, 0.12, 'good');
@@ -2028,18 +2162,33 @@ function mpStuff(A, wx, bonus) {
       st.phase = 'dead';
       const set = tfig(a, 1);
       after(0.12, () => defAnim(set, Math.abs(set.x - sx) < 1.6 ? 'miss' : 'lunge', sx < set.x ? -1 : 1));
+      stat(slotOf(1 - a, 1), 'b'); stat(slotOf(1 - a, 1), 'p');
+      if ((bonus || 0) < 2) mpWall(1 - a, 2);
       after(0.75, () => mpPoint(1 - a, 'GEBLOCKT!'));
       return;
     }
-    // it bounces back: the hitter has to cover their own side
+    mpWall(1 - a, 1);
+    // it bounces back: the hitter covers, and the setter can jump in (tap on the ring)
     const rl = (Math.random() * 3) | 0, T = lerp(BAL.reboundT[0], BAL.reboundT[1], mpDiff());
     mlaunch({ x: lane2x(a, rl), y: 0.8, z: sa * 3.3 }, T, { spin: -14 });
-    mpIncoming(a, 'block', rl, T, 0, 'good');
+    const inc = mpIncoming(a, 'block', rl, T, 0, 'good');
+    const cov = st.cover = { t: a, tc: G.t + T * 0.55, ok: false };
+    inc.blkSave = () => cov.ok;
+    if (!human(slotOf(a, 1)) && Math.random() < 0.25 + 0.3 * mpDiff()) at(cov.tc, () => mpCover(a, cov.tc));
+    after(T + 0.3, () => { if (st.cover === cov) st.cover = null; });
   });
+}
+function mpCover(t, ht) {
+  const st = MP.st, cov = st.cover; if (!cov || cov.t !== t || cov.ok) return;
+  if (Math.abs(ht - cov.tc) > 0.17) { S('err'); return; }
+  cov.ok = true; st.cover = null;
+  const set = tfig(t, 1), inc = st.inc;
+  if (inc && inc.d === t) { set.tx = inc.x; set.tz = inc.z - sgn(t) * 0.4; set.sx = set.sz = 10; }
+  setPose(set, 'reflex', 0.3, 30); S('step'); fx({ k: 'burst', c: 'accent' });
 }
 function mpPoint(w, txt) {
   const st = MP.st; if (!st || st.phase === 'point' || G.mode !== 'mp') return;
-  G.ev.length = 0; st.phase = 'point'; st.inc = st.atk = st.srv = st.setq = st.dump = null;
+  G.ev.length = 0; st.phase = 'point'; st.inc = st.atk = st.srv = st.setq = st.dump = st.cover = null;
   st.score[w]++;
   const l = 1 - w, long = st.rally >= 4;
   fx({ k: 'pop', s: txt, team: w });
@@ -2056,18 +2205,21 @@ function mpPoint(w, txt) {
   after(1.35, mpRally);
 }
 function mpOver() {
-  const sc = MP.st.score.slice();
-  MP.net.all({ t: 'over', score: sc });
-  mpOverShow(sc);
+  const sc = MP.st.score.slice(), stats = MP.st.stats;
+  MP.net.all({ t: 'over', score: sc, stats });
+  mpOverShow(sc, stats);
 }
-function mpOverShow(sc) {
+function mpOverShow(sc, stats) {
   G.mode = 'mpOver';
   const mine = sc[MP.team], theirs = sc[1 - MP.team], win = mine > theirs;
   SFX.match(win);
   $('#ovTitle').textContent = win ? 'Sieg!' : 'Niederlage';
   $('#ovTitle').className = win ? 'win' : 'lose';
   $('#ovScore').textContent = mine + ' : ' + theirs;
-  $('#ovStats').innerHTML = '';
+  const my = stats && MP.mySlot >= 0 ? stats[MP.mySlot] : null;
+  const rows = !my ? [] : MP.role === 1 ? [['Blockpunkte', my.b], ['Gerettet', my.d], ['Perfekte Pässe', my.s], ['Finten', my.f]] : [['Punkte', my.p], ['Abwehr', my.d]];
+  $('#ovStats').innerHTML = rows.map(r => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('');
+  showCoinWin(win && MP.mySlot >= 0);
   const b = tfig(MP.team, 0);
   if (win) { setBase(b, 'cheer'); setPose(b, 'cheer', 0); G.hype = 4; } else { setBase(b, 'sad'); setPose(b, 'sad', 0); }
   $('#againBtn').hidden = !MP.host;
@@ -2095,9 +2247,11 @@ function hostInput(slot, k, dx, dy, ht) {
     else if (dy < 0 && ph === 'defend') mpDash(t, ht);
   } else {
     // setter: tap on the ring = set, swipe up = dump over the net
-    if (st.setq && st.setq.t === t) { mpSetInput(t, ht, k === 'swipe' && dy < 0 && ay > ax * 1.1); return; }
-    // the other team dumped: swipe down to drop back and grab it
+    if (st.setq && st.setq.t === t) { mpSetInput(t, ht, k !== 'swipe' ? 'high' : dy < 0 && ay > ax * 1.1 ? 'dump' : ax > ay ? 'quick' : 'high'); return; }
+    // the other team dumped or lobbed: swipe down to turn and grab it
     if (st.dump && st.dump.o === t && k === 'swipe' && dy > 0 && ay > ax) { mpDumpSave(t); return; }
+    // own hitter got blocked: tap on the ring to cover the rebound
+    if (st.cover && st.cover.t === t && k === 'tap') { mpCover(t, ht); return; }
     if (ph === 'attack' && st.atk && st.atk.a === 1 - t) {
       // blocker: sideways = that side of the hitter, up = wide, down = drop back, tap = jump
       if (k === 'tap') { mpBlockJump(st.atk, ht); return; }
@@ -2147,7 +2301,8 @@ function mpSnapOut() {
   const f = FIGS.map(g => [+g.x.toFixed(3), +g.y.toFixed(3), +g.z.toFixed(3), g.tgt, g.rate, +g.lean.toFixed(2), g.lock ? 1 : 0]);
   const A = st.atk, I = st.inc, V = st.srv;
   const Q = st.setq;
-  return { t: 's', T: G.t, ph: st.phase, pz: st.paused ? 1 : 0, sq: Q ? [Q.t, Q.ts] : 0, sc: st.score, sv: st.server, m: st.meter, fi: st.fire, ln: st.lane, f,
+  const CV = st.cover;
+  return { t: 's', T: G.t, ph: st.phase, pz: st.paused ? 1 : 0, sq: Q ? [Q.t, Q.ts] : 0, w: st.wall, cv: CV ? [CV.t, CV.tc] : 0, sc: st.score, sv: st.server, m: st.meter, fi: st.fire, ln: st.lane, f,
     a: A ? [A.a, A.tc, A.hit ? 1 : 0, A.block, A.C.x, A.tb, A.bj ? 1 : 0] : 0, i: I ? [I.x, I.z, I.tMark, I.d] : 0, v: V ? [V.t, V.tp, V.hit ? 1 : 0] : 0 };
 }
 function mpSnap(d) {
@@ -2174,6 +2329,8 @@ function mpViewFrom(d) {
   if (MP.role === 0 && d.v && d.v[0] === T && !d.v[2] && d.ph === 'serveToss') v.ring = d.v[1];
   // front player: ring for the set, ring for the block jump
   if (MP.role === 1 && d.sq && d.sq[0] === T) v.ring = d.sq[1];
+  if (MP.role === 1 && d.cv && d.cv[0] === T) v.ring = d.cv[1];
+  if (d.w) { v.wall = d.w[T]; tfig(0, 1).glow = d.w[0] >= WALLMAX; tfig(1, 1).glow = d.w[1] >= WALLMAX; }
   if (MP.role === 1 && d.a && d.a[0] !== T && !d.a[2] && !d.a[6] && d.a[3] !== 'D') v.ring = d.a[5];
   if (!!d.pz !== !!v.paused) { v.paused = !!d.pz; if (!MP.host) mpShowPause(v.paused); }
   v.inc = d.i ? { x: d.i[0], z: d.i[1], tMark: d.i[2], done: false } : null;
@@ -2237,6 +2394,7 @@ $('#mpCode').addEventListener('keydown', e => { if (e.key === 'Enter') mpJoin();
 $('#mpBack').addEventListener('click', () => { if (MP.net) { MP.net.close(); MP.net = null; } menuScene(); });
 $('#mpLeave').addEventListener('click', mpLeave);
 $('#mpGo').addEventListener('click', mpBegin);
+$('#mpShare').addEventListener('click', mpShare);
 for (let i = 0; i < 4; i++) $('#slot' + i).addEventListener('click', () => mpPickSlot(i));
 
 /* ---------------- render ---------------- */
@@ -2306,7 +2464,9 @@ function drawFig(f) {
   const base = pv(f.x, 0, f.z), b = boostAt(base.d);
   const pts = [];
   for (let j = 0; j < 13; j++) pts.push(pv(f.x + JT[j * 2] * b, f.y + JT[j * 2 + 1] * b, f.z));
-  const col = f.col, sc = base.s * b;
+  const SK = f.skin ? SKIN[f.skin] : null;
+  const col = SK ? SK.bone : f.col, sc = base.s * b;
+  if (SK && SK.alpha) ctx.globalAlpha = SK.alpha;
   for (const [a, c] of BONES) line(pts[a].x, pts[a].y, pts[c].x, pts[c].y, col);
   // ribcage + pelvis drawn across the spine
   const n = pts[1], h = pts[8]; const vx = h.x - n.x, vy = h.y - n.y, len = Math.hypot(vx, vy) || 1;
@@ -2314,20 +2474,41 @@ function drawFig(f) {
   for (let i = 0; i < 3; i++) { const t = 0.2 + i * 0.2, cx = n.x + vx * t, cy = n.y + vy * t, w = rw * (1 - i * 0.18); line(cx - qx * w, cy - qy * w, cx + qx * w, cy + qy * w, col); }
   const pw = 0.12 * sc; line(h.x - qx * pw, h.y - qy * pw, h.x + qx * pw, h.y + qy * pw, col);
   // blocker hands are the tell, so they get chunky bright pixels
-  if ((f === oB || f === mate) && f.tgt.startsWith('block')) for (const j of [6, 7]) rect(pts[j].x - 1, pts[j].y - 1, 3, 2, C.bone);
+  if ((f === oB || f === mate) && f.tgt.startsWith('block')) for (const j of [6, 7]) rect(pts[j].x - 1, pts[j].y - 1, 3, 2, f.glow ? C.fire1 : C.bone);
+  if (f.glow && (G.mode === 'mp' || G.mode === 'mpOver')) for (const j of [6, 7]) for (let i = 0; i < 3; i++) {
+    const fy = pts[j].y - 2 - ((G.t * 16 + i * 2 + j) % 5);
+    rect(pts[j].x + Math.round(Math.sin(G.t * 11 + i * 2 + j) * 1.5), fy, 1, 1, i === 0 ? C.fire1 : i === 1 ? C.fire2 : C.fire3);
+  }
   // skull
   const r = Math.max(1, Math.round(0.15 * sc)), hx = Math.round(pts[0].x), hy = Math.round(pts[0].y);
-  disc(hx, hy, r, col);
-  if (f.front !== FLIP) {
+  const facing = f.front !== FLIP, acc = SK && SK.acc;
+  if (acc === 'pumpkin') { disc(hx, hy, r + 1, '#e07b2a'); rect(hx - 1, hy - r - 1, 1, 2, '#c4621a'); rect(hx + 1, hy - r - 1, 1, 2, '#c4621a'); rect(hx, hy - r - 3, 1, 2, '#3d6b2f'); }
+  else disc(hx, hy, r, col);
+  if (acc === 'pumpkin') { if (facing && r >= 2) { rect(hx - 2, hy - 1, 1, 1, '#ffe08a'); rect(hx + 2, hy - 1, 1, 1, '#ffe08a'); rect(hx - 1, hy + 1, 3, 1, '#ffe08a'); } }
+  else if (facing) {
     const glow = G.t - AI.planT < 2.2 && G.mode === 'play' && ((G.t * 8) | 0) % 2 === 0;
     if (glow && r >= 2) { rect(hx - 2, hy - 1, 2, 2, C.eye); rect(hx + 1, hy - 1, 2, 2, C.eye); }
     else if (r >= 2) { rect(hx - 1, hy, 1, 1, C.eye); rect(hx + 1, hy, 1, 1, C.eye); if (r >= 3) rect(hx, hy + 2, 1, 1, C.ink); }
     else rect(hx, hy, 1, 1, C.eye);
   } else if (r >= 2) rect(hx + r - 1, hy + 1, 1, 1, C.boneDim);
-  if (f.band) {
-    const yb = hy - Math.floor(r / 3), w = Math.floor(Math.sqrt(Math.max(0, r * r + r * 0.8 - (yb - hy) ** 2)));
-    rect(hx - w, yb, 2 * w + 1, 1, (G.mode === 'mp' ? MP.view && MP.view.fire : G.fire && G.mode === 'play') ? C.fire2 : C.accent);
+  if (acc === 'bandana') {
+    rect(hx - r, hy - r, 2 * r + 1, Math.max(1, r - 1), SK.band); rect(hx + r, hy - 1, 2, 1, SK.band); rect(hx + r + 1, hy, 1, 1, SK.band);
+    if (facing && r >= 2) rect(hx - 2, hy - 1, 2, 2, C.ink);
+  } else if (acc === 'horns') {
+    const hc = '#3a1414'; rect(hx - r, hy - r - 1, 1, 2, hc); rect(hx - r - 1, hy - r - 2, 1, 1, hc); rect(hx + r, hy - r - 1, 1, 2, hc); rect(hx + r + 1, hy - r - 2, 1, 1, hc);
+  } else if (acc === 'crown') {
+    const cc = '#ffd75a'; rect(hx - r, hy - r - 2, 2 * r + 1, 2, cc); rect(hx - r, hy - r - 3, 1, 1, cc); rect(hx, hy - r - 4, 1, 2, cc); rect(hx + r, hy - r - 3, 1, 1, cc); rect(hx, hy - r - 2, 1, 1, C.bad);
   }
+  if (SK && SK.fx === 'ember') for (let i = 0; i < 3; i++) {
+    const ex = hx + Math.round(Math.sin(G.t * 7 + i * 2.1 + f.x) * (r + 1)), ey = hy - r - 1 - ((G.t * 14 + i * 3) % 5);
+    rect(ex, ey, 1, 1, i === 0 ? C.fire1 : C.fire2);
+  }
+  if (f.band && acc !== 'bandana') {
+    const yb = hy - Math.floor(r / 3), w = Math.floor(Math.sqrt(Math.max(0, r * r + r * 0.8 - (yb - hy) ** 2)));
+    const fire = G.mode === 'mp' ? MP.view && MP.view.fire : G.fire && G.mode === 'play';
+    rect(hx - w, yb, 2 * w + 1, 1, fire ? C.fire2 : SK ? SK.band : C.accent);
+  }
+  ctx.globalAlpha = 1;
   f._head = { x: hx, y: hy, r };
 }
 function drawBall() {
@@ -2407,6 +2588,14 @@ function drawHUD() {
   for (let i = 0; i < BAL.meterMax; i++) {
     const on = FI || i < MT, col = on ? (FI ? (((G.t * 10 + i) | 0) % 2 ? C.fire1 : C.fire2) : C.bone) : C.court2, x = cx - BAL.meterMax * 2 + i * 4 + 1;
     rect(x, 24, 3, 2, col); rect(x + 1, 26, 1, 1, col);
+  }
+  if (mpv && MP.role === 1 && mpv.wall != null) {
+    ctx.globalAlpha = 0.78; rect(cx - WALLMAX * 2.5 - 1, 30, WALLMAX * 5 + 1, 6, C.ink); ctx.globalAlpha = 1;
+    const ready = mpv.wall >= WALLMAX;
+    for (let i = 0; i < WALLMAX; i++) {
+      const on = ready || i < mpv.wall, col = ready ? (((G.t * 10 + i) | 0) % 2 ? C.fire1 : C.fire2) : on ? C.bone : C.court2;
+      const bx = Math.round(cx - WALLMAX * 2.5) + i * 5; rect(bx, 31, 4, 2, col); rect(bx + (i % 2 ? 0 : 2), 33, 2, 1, col);
+    }
   }
   if (hint && (G.mode === 'play' || G.mode === 'mp')) {
     const a = Math.min(1, (G.t - hintT) * 4) * (0.65 + 0.35 * Math.sin(G.t * 6));
@@ -2551,6 +2740,14 @@ function boot(data) {
     showOnly(null); startRally();
   }
   requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
+  // invite link (?raum=CODE): straight into that room
+  try {
+    const qs = new URLSearchParams(location.search), room = (qs.get('raum') || '').toUpperCase();
+    if (/^[A-Z0-9]{4}$/.test(room)) {
+      qs.delete('raum'); history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs.toString().replace(/=(&|$)/g, '$1') : ''));
+      mpOpen(); $('#mpCode').value = room; mpJoin();
+    }
+  } catch (e) {}
 }
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ level: G.level, mode: G.mode, score: G.score, server: G.server, meter: G.meter, fire: G.fire, stats: G.stats })); } catch (e) {}
 const hot = window.claude && window.claude.hot;
