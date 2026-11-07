@@ -90,6 +90,21 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 #over dt{color:var(--bone-dim)}
 #over dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
 .win{color:var(--good)} .lose{color:var(--bad)}
+#mpOv input{font-family:var(--font-display);font-size:20px;letter-spacing:.3em;text-transform:uppercase;text-align:center;width:6.2em;
+  background:var(--ink);color:var(--bone);border:0;box-shadow:inset 0 0 0 2px var(--edge);padding:9px 6px}
+#mpOv input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#mpOv .join{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+#mpOv .join .btn{min-width:0}
+.room{font-family:var(--font-display);font-size:34px;letter-spacing:.24em;margin:0;color:var(--accent)}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.slots .tm{font-family:var(--font-display);font-size:12px;color:var(--bone-dim);text-align:center}
+.slot{font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;border:0;cursor:pointer;
+  background:transparent;color:var(--bone);box-shadow:inset 0 0 0 2px var(--edge);min-width:96px}
+.slot i{font-style:normal;font-size:15px;color:var(--bone-dim)}
+.slot b{font-family:var(--font-display);font-size:15px}
+.slot.taken b{color:var(--bone)}
+.slot[aria-pressed="true"]{background:var(--accent);color:var(--ink);box-shadow:inset 0 0 0 2px var(--accent)}
+.slot[aria-pressed="true"] i{color:var(--ink)}
 #pauseOv h2{font-family:var(--font-display);font-size:28px;margin:0;letter-spacing:.1em}
 @media (prefers-reduced-motion: reduce){ .btn:active{transform:none} }
 </style>
@@ -123,6 +138,7 @@ html{background:var(--screen)}
           <button id="lv2" data-lv="2" aria-pressed="false">Schwer</button>
         </div>
         <button class="btn" id="playBtn">Spielen</button>
+        <button class="btn ghost" id="mpBtn">Mehrspieler</button>
         <button class="btn ghost" id="howBtn">Anleitung</button>
         <p class="rec" id="rec"></p>
       </div>
@@ -136,9 +152,35 @@ html{background:var(--screen)}
         <dt><kbd>↙</kbd> <kbd>↘</kbd></dt><dd>Schmettern, wenn der Ring zugeht</dd>
         <dt><kbd>↑</kbd></dt><dd>Lob über den Block</dd>
         <dt>Tippen</dt><dd>Aufschlag, dann <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> wischen</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Mehrspieler vorne: Block links, rechts, breit, zurück</dd>
       </dl>
       <p>Schlag dahin, wo der Block nicht ist. Volle Schädelleiste: Feuerball.</p>
       <button class="btn" id="howOk">Verstanden</button>
+    </div>
+
+    <div class="ov dim" id="mpOv" hidden>
+      <div class="panel" id="mpStart">
+        <button class="btn" id="mpCreate">Raum erstellen</button>
+        <div class="join">
+          <input id="mpCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Raumcode">
+          <button class="btn ghost" id="mpJoin">Beitreten</button>
+        </div>
+        <button class="btn ghost" id="mpBack">Zurück</button>
+        <p class="rec" id="mpMsg" aria-live="polite"></p>
+      </div>
+      <div class="panel" id="mpLobby" hidden>
+        <p class="room" id="mpRoom">----</p>
+        <div class="slots" role="group" aria-label="Plätze">
+          <span class="tm">A</span><span class="tm">B</span>
+          <button class="slot" id="slot0" aria-pressed="false"><i>Hinten</i><b>KI</b></button>
+          <button class="slot" id="slot2" aria-pressed="false"><i>Hinten</i><b>KI</b></button>
+          <button class="slot" id="slot1" aria-pressed="false"><i>Vorne</i><b>KI</b></button>
+          <button class="slot" id="slot3" aria-pressed="false"><i>Vorne</i><b>KI</b></button>
+        </div>
+        <button class="btn" id="mpGo">Start</button>
+        <button class="btn ghost" id="mpLeave">Verlassen</button>
+        <p class="rec" id="mpWait"></p>
+      </div>
     </div>
 
     <div class="ov dim" id="pauseOv" hidden>
@@ -286,6 +328,8 @@ function fillPoly(pts, c) {
 const CAM0 = { y: 9, off: 7.4, pitch: 0.5 };
 const CAM = { x: 0, y: CAM0.y, z: 0, pitch: CAM0.pitch, f: 290, cp: 1, sp: 0 };
 let HOR = 0;
+let FLIP = false; // team B phones see the court from the other end
+const pv = (x, y, z) => FLIP ? proj(-x, y, -z) : proj(x, y, z);
 function trig() { CAM.cp = Math.cos(CAM.pitch); CAM.sp = Math.sin(CAM.pitch); }
 function proj(x, y, z) {
   const dx = x - CAM.x, dy = y - CAM.y, dz = z - CAM.z;
@@ -368,7 +412,7 @@ function snapPose(f, n) { f.pose.set(POSES[n]); f.tgt = f.base = n; f.until = 0;
 function jump(f, v) { f.vy = v; f.air = true; }
 const boostAt = d => 1 + 0.28 * clamp((d - 10.5) / 10, 0, 1);
 function handWorld(f, idx) {
-  const b = boostAt(proj(f.x, 0, f.z).d);
+  const b = boostAt(pv(f.x, 0, f.z).d);
   return { x: f.x + f.pose[idx * 2] * b, y: f.y + f.pose[idx * 2 + 1] * b, z: f.z };
 }
 function updFig(f, dt) {
@@ -539,7 +583,7 @@ function D() {
 function shake(n) { if (!reduceMotion) G.shake = Math.max(G.shake, n); }
 function slowmo(s) { G.slow = Math.max(G.slow, s); }
 // gesture hints: icons only, shown the first few times, then never again
-const HINTS = { serve: 'TIPPEN', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑' };
+const HINTS = { serve: 'TIPPEN', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← ↑ ↓ →' };
 const hintSeen = store.get('hints', {});
 let hint = '', hintT = 0;
 function setHint(key) {
@@ -758,7 +802,7 @@ function dash() {
 function slideFx(f, side, dist) {
   return () => {
     // my figure stays on screen: on an outer lane it slides inward of the reach
-    const lim = f === me ? 0.85 : 4.2;
+    const lim = f === me || (f === oA && G.mode === 'mp') ? 0.85 : 4.2;
     SFX.slide(); f.tx = clamp(f.x + side * dist, -lim, lim); if (!f.spring) f.sx = 3;
     for (let i = 0; i < 6; i++) G.parts.push({ x: f.x + side * rand(0, .5), y: .05, z: f.z + rand(-.15, .15), vx: -side * rand(.3, 1.4), vy: rand(.3, 1), vz: rand(-.3, .3), age: 0, life: rand(.3, .55), c: pick([C.boneDim, C.line, C.court2]) });
   };
@@ -766,7 +810,8 @@ function slideFx(f, side, dist) {
 function thud(f) { return () => { SFX.thud(); dust(f.x, f.z, 4); }; }
 function defAnim(f, kind, side) {
   const S = side < 0 ? 'L' : 'R';
-  if (f === me && (kind === 'dive' || kind === 'miss') && Math.abs(f.x + side * 1.1) > 2.2) f.tx = clamp(f.x, -0.85, 0.85);
+  const near = f === me || (f === oA && G.mode === 'mp');
+  if (near && (kind === 'dive' || kind === 'miss') && Math.abs(f.x + side * 1.1) > 2.2) f.tx = clamp(f.x, -0.85, 0.85);
   switch (kind) {
     case 'clean': return seq(f, [['dig', .12, 34], ['digUp', .2, 14]]);
     case 'low': return seq(f, [['digLow', .1, 38], ['digUp', .22, 12]]);
@@ -1262,7 +1307,8 @@ function togglePause(force) {
   if (G.paused) $('#resumeBtn').focus();
 }
 function showOnly(id) {
-  for (const k of ['menu', 'how', 'over', 'pauseOv']) $('#' + k).hidden = k !== id;
+  if (id === 'over' && !MP.net) $('#againBtn').hidden = false;
+  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv']) $('#' + k).hidden = k !== id;
   $('#pauseBtn').hidden = G.mode !== 'play';
   if (id === 'menu') updRecord();
 }
@@ -1275,6 +1321,7 @@ function updRecord() {
 
 /* ---------------- input ---------------- */
 function onSwipe(dx, dy) {
+  if (G.mode === 'mp') return mpSwipe(dx, dy);
   if (G.mode !== 'play' || G.paused) return;
   const ax = Math.abs(dx), ay = Math.abs(dy), ph = G.phase;
   if (ph === 'serveReady') { toss(); return; }
@@ -1291,6 +1338,7 @@ function onSwipe(dx, dy) {
   }
 }
 function onTap() {
+  if (G.mode === 'mp') { mpSend('tap', 0, 0); return; }
   if (G.mode !== 'play' || G.paused) return;
   if (G.phase === 'serveReady') toss();
   else if (G.phase === 'serveToss') serveHit(0, false);
@@ -1332,7 +1380,8 @@ document.addEventListener('touchmove', e => { if (e.target === cv) e.preventDefa
 document.addEventListener('gesturestart', e => e.preventDefault());
 addEventListener('keydown', e => {
   const k = e.key;
-  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(k) && G.mode === 'play') e.preventDefault();
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(k) && (G.mode === 'play' || G.mode === 'mp') && document.activeElement === document.body) e.preventDefault();
+  if (G.mode === 'mp') { if (e.repeat) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
   if (e.repeat) return;
   if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; }
   if (G.mode !== 'play' || G.paused) return;
@@ -1360,13 +1409,704 @@ $('#howBtn').addEventListener('click', () => openHow('menu'));
 $('#howOk').addEventListener('click', () => { if ($('#howOk').dataset.next === 'play') startGame(); else showOnly('menu'); });
 $('#resumeBtn').addEventListener('click', () => togglePause(false));
 $('#quitBtn').addEventListener('click', () => { G.paused = false; menuScene(); });
-$('#againBtn').addEventListener('click', startGame);
-$('#menuBtn').addEventListener('click', menuScene);
+$('#againBtn').addEventListener('click', () => { if (MP.net) mpBegin(); else startGame(); });
+$('#menuBtn').addEventListener('click', () => { if (MP.net) mpLeave(); else menuScene(); });
 $('#pauseBtn').addEventListener('click', () => togglePause());
 function updSoundIcon() { $('#waves').style.display = muted ? 'none' : ''; $('#mute').style.display = muted ? '' : 'none'; $('#soundBtn').setAttribute('aria-label', muted ? 'Ton an' : 'Ton aus'); }
 $('#soundBtn').addEventListener('click', () => { muted = !muted; store.set('muted', muted); audioInit(); updSoundIcon(); });
 updSoundIcon();
 setLevel(G.level);
+
+/* ================= multiplayer: up to 4 phones, 2 vs 2, one phone (the host) runs the match ================= */
+// slots: 0 team A back, 1 team A front, 2 team B back, 3 team B front; an empty slot is played by the computer
+// world: team A lives on z > 0, team B on z < 0; game logic works in team-local coordinates (lx, lz) and W() maps them
+const sgn = t => t === 0 ? 1 : -1;
+const TEAMF = [[me, mate], [oA, oB]];
+const tfig = (t, r) => TEAMF[t][r];
+const slotOf = (t, r) => t * 2 + r;
+const MIRR = { jump: 1, spike: 1, follow: 1, lob: 1, hold: 1, toss: 1 };
+const PZ = (f, n) => f.front && MIRR[n] ? n + 'M' : n;
+const lane2x = (t, l) => sgn(t) * LX[l];
+const MPCODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const MP = {
+  net: null, host: false, code: '', slots: [null, null, null, null], myId: '', mySlot: -1, team: 0, role: 0,
+  st: null, view: null, level: 1, snapT: 0, off: 0, offOk: false, rtt: 0.12, pingT: 0, lastBall: null, pred: { lane: 1, until: 0 },
+  hintAtk: null
+};
+
+/* ---------- transport: PeerJS (WebRTC) online, BroadcastChannel for same-device tests (?bc) ---------- */
+function loadPeer() {
+  if (window.Peer) return Promise.resolve();
+  const urls = ['lib/peerjs.min.js', 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];
+  return urls.reduce((p, u) => p.catch(() => new Promise((ok, no) => {
+    const s = document.createElement('script'); s.src = u; s.onload = () => window.Peer ? ok() : no(); s.onerror = no; document.head.appendChild(s);
+  })), Promise.reject()).catch(() => { throw new Error('nolib'); });
+}
+const useBC = /[?&]bc\b/.test(location.search);
+const LAG = +((location.search.match(/lag=(\d+)/) || [])[1] || 0); // test only: fake network delay in ms
+const bcPost = (bc, m) => LAG ? setTimeout(() => { try { bc.postMessage(m); } catch (e) {} }, LAG * (0.8 + Math.random() * 0.4)) : bc.postMessage(m);
+function netCreate(code, h) {
+  // h: { open(), conn(id), msg(id, data), gone(id), fail(kind) }
+  if (useBC) {
+    const bc = new BroadcastChannel('vsk-' + code), peers = new Set();
+    bc.onmessage = e => { const m = e.data; if (m.to !== 'H') return; if (!peers.has(m.from)) { peers.add(m.from); h.conn(m.from); } if (m.d && m.d.t === 'bye') { peers.delete(m.from); h.gone(m.from); } else h.msg(m.from, m.d); };
+    setTimeout(() => h.open(), 0);
+    return { send: (id, d) => bcPost(bc, { to: id, from: 'H', d }), all: d => { for (const id of peers) bcPost(bc, { to: id, from: 'H', d }); }, close() { for (const id of peers) bc.postMessage({ to: id, from: 'H', d: { t: 'bye' } }); bc.close(); } };
+  }
+  const conns = {};
+  const peer = new Peer('vsk-' + code);
+  peer.on('open', () => h.open());
+  peer.on('error', e => h.fail(e.type === 'unavailable-id' ? 'taken' : 'net'));
+  peer.on('connection', c => {
+    c.on('open', () => { conns[c.peer] = c; h.conn(c.peer); });
+    c.on('data', d => h.msg(c.peer, d));
+    c.on('close', () => { delete conns[c.peer]; h.gone(c.peer); });
+  });
+  return {
+    send: (id, d) => { const c = conns[id]; if (c && c.open) c.send(d); },
+    all: d => { for (const id in conns) if (conns[id].open) conns[id].send(d); },
+    close() { try { peer.destroy(); } catch (e) {} }
+  };
+}
+function netJoin(code, h) {
+  if (useBC) {
+    const id = 'c' + Math.random().toString(36).slice(2, 8), bc = new BroadcastChannel('vsk-' + code);
+    bc.onmessage = e => { const m = e.data; if (m.to !== id) return; if (m.d && m.d.t === 'bye') h.gone(); else h.msg(m.d); };
+    const net = { id, toHost: d => bcPost(bc, { to: 'H', from: id, d }), close() { bc.postMessage({ to: 'H', from: id, d: { t: 'bye' } }); bc.close(); } };
+    setTimeout(() => { net.toHost({ t: 'hi' }); h.open(id); }, 0);
+    return net;
+  }
+  const peer = new Peer();
+  let conn = null;
+  const net = { id: '', toHost: d => { if (conn && conn.open) conn.send(d); }, close() { try { peer.destroy(); } catch (e) {} } };
+  peer.on('open', id => {
+    net.id = id;
+    conn = peer.connect('vsk-' + code, { reliable: true });
+    conn.on('open', () => { net.toHost({ t: 'hi' }); h.open(id); });
+    conn.on('data', d => h.msg(d));
+    conn.on('close', () => h.gone());
+  });
+  peer.on('error', e => h.fail(e.type === 'peer-unavailable' ? 'nofound' : 'net'));
+  return net;
+}
+
+/* ---------- lobby ---------- */
+function mpMsg(s) { $('#mpMsg').textContent = s; }
+function mpOpen() { showOnly('mpOv'); $('#mpStart').hidden = false; $('#mpLobby').hidden = true; mpMsg(''); }
+function mpNewCode() { let s = ''; for (let i = 0; i < 4; i++) s += MPCODE[(Math.random() * MPCODE.length) | 0]; return s; }
+async function mpCreate() {
+  audioInit(); mpMsg('…');
+  try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('Keine Verbindung'); return; }
+  const code = mpNewCode();
+  MP.host = true; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1 }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
+  MP.net = netCreate(code, {
+    open() { mpLobbyShow(); },
+    conn(id) {
+      if (MP.slots.some(s => s && s.id === id)) return;
+      const free = [2, 1, 3, 0].find(i => !MP.slots[i]);
+      if (free == null) { MP.net.send(id, { t: 'full' }); return; }
+      const used = MP.slots.filter(Boolean).map(s => s.n);
+      let n = 1; while (used.includes(n)) n++;
+      MP.slots[free] = { id, n };
+      mpLobbySync();
+      if (G.mode === 'mp') { MP.net.send(id, { t: 'start', level: MP.level }); if (MP.lastBall) MP.net.send(id, { t: 'fx', e: MP.lastBall }); }
+    },
+    msg(id, d) { mpHostMsg(id, d); },
+    gone(id) { const i = MP.slots.findIndex(s => s && s.id === id); if (i >= 0) { MP.slots[i] = null; mpLobbySync(); } },
+    fail(k) { if (k === 'taken') { MP.net.close(); mpCreate(); } else mpMsg('Keine Verbindung'); }
+  });
+}
+async function mpJoin() {
+  audioInit();
+  const code = $('#mpCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 4) { $('#mpCode').focus(); return; }
+  mpMsg('…');
+  try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('Keine Verbindung'); return; }
+  MP.host = false; MP.code = code; MP.mySlot = -1;
+  const t0 = setTimeout(() => { if (!MP.myId) mpMsg('Raum nicht gefunden'); }, 9000);
+  MP.net = netJoin(code, {
+    open(id) { clearTimeout(t0); MP.myId = id; },
+    msg(d) { mpClientMsg(d); },
+    gone() { if (MP.net) { mpLeave(); popup('VERBINDUNG WEG', C.bad); } },
+    fail(k) { clearTimeout(t0); mpMsg(k === 'nofound' ? 'Raum nicht gefunden' : 'Keine Verbindung'); MP.net = null; }
+  });
+}
+function mpLeave() {
+  const net = MP.net; MP.net = null;
+  if (net) try { net.close(); } catch (e) {}
+  MP.st = null; MP.view = null; MP.mySlot = -1; MP.myId = '';
+  FLIP = false; oA.spring = false; me.band = true; mate.band = oA.band = oB.band = false;
+  G.paused = false; menuScene();
+}
+function mpLobbySync() {
+  if (!MP.host) return;
+  MP.net.all({ t: 'lobby', slots: MP.slots, code: MP.code, level: MP.level, live: G.mode === 'mp' });
+  mpLobbyDraw();
+}
+function mpLobbyShow() { showOnly('mpOv'); $('#mpStart').hidden = true; $('#mpLobby').hidden = false; mpLobbyDraw(); }
+function mpLobbyDraw() {
+  $('#mpRoom').textContent = MP.code;
+  MP.mySlot = MP.slots.findIndex(s => s && s.id === MP.myId);
+  for (let i = 0; i < 4; i++) {
+    const s = MP.slots[i], b = $('#slot' + i);
+    b.querySelector('b').textContent = !s ? 'KI' : s.id === MP.myId ? 'DU' : 'P' + s.n;
+    b.setAttribute('aria-pressed', String(i === MP.mySlot));
+    b.classList.toggle('taken', !!s && i !== MP.mySlot);
+  }
+  $('#mpGo').hidden = !MP.host;
+  $('#mpWait').textContent = MP.host ? '' : 'Warte auf Start';
+}
+function mpPickSlot(i) {
+  if (MP.host) { if (MP.slots[i]) return; const me0 = MP.slots[MP.mySlot]; MP.slots[MP.mySlot] = null; MP.slots[i] = me0; mpLobbySync(); }
+  else MP.net && MP.net.toHost({ t: 'slot', i });
+}
+function mpHostMsg(id, d) {
+  const i = MP.slots.findIndex(s => s && s.id === id);
+  if (d.t === 'slot') { if (i >= 0 && !MP.slots[d.i] && G.mode !== 'mp') { MP.slots[d.i] = MP.slots[i]; MP.slots[i] = null; mpLobbySync(); } }
+  else if (d.t === 'p') MP.net.send(id, { t: 'q', c: d.c });
+  else if (d.t === 'in' && i >= 0 && G.mode === 'mp') hostInput(i, d.k, d.dx, d.dy, d.ht);
+}
+function mpClientMsg(d) {
+  if (d.t === 'lobby') { MP.slots = d.slots; MP.code = d.code; MP.level = d.level; if (G.mode !== 'mp') mpLobbyShow(); else mpRoles(); }
+  else if (d.t === 'full') { mpMsg('Raum voll'); MP.net.close(); MP.net = null; }
+  else if (d.t === 'start') { MP.level = d.level; mpEnter(); }
+  else if (d.t === 's') mpSnap(d);
+  else if (d.t === 'fx') applyFx(d.e);
+  else if (d.t === 'q') { const r = (performance.now() - d.c) / 1000; MP.rtt = MP.rtt * 0.7 + r * 0.3; }
+  else if (d.t === 'over') mpOverShow(d.score);
+}
+
+/* ---------- entering a match (all phones) ---------- */
+function mpRoles() {
+  MP.mySlot = MP.slots.findIndex(s => s && s.id === MP.myId);
+  MP.team = MP.mySlot >= 0 ? MP.mySlot >> 1 : 0; MP.role = MP.mySlot >= 0 ? MP.mySlot & 1 : 0;
+  FLIP = MP.team === 1;
+  for (let i = 0; i < 4; i++) tfig(i >> 1, i & 1).band = i === MP.mySlot;
+}
+function mpEnter() {
+  G.mode = 'mp'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 1; G.fadeV = -4; G.hype = 0;
+  oA.spring = true; mpRoles();
+  MP.view = { score: [0, 0], server: 0, meter: 0, fire: false, ring: null, inc: null, blk: null, ph: '' };
+  showOnly(null); setHint('');
+  try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
+}
+function mpBegin() {
+  if (!MP.host) return;
+  MP.level = G.level;
+  MP.net.all({ t: 'start', level: MP.level });
+  mpEnter();
+  MP.st = { score: [0, 0], server: Math.random() < 0.5 ? 0 : 1, meter: [0, 0], fire: [false, false], phase: 'idle', inc: null, atk: null, srv: null,
+    hist: [{ L: 0, R: 0, LOB: 0 }, { L: 0, R: 0, LOB: 0 }], lane: [1, 1], arrive: [-9, -9], dash: [false, false], rally: 0 };
+  for (const f of FIGS) f.seq = null;
+  mpRally();
+}
+
+/* ---------- host: effects that every phone plays ---------- */
+function fx(e) { applyFx(e); if (MP.host && MP.net) MP.net.all({ t: 'fx', e }); if (e.k === 'ball' || e.k === 'hold') MP.lastBall = e; }
+const FXCOL = { bone: C.bone, accent: C.accent, bad: C.bad, fire: C.fire2 };
+function applyFx(e) {
+  switch (e.k) {
+    case 'sfx': if (SFX[e.n]) SFX[e.n](e.a); break;
+    case 'sparks': sparks(e.x, e.y, e.z, e.n, e.c && e.c.map(c => C[c] || c)); break;
+    case 'dust': dust(e.x, e.z, e.n); break;
+    case 'shake': shake(e.v); break;
+    case 'net': G.netWob = e.v; break;
+    case 'flash': G.flash = e.v; break;
+    case 'hype': G.hype = Math.max(G.hype, e.v); break;
+    case 'burst': G.fx.push({ x: ball.x, y: ball.y, z: ball.z, t0: G.t, dur: e.big ? 0.32 : 0.2, col: FXCOL[e.c] || C.bone, r1: e.big ? 15 : 8 }); break;
+    case 'vib': if (e.team == null || e.team === MP.team) vib(e.ms); break;
+    case 'pop': popup(e.s, e.team == null ? C.accent : e.team === MP.team ? C.accent : C.bad); break;
+    case 'fade': G.fadeV = e.v; break;
+    case 'res': if (MP.team === e.w) SFX.win(); else SFX.lose(); break;
+    case 'hold': ball.mode = 'held'; ball.holder = FIGS[e.f]; ball.idx = e.i; ball.fire = false; ball.trail.length = 0; break;
+    case 'ball':
+      ball.p0 = e.p0; ball.v = e.v; ball.t0 = e.t0; ball.T = e.T; ball.mode = 'flight'; ball.holder = null;
+      ball.wob = e.wob || 0; ball.wobF = e.wobF || 0; ball.fire = !!e.fire; ball.spinV = e.spin; break;
+  }
+}
+const S = (n, a) => fx({ k: 'sfx', n, a });
+function mlaunch(to, T, o = {}) {
+  launch(to, T, o);
+  fx({ k: 'ball', p0: ball.p0, v: ball.v, t0: ball.t0, T, wob: ball.wob, wobF: ball.wobF, fire: ball.fire, spin: ball.spinV });
+}
+function mhold(f, i) { fx({ k: 'hold', f: FIGS.indexOf(f), i }); }
+function msparks(n, c) { fx({ k: 'sparks', x: ball.x, y: ball.y, z: ball.z, n, c }); }
+
+/* ---------- host: match rules ---------- */
+const human = i => !!MP.slots[i];
+const grace = i => MP.slots[i] && MP.slots[i].id !== MP.myId ? 0.2 : 0;
+const mpDiff = () => [0.2, 0.45, 0.7][MP.level] != null ? [0.2, 0.45, 0.7][MP.level] : 0.45;
+function laneOfX(t, wx) { const lx = sgn(t) * wx; return lx < -0.95 ? 0 : lx > 0.95 ? 2 : 1; }
+function goBack(t) { const b = tfig(t, 0); b.tx = lane2x(t, MP.st.lane[t]); b.tz = sgn(t) * DZ; b.sz = 6; setBase(b, 'ready'); }
+function mpRally() {
+  const st = MP.st; if (!st || G.mode !== 'mp') return;
+  G.ev.length = 0; st.inc = st.atk = st.srv = null; st.rally = 0; st.dash = [false, false];
+  for (let t = 0; t < 2; t++) {
+    const b = tfig(t, 0), f = tfig(t, 1), s = sgn(t);
+    st.lane[t] = 1; place(b, 0, s * DZ); snapPose(b, 'ready'); b.sx = 15; b.sz = 7;
+    place(f, s * MSET.x, s * 0.6); snapPose(f, 'setReady'); f.sx = f.sz = 7;
+  }
+  const t = st.server, b = tfig(t, 0), s = sgn(t);
+  place(b, s * 0.3, s * 9.4); snapPose(b, PZ(b, 'hold')); setBase(b, PZ(b, 'hold'));
+  mhold(b, 6);
+  st.phase = 'serveReady';
+  fx({ k: 'fade', v: -5 });
+  after(0.4, () => S('whistle'));
+  if (!human(slotOf(t, 0))) after(1.3, () => mpToss(t));
+}
+function mpToss(t) {
+  const st = MP.st; if (!st || st.phase !== 'serveReady' || st.server !== t) return;
+  const b = tfig(t, 0), s = sgn(t);
+  st.phase = 'serveToss';
+  setPose(b, PZ(b, 'toss'), 0.7); setBase(b, PZ(b, 'toss')); S('toss');
+  mlaunch({ x: b.x + 0.05 * s, y: 1.6, z: b.z - 0.6 * s }, 1.3, { spin: 2 });
+  const tp = G.t + 0.65;
+  st.srv = { t, tp, hit: false, lock: 0 };
+  at(tp - 0.42, () => { if (st.srv && !st.srv.hit) { jump(b, 4.0); setPose(b, PZ(b, 'jump'), 0, 18); b.tz = b.z - 0.45 * s; b.sz = 1.3; } });
+  const sl = slotOf(t, 0);
+  at(tp + 0.3 + grace(sl), () => mpServeHit(t, 0, null));
+  if (!human(sl)) { const d = mpDiff(); at(tp + rand(-0.13, 0.13) * (1.2 - d), () => mpServeHit(t, pick([-1, 0, 1]), G.t)); }
+}
+function mpServeHit(t, h, ht) {
+  const st = MP.st, Sv = st && st.srv; if (!Sv || Sv.hit || Sv.t !== t) return;
+  const auto = ht == null, dt = auto ? 1 : ht - Sv.tp;
+  if (!auto && dt < -0.32) { fx({ k: 'burst', c: 'bad' }); S('err'); return; }
+  Sv.hit = true;
+  const adt = Math.abs(dt), q = auto ? 'weak' : adt < 0.08 ? 'perfect' : adt < 0.18 ? 'good' : 'weak';
+  if (q === 'perfect') { mpMeter(t, 1); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); }
+  const b = tfig(t, 0), r = 1 - t;
+  setPose(b, PZ(b, 'spike'), 0.15, 40); setBase(b, PZ(b, 'follow')); S('serve'); fx({ k: 'shake', v: q === 'perfect' ? 2 : 1 });
+  msparks(q === 'perfect' ? 8 : 3);
+  const back = () => goBack(t);
+  if (b.air) b.onLand = back; else after(0.3, back);
+  st.phase = 'served';
+  const lane = 1 - h; // the server's left is the receiver's right
+  const T = { perfect: 0.95, good: 1.05, weak: 1.2 }[q], md = { perfect: 0.32, good: 0.18, weak: 0.06 }[q];
+  const o = q === 'perfect' && Math.random() < 0.5 ? { wob: rand(0.8, 1.2) * (Math.random() < 0.5 ? -1 : 1), wobF: Math.PI * 2 * rand(1, 1.5), spin: 1 } : { spin: 14 };
+  mlaunch({ x: lane2x(r, lane), y: 0.85, z: sgn(r) * (DZ + 0.1) }, T, o);
+  mpIncoming(r, 'serve', lane, T, md, q);
+}
+function mpMeter(t, n) {
+  const st = MP.st; if (st.fire[t]) return;
+  st.meter[t] = clamp(st.meter[t] + n, 0, BAL.meterMax);
+  if (st.meter[t] >= BAL.meterMax) { st.fire[t] = true; S('fire'); }
+}
+function mpIncoming(d, type, lane, T, md, q, extra) {
+  const st = MP.st, s = sgn(d);
+  const lz = type === 'tip' ? 3.0 : type === 'block' ? 3.3 : DZ + 0.1;
+  const inc = st.inc = { d, type, lane, x: s * LX[lane] * (type === 'tip' ? 0.85 : 1), z: s * lz, tArr: G.t + T, tMark: G.t + md, done: false, q, ai: null };
+  st.phase = 'defend'; st.dash[d] = false; MP.snapT = 0;
+  const b = tfig(d, 0), sl = slotOf(d, 0);
+  if (!b.air && !b.lock && type !== 'block') { jump(b, 1.5); setPose(b, 'ready', 0.2, 20); }
+  if (human(sl)) { after(T + grace(sl), mpResolve); return; }
+  // computer defender: decide, then move there like a person would
+  const dif = mpDiff();
+  let p = type === 'serve' ? { perfect: 0.55, good: 0.75, weak: 0.9 }[q] : type === 'spike' ? { perfect: 0.3, good: 0.5, weak: 0.72 }[q]
+    : type === 'tip' ? 0.6 : type === 'free' ? 0.88 : type === 'fire' ? 0.06 : 0.6;
+  p = clamp(p * (0.75 + 0.5 * dif) + (extra || 0), 0.03, 0.95);
+  const ok = Math.random() < p;
+  inc.ai = ok;
+  const goal = ok ? lane : (lane === st.lane[d] ? pick([0, 1, 2].filter(l => l !== lane)) : st.lane[d]);
+  after(clamp(md + rand(0.08, 0.2), 0, T - 0.2), () => {
+    if (inc.done) return;
+    if (goal !== st.lane[d]) mpLane(d, goal - st.lane[d], G.t, true);
+    if (type === 'tip' && ok) mpDash(d, G.t);
+  });
+  after(T, mpResolve);
+}
+function mpLane(t, dl, ht, abs) {
+  const st = MP.st, b = tfig(t, 0);
+  const nl = clamp(st.lane[t] + dl, 0, 2); if (nl === st.lane[t]) return;
+  st.lane[t] = nl; b.tx = lane2x(t, nl); b.sx = 15; b.moveDir = Math.sign(dl) * sgn(t);
+  st.arrive[t] = (ht == null ? G.t : ht) + 0.12 * Math.abs(dl);
+  fx({ k: 'dust', x: b.x, z: b.z, n: 2 }); S('step');
+  if (!b.lock && !b.air) setPose(b, b.moveDir < 0 ? 'reachL' : 'reachR', 0.1, 26);
+}
+function mpDash(t, ht) {
+  const st = MP.st, inc = st.inc; if (!inc || inc.done || inc.d !== t || st.dash[t]) return;
+  const b = tfig(t, 0); st.dash[t] = true; b.sz = 13;
+  if (inc.type === 'tip') { b.tz = inc.z + 0.3 * sgn(t); b.tx = inc.x; } else b.tz = sgn(t) * 2.6;
+  st.arrive[t] = Math.max(st.arrive[t], (ht == null ? G.t : ht) + Math.abs(b.tz - b.z) / b.sz); S('step');
+}
+function mpResolve() {
+  const st = MP.st, inc = st && st.inc; if (!inc || inc.done) return;
+  inc.done = true; st.inc = null;
+  const d = inc.d, b = tfig(d, 0);
+  let ok, late;
+  if (inc.ai != null) { ok = inc.ai; late = ok && Math.random() < 0.25; }
+  else {
+    ok = st.lane[d] === inc.lane && (inc.type !== 'tip' || st.dash[d]) && !(inc.type !== 'tip' && st.dash[d]);
+    late = st.arrive[d] > inc.tArr - 0.08;
+  }
+  if (inc.type === 'fire' && inc.ai == null) late = true;
+  const diveOk = lerp(BAL.diveOk[0], BAL.diveOk[1], mpDiff());
+  if (ok && (!late || Math.random() < diveOk)) { mpDig(d, inc, late, b); return; }
+  st.phase = 'dead';
+  const side = inc.x < b.x - 0.05 ? -1 : inc.x > b.x + 0.05 ? 1 : (b.moveDir || 1);
+  if (ok) {
+    defAnim(b, inc.type === 'tip' ? 'missTip' : 'shank', side); S('dig');
+    mlaunch({ x: ball.x + side * rand(4, 6), y: 0, z: sgn(d) * rand(7, 11) }, 0.9, { spin: 18 });
+    after(0.7, () => mpPoint(1 - d, 'ZU SPÄT!'));
+    return;
+  }
+  defAnim(b, Math.abs(b.x - inc.x) < 2.6 ? (inc.type === 'tip' ? 'missTip' : 'miss') : 'lunge', side);
+  after(0.45, () => mpPoint(1 - d, inc.type === 'block' ? 'GEBLOCKT!' : inc.type === 'tip' ? 'FINTE!' : inc.type === 'serve' ? 'ASS!' : 'PUNKT!'));
+}
+function mpDig(d, inc, late, digger) {
+  const st = MP.st, s = sgn(d), b = tfig(d, 0), set = tfig(d, 1);
+  const off = inc.x - digger.x;
+  let kind;
+  if (inc.type === 'tip') { kind = 'pancake'; mpMeter(d, 1); }
+  else if (late) { kind = 'dive'; mpMeter(d, 1); }
+  else if (inc.type === 'block') kind = 'reflex';
+  else if (inc.type === 'free') kind = 'free';
+  else if (Math.abs(off) > 0.42) kind = 'reach';
+  else kind = inc.type === 'spike' || inc.type === 'fire' ? 'low' : 'clean';
+  const dur = defAnim(digger, kind, kind === 'reach' ? Math.sign(off) : (b.moveDir || 1));
+  if (inc.type === 'tip' && digger === b) st.lane[d] = inc.lane;
+  S('dig'); fx({ k: 'dust', x: ball.x, z: ball.z, n: 6 }); msparks(kind === 'dive' || kind === 'pancake' ? 7 : 4, ['bone']); fx({ k: 'vib', ms: 12, team: d });
+  st.rally++; if (st.rally >= 4) { fx({ k: 'hype', v: 0.5 + st.rally * 0.05 }); if (st.rally % 2 === 0) S('crowd'); }
+  const wild = kind === 'dive' || kind === 'pancake' ? 1 : kind === 'reach' || kind === 'reflex' ? 0.45 : 0.12;
+  const lx = clamp(MSET.x + rand(-1.3, 1.3) * wild, -2.6, 3.2), lz = clamp(MSET.z + rand(-0.2, 1.2) * wild, 0.5, 2.2);
+  mlaunch({ x: s * lx, y: 2.55 + rand(0, 0.7) * wild, z: s * (lz + 0.12) }, 1.0, { spin: 4 });
+  // the digger might be the setter (deep block); then the setter just plays it back
+  set.tx = s * lx; set.tz = s * lz; set.sx = set.sz = 6;
+  after(0.6, () => setPose(set, 'setReady', 0.5));
+  st.phase = 'pass';
+  after(Math.max(0.4, Math.min(0.72, dur)), () => { b.lock = false; b.tx = lane2x(d, st.lane[d]); b.sx = 15; b.tz = s * APZ; b.sz = 7; setBase(b, 'ready'); });
+  after(1.0, () => mpSet(d));
+}
+function mpSet(a) {
+  const st = MP.st; if (!st || G.mode !== 'mp') return;
+  const o = 1 - a, s = sgn(a), b = tfig(a, 0), set = tfig(a, 1), blk = tfig(o, 1), def = tfig(o, 0), dif = mpDiff();
+  setPose(set, 'set', 0.3); S('set');
+  const Cp = { x: s * (LX[st.lane[a]] + 0.12), y: CY, z: s * CZ };
+  mlaunch(Cp, 0.9, { spin: 3 });
+  const tc = G.t + 0.9;
+  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null };
+  st.phase = 'attack'; MP.snapT = 0;
+  blk.tx = clamp(Cp.x, -2.8, 2.8); blk.tz = sgn(o) * 0.5; blk.sx = blk.sz = 7; setBase(blk, 'setReady'); setPose(blk, 'setReady');
+  const bsl = slotOf(o, 1), asl = slotOf(a, 0), dsl = slotOf(o, 0);
+  if (!human(bsl)) {
+    // computer blocker: leans on what this hitter likes, sometimes shows one side and switches
+    const h = st.hist[a], tot = h.L + h.R + h.LOB + 1;
+    const w = { L: 1 + 1.4 * h.L / tot, R: 1 + 1.4 * h.R / tot, W: 0.35 + 0.5 * dif + 0.3 * (h.L + h.R) / tot, D: 0.15 + 0.3 * dif + 2 * h.LOB / tot };
+    const k = AI.weighted(w);
+    const v = k === 'L' ? -s : k === 'R' ? s : k; // attacker's left in world x
+    const lead = lerp(0.72, 0.4, dif);
+    if ((k === 'L' || k === 'R') && Math.random() < 0.3 * dif) {
+      at(tc - 0.78, () => mpBlock(A, -v));
+      at(tc - Math.max(0.36, lead * 0.8), () => mpBlock(A, v));
+    } else at(tc - lead, () => mpBlock(A, v));
+  }
+  if (!human(dsl)) at(tc - 0.3, () => {
+    // computer defender covers the side the block leaves open
+    if (st.atk !== A || typeof A.block !== 'number' || Math.random() > 0.4 + 0.5 * dif) return;
+    const goal = laneOfX(o, A.C.x - A.block * 2.4);
+    A.defRead = goal;
+    if (goal !== st.lane[o]) mpLane(o, goal - st.lane[o], G.t);
+  });
+  at(tc - 0.8, () => { b.tz = s * 3.3; b.sz = Math.max(3, Math.abs(b.z - s * 3.3) / 0.4); b.lock = false; setBase(b, 'stand'); });
+  at(tc - 0.43, () => { jump(b, 4.25); setPose(b, PZ(b, 'jump'), 0, 18); setBase(b, PZ(b, 'jump')); b.tz = s * 2.9; b.sz = 1.2; });
+  at(tc - 0.3, () => { if (st.atk === A && A.block != null && A.block !== 'D' && !blk.air) jump(blk, 3.4); });
+  if (!human(asl)) at(tc + rand(-0.12, 0.12) * (1.25 - dif), () => {
+    if (st.atk !== A || A.hit) return;
+    // computer hitter reads the block (better on higher levels)
+    let dir;
+    const bl = A.block, read = Math.random() < 0.35 + 0.55 * dif;
+    if (typeof bl === 'number' && read) dir = bl * s < 0 ? 'R' : 'L';
+    else if (bl === 'W' && read) dir = Math.random() < 0.6 ? 'LOB' : pick(['L', 'R']);
+    else dir = Math.random() < 0.15 ? 'LOB' : pick(['L', 'R']);
+    mpAttack(a, dir, G.t);
+  });
+  at(tc + 0.2 + grace(asl), () => mpLateHit(A));
+}
+function mpBlock(A, v, ht) {
+  const st = MP.st; if (st.atk !== A || A.hit || (ht != null ? ht : G.t) > A.lockT) return;
+  if (A.block === v) return;
+  A.block = v; S('tick'); MP.snapT = 0;
+  const blk = tfig(1 - A.a, 1), so = sgn(1 - A.a);
+  if (v === 'D') { blk.tz = so * 2.4; blk.sz = 5; setBase(blk, 'ready'); setPose(blk, 'ready'); return; }
+  blk.tz = so * 0.5; blk.sx = 7; blk.sz = 6;
+  blk.tx = clamp(A.C.x + (v === 'W' ? 0 : v * 0.45), -3, 3);
+  const p = v === 'W' ? 'blockW' : v < 0 ? 'blockL' : 'blockR';
+  setBase(blk, p); setPose(blk, p, 0, 22);
+  if (G.t > A.tc - 0.3 && !blk.air) jump(blk, 3.4);
+}
+function mpLateHit(A) {
+  const st = MP.st; if (!st || st.atk !== A || A.hit) return;
+  A.hit = true; st.phase = 'over';
+  const a = A.a, o = 1 - a, b = tfig(a, 0);
+  fx({ k: 'burst', c: 'bad' }); S('err');
+  setPose(b, PZ(b, 'lob'), 0.25); setBase(b, PZ(b, 'follow'));
+  b.onLand = () => goBack(a);
+  const lane = (Math.random() * 3) | 0;
+  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.3, { spin: 3 });
+  mpIncoming(o, 'free', lane, 1.3, 0.15, 'weak');
+}
+function mpAttack(a, dir, ht) {
+  const st = MP.st, A = st.atk; if (!A || A.a !== a || A.hit) return;
+  const dt = ht - A.tc;
+  if (dt < -0.3) { fx({ k: 'burst', c: 'bad' }); S('err'); return; }
+  if (dt > 0.2) return;
+  A.hit = true;
+  const adt = Math.abs(dt), q = adt < 0.075 ? 'perfect' : adt < 0.17 ? 'good' : 'weak';
+  const h = st.hist[a]; for (const k in h) h[k] *= 0.8; h[dir] += 1;
+  if (q === 'perfect') { mpMeter(a, 1); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); } else if (q === 'good') fx({ k: 'burst', c: 'bone' });
+  const b = tfig(a, 0), o = 1 - a, s = sgn(a);
+  setPose(b, PZ(b, dir === 'LOB' ? 'lob' : 'spike'), 0.14, 40); setBase(b, PZ(b, 'follow'));
+  b.onLand = () => { setBase(b, 'ready'); setPose(b, 'ready'); if (!st.inc || st.inc.d !== a) goBack(a); else { b.tz = s * 3.3; b.sz = 4; } };
+  st.phase = 'over';
+  st.rally++;
+  const wx = dir === 'L' ? -s : s;
+  if (st.fire[a] && dir !== 'LOB' && q !== 'weak') { mpFire(A, wx); return; }
+  if (dir === 'LOB') { mpLob(A, q); return; }
+  const blocked = A.block === 'W' || A.block === wx;
+  if (blocked) {
+    const r = Math.random(), tool = BAL.tool[q];
+    if (r < tool) mpBlockOut(A, wx); else if (r < tool + BAL.touch) mpTouch(A, wx); else mpStuff(A, wx);
+    return;
+  }
+  S('spike'); fx({ k: 'shake', v: q === 'perfect' ? 3 : 2 }); fx({ k: 'vib', ms: 18, team: a }); msparks(q === 'perfect' ? 10 : 5);
+  const tx = clamp(A.C.x + wx * rand(2.0, 2.8), -4.1, 4.1), lane = laneOfX(o, tx);
+  const T = { perfect: 0.58, good: 0.68, weak: 0.8 }[q], md = { perfect: 0.14, good: 0.08, weak: 0.03 }[q] - (A.block === 'D' ? 0.03 : 0);
+  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, T, { spin: 22 });
+  mpIncoming(o, 'spike', lane, T, Math.max(0, md), q, (A.block === 'D' ? 0.15 : 0) + (A.defRead === lane ? 0.2 : 0));
+}
+function mpFire(A, wx) {
+  const st = MP.st, a = A.a, o = 1 - a;
+  st.fire[a] = false; st.meter[a] = 0;
+  S('fire'); S('spike'); fx({ k: 'shake', v: 6 }); fx({ k: 'flash', v: 1 }); fx({ k: 'vib', ms: 40 });
+  msparks(16, ['fire1', 'fire2', 'fire3']);
+  const lane = laneOfX(o, clamp(A.C.x + wx * 2.6, -4.1, 4.1));
+  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 0.42, { fire: true, spin: 30 });
+  mpIncoming(o, 'fire', lane, 0.42, 0.3, 'perfect');
+  after(0.2, () => setPose(tfig(o, 1), 'sad', 1.2));
+}
+function mpLob(A, q) {
+  const st = MP.st, a = A.a, o = 1 - a, so = sgn(o);
+  S('lob');
+  const lane = (Math.random() * 3) | 0, T = 1.05;
+  if (A.block === 'D') {
+    // the blocker dropped back for exactly this
+    const blk = tfig(o, 1), lx = LX[lane] * 0.85;
+    mlaunch({ x: so * lx, y: 0.6, z: so * 3.0 }, T, { spin: 3 });
+    blk.tx = so * lx; blk.tz = so * 2.9; blk.sx = blk.sz = 7;
+    if (Math.random() < BAL.lobD) { after(T, () => mpDig(o, { type: 'free', x: so * lx, lane }, false, blk)); return; }
+    after(T * 0.8, () => defAnim(blk, 'missTip', 1));
+    after(T + 0.25, () => mpPoint(a, 'LOB-PUNKT!'));
+    return;
+  }
+  mlaunch({ x: so * LX[lane] * 0.85, y: 0.45, z: so * 3.0 }, T, { spin: 3 });
+  mpIncoming(o, 'tip', lane, T, A.block === 'W' ? 0.4 : A.block != null ? 0.22 : 0.15, q);
+}
+function mpHands(A, wx, cb) {
+  const blk = tfig(1 - A.a, 1);
+  mlaunch({ x: blk.x + wx * 0.35, y: blk.y + 2.3, z: sgn(1 - A.a) * 0.2 }, 0.1, { spin: 20 });
+  S('spike');
+  after(0.1, cb);
+}
+function mpBlockOut(A, wx) {
+  mpHands(A, wx, () => {
+    S('touch'); S('block'); fx({ k: 'shake', v: 3 }); fx({ k: 'net', v: 0.7 }); fx({ k: 'burst', c: 'accent', big: true }); msparks(8, ['bone', 'accent']);
+    const o = 1 - A.a, blk = tfig(o, 1); setPose(blk, 'blockW', 0.25, 30);
+    mlaunch({ x: wx * rand(5.6, 6.8), y: 0, z: sgn(o) * rand(5, 9) }, 0.8, { spin: 25 });
+    after(0.45, () => defAnim(tfig(o, 0), 'lunge', wx));
+    after(0.95, () => mpPoint(A.a, 'BLOCK-AUS!'));
+  });
+}
+function mpTouch(A, wx) {
+  mpHands(A, wx, () => {
+    const o = 1 - A.a; S('touch'); fx({ k: 'net', v: 0.5 }); fx({ k: 'shake', v: 2 }); fx({ k: 'burst', c: 'bone' }); msparks(6, ['bone', 'accent']);
+    setPose(tfig(o, 1), wx < 0 ? 'blockL' : 'blockR', 0.2, 34);
+    const lane = (Math.random() * 3) | 0;
+    mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.0, { spin: 14 });
+    mpIncoming(o, 'free', lane, 1.0, 0.12, 'good');
+  });
+}
+function mpStuff(A, wx) {
+  mpHands(A, wx, () => {
+    const st = MP.st, a = A.a, sa = sgn(a);
+    S('block'); fx({ k: 'shake', v: 4 }); fx({ k: 'net', v: 1 }); fx({ k: 'vib', ms: 30 }); msparks(8, ['bone', 'bad']);
+    if (Math.random() < lerp(BAL.stuff[0], BAL.stuff[0] + BAL.stuff[1], mpDiff())) {
+      const sx = ball.x + rand(-0.6, 0.6);
+      mlaunch({ x: sx, y: 0, z: sa * rand(0.6, 1.6) }, 0.3, { spin: -20 });
+      st.phase = 'dead';
+      const set = tfig(a, 1);
+      after(0.12, () => defAnim(set, Math.abs(set.x - sx) < 1.6 ? 'miss' : 'lunge', sx < set.x ? -1 : 1));
+      after(0.75, () => mpPoint(1 - a, 'GEBLOCKT!'));
+      return;
+    }
+    // it bounces back: the hitter has to cover their own side
+    const rl = (Math.random() * 3) | 0, T = lerp(BAL.reboundT[0], BAL.reboundT[1], mpDiff());
+    mlaunch({ x: lane2x(a, rl), y: 0.8, z: sa * 3.3 }, T, { spin: -14 });
+    mpIncoming(a, 'block', rl, T, 0, 'good');
+  });
+}
+function mpPoint(w, txt) {
+  const st = MP.st; if (!st || st.phase === 'point' || G.mode !== 'mp') return;
+  G.ev.length = 0; st.phase = 'point'; st.inc = st.atk = st.srv = null;
+  st.score[w]++;
+  const l = 1 - w, long = st.rally >= 4;
+  fx({ k: 'pop', s: txt, team: w });
+  fx({ k: 'hype', v: long ? 2.4 : 1.4 });
+  S('crowd'); fx({ k: 'res', w });
+  mpMeter(w, long ? 2 : 1);
+  if (!st.fire[l]) st.meter[l] = Math.max(0, st.meter[l] - 3);
+  for (let r = 0; r < 2; r++) { react(tfig(w, r), 'cheer', 1.2, 12); react(tfig(l, r), 'sad', 1.2, 10); }
+  st.server = w;
+  const [x, y] = st.score;
+  if ((x >= 15 || y >= 15) && Math.abs(x - y) >= 2) { after(1.8, mpOver); return; }
+  if (Math.max(x, y) >= 14 && x !== y) after(1.4, () => fx({ k: 'pop', s: 'MATCHBALL', team: x > y ? 0 : 1 }));
+  after(1.15, () => fx({ k: 'fade', v: 6 }));
+  after(1.35, mpRally);
+}
+function mpOver() {
+  const sc = MP.st.score.slice();
+  MP.net.all({ t: 'over', score: sc });
+  mpOverShow(sc);
+}
+function mpOverShow(sc) {
+  G.mode = 'mpOver';
+  const mine = sc[MP.team], theirs = sc[1 - MP.team], win = mine > theirs;
+  SFX.match(win);
+  $('#ovTitle').textContent = win ? 'Sieg!' : 'Niederlage';
+  $('#ovTitle').className = win ? 'win' : 'lose';
+  $('#ovScore').textContent = mine + ' : ' + theirs;
+  $('#ovStats').innerHTML = '';
+  const b = tfig(MP.team, 0);
+  if (win) { setBase(b, 'cheer'); setPose(b, 'cheer', 0); G.hype = 4; } else { setBase(b, 'sad'); setPose(b, 'sad', 0); }
+  $('#againBtn').hidden = !MP.host;
+  showOnly('over');
+}
+
+/* ---------- input: every phone sends swipes and taps, the host decides ---------- */
+function hostInput(slot, k, dx, dy, ht) {
+  const st = MP.st; if (!st) return;
+  const t = slot >> 1, r = slot & 1, ph = st.phase, ax = Math.abs(dx || 0), ay = Math.abs(dy || 0);
+  ht = ht == null ? G.t : Math.min(ht, G.t);
+  if (r === 0) {
+    if (ph === 'serveReady' && st.server === t) { mpToss(t); return; }
+    if (ph === 'serveToss' && st.srv && st.srv.t === t) { mpServeHit(t, k === 'tap' ? 0 : ax > ay * 0.5 ? Math.sign(dx) : 0, ht); return; }
+    if (k !== 'swipe') return;
+    if (ph === 'attack' && st.atk && st.atk.a === t && !st.atk.hit) {
+      const dir = dy < 0 && ay > ax * 1.1 ? 'LOB' : dx < 0 ? 'L' : dx > 0 ? 'R' : pick(['L', 'R']);
+      mpAttack(t, dir, ht); return;
+    }
+    if ((ph === 'serveReady' || ph === 'serveToss') && st.server === t) return;
+    if (ph === 'point' || ph === 'dead') return;
+    if (ax >= ay * 0.8) mpLane(t, dx < 0 ? -1 : 1, ht);
+    else if (dy < 0 && ph === 'defend') mpDash(t, ht);
+  } else if (k === 'swipe' && ph === 'attack' && st.atk && st.atk.a === 1 - t) {
+    // blocker: sideways = that side of the hitter, up = wide, down = drop back
+    const v = ay > ax * 1.1 ? (dy < 0 ? 'W' : 'D') : (dx < 0 ? -sgn(t) : sgn(t));
+    mpBlock(st.atk, v, ht);
+  }
+}
+function mpSwipe(dx, dy) {
+  if (MP.mySlot < 0) return;
+  const v = MP.view, ax = Math.abs(dx), ay = Math.abs(dy);
+  // predict my own lane move so it feels instant
+  let lane = false;
+  if (MP.role === 0 && v && ax >= ay * 0.8 && !v.ring && v.ph !== 'serveReady' && v.ph !== 'point' && v.ph !== 'dead') {
+    lane = true;
+    if (!MP.host) {
+      const b = tfig(MP.team, 0), nl = clamp(MP.pred.lane + (dx < 0 ? -1 : 1), 0, 2);
+      if (nl !== MP.pred.lane) { MP.pred.lane = nl; MP.pred.until = performance.now() + 450; b.tx = lane2x(MP.team, nl); SFX.step(); }
+    }
+  }
+  mpSend('swipe', dx, dy);
+  return lane ? 'lane' : undefined;
+}
+function mpSend(k, dx, dy) {
+  if (MP.host) hostInput(MP.mySlot, k, dx, dy, G.t);
+  else if (MP.net) MP.net.toHost({ t: 'in', k, dx, dy, ht: G.t });
+}
+
+/* ---------- state sync: host sends snapshots, phones draw them ---------- */
+function mpSnapOut() {
+  const st = MP.st; if (!st) return null;
+  const f = FIGS.map(g => [+g.x.toFixed(3), +g.y.toFixed(3), +g.z.toFixed(3), g.tgt, g.rate, +g.lean.toFixed(2), g.lock ? 1 : 0]);
+  const A = st.atk, I = st.inc, V = st.srv;
+  return { t: 's', T: G.t, ph: st.phase, sc: st.score, sv: st.server, m: st.meter, fi: st.fire, ln: st.lane, f,
+    a: A ? [A.a, A.tc, A.hit ? 1 : 0, A.block, A.C.x] : 0, i: I ? [I.x, I.z, I.tMark, I.d] : 0, v: V ? [V.t, V.tp, V.hit ? 1 : 0] : 0 };
+}
+function mpSnap(d) {
+  const now = performance.now() / 1000;
+  const off = d.T + MP.rtt / 2 - now;
+  if (!MP.offOk || Math.abs(off - MP.off) > 0.3) { MP.off = off; MP.offOk = true; } else MP.off += (off - MP.off) * 0.1;
+  MP.snap = d;
+  for (let i = 0; i < 4; i++) {
+    const g = FIGS[i], s = d.f[i];
+    g.nx = s[0]; g.ny = s[1]; g.nz = s[2]; g.lean = s[5]; g.lock = !!s[6];
+    if (g.tgt !== s[3]) { g.tgt = s[3]; g.rate = s[4]; }
+    if (g.nx0 == null) { g.x = g.nx; g.y = g.ny; g.z = g.nz; g.nx0 = 1; }
+  }
+  if (performance.now() > MP.pred.until) MP.pred.lane = d.ln[MP.team];
+  mpViewFrom(d);
+}
+// what this phone draws: my team's score first, ring only for me, marker, block on the net
+function mpViewFrom(d) {
+  const v = MP.view; if (!v) return;
+  const T = MP.team;
+  v.score = [d.sc[T], d.sc[1 - T]]; v.server = d.sv === T ? 0 : 1; v.meter = d.m[T]; v.fire = d.fi[T]; v.ph = d.ph;
+  v.ring = null;
+  if (MP.role === 0 && d.a && d.a[0] === T && !d.a[2]) v.ring = d.a[1];
+  if (MP.role === 0 && d.v && d.v[0] === T && !d.v[2] && d.ph === 'serveToss') v.ring = d.v[1];
+  v.inc = d.i ? { x: d.i[0], z: d.i[1], tMark: d.i[2], done: false } : null;
+  v.blk = d.a && d.a[3] != null && d.a[3] !== 'D' && !d.a[2] ? { cx: d.a[4], v: d.a[3], mine: d.a[0] === T } : null;
+  // gesture hints, first few times only
+  const atkKey = d.a ? d.a[1] : null;
+  if (atkKey !== MP.hintAtk) {
+    MP.hintAtk = atkKey;
+    if (d.a && !d.a[2]) setHint(MP.role === 1 && d.a[0] !== T ? 'block' : MP.role === 0 && d.a[0] === T ? 'attack' : '');
+  }
+}
+function mpUpdate(dt) {
+  if (G.fadeV) { G.fade = clamp(G.fade + G.fadeV * dt, 0, 1); if (G.fade <= 0 || G.fade >= 1) G.fadeV = 0; }
+  G.stop = 0; G.slow = 0;
+  if (MP.host) {
+    G.t += dt;
+    runEv();
+    for (const f of FIGS) updFig(f, dt);
+    MP.snapT -= dt;
+    if (MP.snapT <= 0 && MP.net) { MP.snapT = 0.05; const s = mpSnapOut(); if (s) { MP.net.all(s); mpViewFrom(s); } }
+  } else {
+    G.t = performance.now() / 1000 + MP.off;
+    if (MP.net && performance.now() > MP.pingT) { MP.pingT = performance.now() + 2000; MP.net.toHost({ t: 'p', c: performance.now() }); }
+    const k = Math.min(1, dt * 16);
+    for (let i = 0; i < 4; i++) {
+      const f = FIGS[i]; if (f.nx == null) continue;
+      const own = i === MP.mySlot && MP.role === 0 && performance.now() < MP.pred.until;
+      const px = f.x, wasAir = f.y > 0.03;
+      f.x += ((own ? f.tx : f.nx) - f.x) * (own ? Math.min(1, dt * 22) : k);
+      f.z += (f.nz - f.z) * k; f.y += (f.ny - f.y) * Math.min(1, dt * 24);
+      f.air = f.y > 0.03;
+      f.moving = Math.abs(f.x - px) > dt * 0.4;
+      if (f.moving && !f.air) f.ph += dt * 15;
+      if (wasAir && !f.air) dust(f.x, f.z, 3);
+      const tp = POSES[f.tgt]; if (tp) { const kk = Math.min(1, dt * (f.rate || 14)); for (let j = 0; j < 26; j++) f.pose[j] += (tp[j] - f.pose[j]) * kk; }
+    }
+  }
+  updBall(dt);
+  updParts(dt);
+  updCam(dt);
+  G.shake = Math.max(0, G.shake - dt * 16);
+  G.flash = Math.max(0, G.flash - dt * 3);
+  G.netWob = Math.max(0, G.netWob - dt * 2.2);
+  G.hype = Math.max(0, G.hype - dt);
+  for (let i = G.fx.length - 1; i >= 0; i--) if (G.t - G.fx[i].t0 > G.fx[i].dur) G.fx.splice(i, 1);
+}
+
+/* ---------- UI wiring ---------- */
+$('#mpBtn').addEventListener('click', mpOpen);
+$('#mpCreate').addEventListener('click', mpCreate);
+$('#mpJoin').addEventListener('click', mpJoin);
+$('#mpCode').addEventListener('keydown', e => { if (e.key === 'Enter') mpJoin(); });
+$('#mpBack').addEventListener('click', () => { if (MP.net) { MP.net.close(); MP.net = null; } menuScene(); });
+$('#mpLeave').addEventListener('click', mpLeave);
+$('#mpGo').addEventListener('click', mpBegin);
+for (let i = 0; i < 4; i++) $('#slot' + i).addEventListener('click', () => mpPickSlot(i));
 
 /* ---------------- render ---------------- */
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1406,15 +2146,15 @@ function drawBG() {
   for (const lx of [-0.95, 0.95]) for (let z = 3.3; z < 9.4; z += 0.5) { const p = proj(lx, 0, z); rect(p.x, p.y, 1, 1, strong ? C.line : C.court2); }
 }
 function drawShadow(x, z, w, a) {
-  const p = proj(x, 0, z);
+  const p = pv(x, 0, z);
   const rx = Math.max(1, Math.round(w * p.s)), ry = Math.max(1, Math.round(rx * 0.32));
   ctx.globalAlpha = a; ellipse(p.x, p.y, rx, ry, C.shade); ctx.globalAlpha = 1;
 }
 function drawMarker() {
-  const inc = G.incoming; if (!inc || inc.done || G.t < inc.tMark) return;
+  const inc = G.mode === 'mp' ? MP.view && MP.view.inc : G.incoming; if (!inc || inc.done || G.t < inc.tMark) return;
   const blink = ((G.t * 12) | 0) % 2 === 0;
-  for (const ex of [inc.x - 0.95, inc.x + 0.95]) for (let z = inc.z - 1.6; z <= inc.z + 1.7; z += 0.5) { const q = proj(ex, 0, z); rect(q.x, q.y, 1, 1, C.accent); }
-  const p = proj(inc.x, 0, inc.z), s = Math.max(2, Math.round(0.2 * p.s));
+  for (const ex of [inc.x - 0.95, inc.x + 0.95]) for (let z = inc.z - 1.6; z <= inc.z + 1.7; z += 0.5) { const q = pv(ex, 0, z); rect(q.x, q.y, 1, 1, C.accent); }
+  const p = pv(inc.x, 0, inc.z), s = Math.max(2, Math.round(0.2 * p.s));
   const col = blink ? C.accent : C.fire2;
   line(p.x - s, p.y - s * 0.4, p.x + s, p.y + s * 0.4, col); line(p.x - s, p.y + s * 0.4, p.x + s, p.y - s * 0.4, col);
 }
@@ -1431,9 +2171,9 @@ function drawFig(f) {
     const bob = Math.abs(Math.cos(f.ph)) * 0.04; for (let i = 1; i <= 17; i += 2) JT[i] += bob;
   }
   if (f.lean) for (let j = 0; j < 8; j++) JT[j * 2] += f.lean * (j === 0 ? 0.36 : j >= 4 ? 0.34 : 0.26);
-  const base = proj(f.x, 0, f.z), b = boostAt(base.d);
+  const base = pv(f.x, 0, f.z), b = boostAt(base.d);
   const pts = [];
-  for (let j = 0; j < 13; j++) pts.push(proj(f.x + JT[j * 2] * b, f.y + JT[j * 2 + 1] * b, f.z));
+  for (let j = 0; j < 13; j++) pts.push(pv(f.x + JT[j * 2] * b, f.y + JT[j * 2 + 1] * b, f.z));
   const col = f.col, sc = base.s * b;
   for (const [a, c] of BONES) line(pts[a].x, pts[a].y, pts[c].x, pts[c].y, col);
   // ribcage + pelvis drawn across the spine
@@ -1442,11 +2182,11 @@ function drawFig(f) {
   for (let i = 0; i < 3; i++) { const t = 0.2 + i * 0.2, cx = n.x + vx * t, cy = n.y + vy * t, w = rw * (1 - i * 0.18); line(cx - qx * w, cy - qy * w, cx + qx * w, cy + qy * w, col); }
   const pw = 0.12 * sc; line(h.x - qx * pw, h.y - qy * pw, h.x + qx * pw, h.y + qy * pw, col);
   // blocker hands are the tell, so they get chunky bright pixels
-  if (f === oB && f.tgt.startsWith('block')) for (const j of [6, 7]) rect(pts[j].x - 1, pts[j].y - 1, 3, 2, C.bone);
+  if ((f === oB || f === mate) && f.tgt.startsWith('block')) for (const j of [6, 7]) rect(pts[j].x - 1, pts[j].y - 1, 3, 2, C.bone);
   // skull
   const r = Math.max(1, Math.round(0.15 * sc)), hx = Math.round(pts[0].x), hy = Math.round(pts[0].y);
   disc(hx, hy, r, col);
-  if (f.front) {
+  if (f.front !== FLIP) {
     const glow = G.t - AI.planT < 2.2 && G.mode === 'play' && ((G.t * 8) | 0) % 2 === 0;
     if (glow && r >= 2) { rect(hx - 2, hy - 1, 2, 2, C.eye); rect(hx + 1, hy - 1, 2, 2, C.eye); }
     else if (r >= 2) { rect(hx - 1, hy, 1, 1, C.eye); rect(hx + 1, hy, 1, 1, C.eye); if (r >= 3) rect(hx, hy + 2, 1, 1, C.ink); }
@@ -1454,18 +2194,18 @@ function drawFig(f) {
   } else if (r >= 2) rect(hx + r - 1, hy + 1, 1, 1, C.boneDim);
   if (f.band) {
     const yb = hy - Math.floor(r / 3), w = Math.floor(Math.sqrt(Math.max(0, r * r + r * 0.8 - (yb - hy) ** 2)));
-    rect(hx - w, yb, 2 * w + 1, 1, G.fire && G.mode === 'play' ? C.fire2 : C.accent);
+    rect(hx - w, yb, 2 * w + 1, 1, (G.mode === 'mp' ? MP.view && MP.view.fire : G.fire && G.mode === 'play') ? C.fire2 : C.accent);
   }
   f._head = { x: hx, y: hy, r };
 }
 function drawBall() {
   if (ball.mode === 'none') return;
   for (let i = 0; i < ball.trail.length; i++) {
-    const q = proj(ball.trail[i].x, ball.trail[i].y, ball.trail[i].z), tr = Math.max(0, Math.round(0.14 * q.s) - (ball.trail.length - i));
+    const q = pv(ball.trail[i].x, ball.trail[i].y, ball.trail[i].z), tr = Math.max(0, Math.round(0.14 * q.s) - (ball.trail.length - i));
     ctx.globalAlpha = 0.12 + 0.1 * i; disc(q.x, q.y, tr, ball.fire ? C.fire2 : C.boneMid);
   }
   ctx.globalAlpha = 1;
-  const p = proj(ball.x, ball.y, ball.z), r = clamp(Math.round(0.14 * p.s), 1, 5);
+  const p = pv(ball.x, ball.y, ball.z), r = clamp(Math.round(0.14 * p.s), 1, 5);
   if (ball.fire) disc(p.x, p.y, r + 1, C.fire2);
   disc(p.x, p.y, r, C.boneMid);
   if (r >= 2) disc(p.x - 0.6, p.y - 0.6, r - 1, ball.fire ? C.fire1 : C.bone);
@@ -1485,24 +2225,28 @@ function drawNet() {
   line(a.x, a.y, b.x, b.y, C.bone); line(a.x, a.y + 1, b.x, b.y + 1, C.boneMid);
   // block zone on the net tape (assist on Leicht and Normal)
   const A = G.attack;
-  if (A && A.shown && A.shown !== 'D' && G.level < 2 && G.mode === 'play') {
-    const cx = A.C.x, span = A.shown === 'L' ? [cx - 1.8, cx + 0.15] : A.shown === 'R' ? [cx - 0.15, cx + 1.8] : [cx - 1.8, cx + 1.8];
-    const p = proj(clamp(span[0], -4.5, 4.5), top, 0), q = proj(clamp(span[1], -4.5, 4.5), top, 0);
+  const B = G.mode === 'mp' ? MP.view && MP.view.blk : null;
+  const showMp = B && B.mine && MP.level < 2;
+  if (showMp || (A && A.shown && A.shown !== 'D' && G.level < 2 && G.mode === 'play')) {
+    const sd = showMp ? (B.v === 'W' ? 'W' : B.v < 0 ? 'L' : 'R') : A.shown, cx = showMp ? B.cx : A.C.x;
+    const span = sd === 'L' ? [cx - 1.8, cx + 0.15] : sd === 'R' ? [cx - 0.15, cx + 1.8] : [cx - 1.8, cx + 1.8];
+    const p = pv(clamp(span[0], -4.5, 4.5), top, 0), q = pv(clamp(span[1], -4.5, 4.5), top, 0);
     line(p.x, p.y - 1, q.x, q.y - 1, C.bad); line(p.x, p.y, q.x, q.y, C.bad);
   }
   const c = proj(-4.5, bot, 0), d = proj(4.5, bot, 0); line(c.x, c.y, d.x, d.y, C.boneDim);
   for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) { const p = proj(sx * 4.5, top + i * 0.2, 0), q = proj(sx * 4.5, top + (i + 1) * 0.2, 0); line(p.x, p.y, q.x, q.y, i % 2 ? C.bone : C.bad); }
 }
 function drawParts() {
-  for (const p of G.parts) { const q = proj(p.x, p.y, p.z); const s = q.s > 22 ? 2 : 1; rect(q.x, q.y, s, s, p.c); }
+  for (const p of G.parts) { const q = pv(p.x, p.y, p.z); const s = q.s > 22 ? 2 : 1; rect(q.x, q.y, s, s, p.c); }
 }
 function drawRing() {
   let tc = null;
-  if (G.phase === 'attack' && G.attack && !G.attack.hit) tc = G.attack.tc;
+  if (G.mode === 'mp') tc = MP.view && MP.view.ring;
+  else if (G.phase === 'attack' && G.attack && !G.attack.hit) tc = G.attack.tc;
   else if (G.phase === 'serveToss' && G.serve && !G.serve.hit) tc = G.serve.tp;
   if (tc == null) return;
   const u = (G.t - (tc - RING)) / RING; if (u < 0) return;
-  const p = proj(ball.x, ball.y, ball.z), rb = clamp(Math.round(0.14 * p.s), 1, 5);
+  const p = pv(ball.x, ball.y, ball.z), rb = clamp(Math.round(0.14 * p.s), 1, 5);
   const r = Math.max(rb + 1, lerp(17, rb + 1, Math.min(1, u)));
   const hot = Math.abs(G.t - tc) < 0.075;
   ring(p.x, p.y, r, hot ? C.accent : (u > 1 ? C.bad : C.boneMid));
@@ -1519,25 +2263,27 @@ function drawHUD() {
   miniSkull(cx - 39, 9, C.bone, true);
   const flare = G.mode === 'play' && G.t - AI.planT < 2.2;
   miniSkull(cx + 34, 9 - (flare ? Math.round(Math.abs(Math.sin(G.t * 9))) : 0), flare && ((G.t * 8) | 0) % 2 ? C.bad : C.opp, false);
-  if (G.mode === 'play') { const bx = G.server === 0 ? cx - 38 : cx + 35; rect(bx, 17, 2, 1, C.accent); rect(bx - 1, 18, 4, 2, C.accent); rect(bx, 20, 2, 1, C.accent); }
+  const mpv = (G.mode === 'mp' || G.mode === 'mpOver') && MP.view;
+  const SC = mpv ? mpv.score : G.score, SV = mpv ? mpv.server : G.server, MT = mpv ? mpv.meter : G.meter, FI = mpv ? mpv.fire : G.fire;
+  if (G.mode === 'play' || G.mode === 'mp') { const bx = SV === 0 ? cx - 38 : cx + 35; rect(bx, 17, 2, 1, C.accent); rect(bx - 1, 18, 4, 2, C.accent); rect(bx, 20, 2, 1, C.accent); }
   for (let side = 0; side < 2; side++) {
     const age = G.t - G.bump[side], hot = age < 0.3;
     const dy = hot ? -Math.round(Math.sin(Math.min(1, age / 0.3) * Math.PI) * 3) : 0;
-    text(pad2(G.score[side]), side ? cx + 16 : cx - 16, 7 + dy, hot ? (side ? C.bad : C.accent) : (side ? C.opp : C.bone), 2, 'c');
+    text(pad2(SC[side]), side ? cx + 16 : cx - 16, 7 + dy, hot ? (side ? C.bad : C.accent) : (side ? C.opp : C.bone), 2, 'c');
   }
   rect(cx, 11, 1, 1, C.boneDim); rect(cx, 15, 1, 1, C.boneDim);
   for (let i = 0; i < BAL.meterMax; i++) {
-    const on = G.fire || i < G.meter, col = on ? (G.fire ? (((G.t * 10 + i) | 0) % 2 ? C.fire1 : C.fire2) : C.bone) : C.court2, x = cx - BAL.meterMax * 2 + i * 4 + 1;
+    const on = FI || i < MT, col = on ? (FI ? (((G.t * 10 + i) | 0) % 2 ? C.fire1 : C.fire2) : C.bone) : C.court2, x = cx - BAL.meterMax * 2 + i * 4 + 1;
     rect(x, 24, 3, 2, col); rect(x + 1, 26, 1, 1, col);
   }
-  if (hint && G.mode === 'play') {
+  if (hint && (G.mode === 'play' || G.mode === 'mp')) {
     const a = Math.min(1, (G.t - hintT) * 4) * (0.65 + 0.35 * Math.sin(G.t * 6));
     ctx.globalAlpha = a; text(hint, cx, Math.round(H * 0.69), C.bone, 1, 'c'); ctx.globalAlpha = 1;
   }
 }
 function drawFx() {
   for (const f of G.fx) {
-    const u = (G.t - f.t0) / f.dur, p = proj(f.x, f.y, f.z), r0 = clamp(Math.round(0.14 * p.s), 1, 5) + 1;
+    const u = (G.t - f.t0) / f.dur, p = pv(f.x, f.y, f.z), r0 = clamp(Math.round(0.14 * p.s), 1, 5) + 1;
     ctx.globalAlpha = 1 - u; ring(p.x, p.y, lerp(r0, f.r1, 1 - (1 - u) * (1 - u)), f.col);
   }
   ctx.globalAlpha = 1;
@@ -1567,8 +2313,9 @@ function drawPops() {
   }
 }
 function drawFireHead() {
-  if (!G.fire || G.mode !== 'play' || !me._head) return;
-  const h = me._head;
+  const mpm = G.mode === 'mp', who = mpm ? (MP.mySlot >= 0 ? tfig(MP.team, MP.role) : null) : me;
+  if (!(mpm ? MP.view && MP.view.fire : G.fire && G.mode === 'play') || !who || !who._head) return;
+  const h = who._head;
   for (let i = 0; i < 6; i++) {
     const fx = h.x + Math.round(Math.sin(G.t * 9 + i * 1.7) * h.r * 0.8);
     const fy = h.y - h.r - 1 - ((G.t * 18 + i * 3) % 6);
@@ -1582,9 +2329,10 @@ function render() {
   for (const f of FIGS) drawShadow(f.x, f.z, f.air ? 0.22 : 0.3, 0.45);
   if (ball.mode !== 'none' && ball.mode !== 'held') drawShadow(ball.x, ball.z, 0.15, clamp(0.6 - ball.y * 0.07, 0.2, 0.6));
   drawMarker();
-  const items = FIGS.map(f => ({ z: f === oB && f.z > -1.3 ? 0.3 : f.z, fn: () => drawFig(f) }));
+  const vz = z => FLIP ? -z : z;
+  const items = FIGS.map(f => ({ z: (f === oB || f === mate) && vz(f.z) > -1.3 && vz(f.z) < 0 ? 0.3 : vz(f.z), fn: () => drawFig(f) }));
   items.push({ z: 0, fn: drawNet });
-  items.push({ z: ball.z + (ball.mode === 'held' ? 0.2 : 0), fn: drawBall });
+  items.push({ z: vz(ball.z) + (ball.mode === 'held' ? 0.2 : 0), fn: drawBall });
   items.sort((a, b) => a.z - b.z);
   for (const it of items) it.fn();
   drawFireHead();
@@ -1594,7 +2342,7 @@ function render() {
   ctx.restore();
   drawFade();
   if (G.flash > 0) { ctx.globalAlpha = Math.min(0.5, G.flash * 0.5); rect(0, 0, W, H, C.fire1); ctx.globalAlpha = 1; }
-  if (G.mode === 'play' || G.mode === 'over') drawHUD();
+  if (G.mode === 'play' || G.mode === 'over' || G.mode === 'mp' || G.mode === 'mpOver') drawHUD();
   if (G.mode === 'menu') {
     const bob = reduceMotion ? 0 : Math.round(Math.sin(G.t * 2) * 1.5);
     text('VOLLEYSKULL', W / 2, 18 + bob, C.bone, 2, 'c');
@@ -1606,10 +2354,12 @@ function render() {
 function updCam(dt) {
   let tx = 0, tz = DZ + CAM0.off;
   if (G.mode === 'play' || G.mode === 'over') tz = Math.max(DZ + CAM0.off, me.z + CAM0.off - 0.6);
+  else if ((G.mode === 'mp' || G.mode === 'mpOver') && MP.mySlot >= 0) { const b = tfig(MP.team, 0); tz = Math.max(DZ + CAM0.off, (FLIP ? -b.z : b.z) + CAM0.off - 0.6); }
   CAM.x += (tx - CAM.x) * Math.min(1, dt * 4);
   CAM.z += (tz - CAM.z) * Math.min(1, dt * 3);
 }
 function update(dt) {
+  if (G.mode === 'mp' || G.mode === 'mpOver') { mpUpdate(dt); return; }
   if (G.fadeV) { G.fade = clamp(G.fade + G.fadeV * dt, 0, 1); if (G.fade <= 0 || G.fade >= 1) G.fadeV = 0; }
   if (G.stop > 0) { G.stop -= dt; return; }
   const s = G.slow > 0 ? 0.35 : 1;
@@ -1673,7 +2423,7 @@ function boot(data) {
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ level: G.level, mode: G.mode, score: G.score, server: G.server, meter: G.meter, fire: G.fire, stats: G.stats })); } catch (e) {}
 const hot = window.claude && window.claude.hot;
 if (hot && hot.ready) hot.ready(boot); else boot(hot && hot.data ? hot.data : {});
-window.__kh = { AI, G, me, mate, oB, oA, ball, startRally, BAL, CAM, LX, startGame, onSwipe, onTap, update, render };
+window.__kh = { MP, AI, FIGS, G, me, mate, oB, oA, ball, startRally, BAL, CAM, LX, startGame, onSwipe, onTap, update, render };
 })();
 </script>
 <script>

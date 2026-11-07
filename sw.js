@@ -1,6 +1,6 @@
 // Offline cache: serve from cache at once, refresh it in the background.
-const CACHE = 'volleyskull-4ffb72abf1';
-const ASSETS = ["./", "index.html", "manifest.webmanifest", "icons/favicon-32.png", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "fonts/silkscreen-400-latin.woff2", "fonts/silkscreen-700-latin.woff2", "fonts/jersey10-latin.woff2"];
+const CACHE = 'volleyskull-58aeff2fb0';
+const ASSETS = ["./", "index.html", "manifest.webmanifest", "icons/favicon-32.png", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "fonts/silkscreen-400-latin.woff2", "fonts/silkscreen-700-latin.woff2", "fonts/jersey10-latin.woff2", "lib/peerjs.min.js"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
