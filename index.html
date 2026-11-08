@@ -84,6 +84,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 #how p,#how li{font-size:19px;line-height:1.25;margin:0;max-width:60ch}
 #how kbd{font:inherit;color:var(--ink);background:var(--bone);padding:0 4px}
 #how .btn{align-self:center;margin-top:8px}
+#how h3{font-family:var(--font-display);font-size:14px;margin:6px 0 -8px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);scroll-margin-top:12px}
+#how p.sub{color:var(--bone-dim);margin-bottom:-8px}
+#mpRole{font-size:17px;line-height:1.2;margin:0;color:var(--bone-dim);max-width:250px;text-align:center}
+#mpRole:empty{display:none}
 #over h2{font-family:var(--font-display);font-size:30px;margin:0;letter-spacing:.08em;text-transform:uppercase}
 #over .score{font-size:44px;line-height:1;margin:0;font-variant-numeric:tabular-nums}
 #over dl{display:grid;grid-template-columns:auto auto;gap:2px 18px;margin:0;font-size:19px;text-align:left}
@@ -182,11 +186,31 @@ html{background:var(--screen)}
         <dt><kbd>↙</kbd> <kbd>↘</kbd></dt><dd>Spike when the ring closes</dd>
         <dt><kbd>↑</kbd></dt><dd>Lob over the block</dd>
         <dt>Tap</dt><dd>Serve, then swipe <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd></dd>
-        <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Multiplayer, front: block left, right, wide, drop back. Tap to jump when the ring closes</dd>
-        <dt>Tap</dt><dd>Front, setting: tap on the ring. <kbd>←</kbd> <kbd>→</kbd> quick set, <kbd>↑</kbd> dump over the net</dd>
-        <dt><kbd>↓</kbd></dt><dd>Front: grab a dump or lob. Tap when your hitter gets blocked to cover, or when their dig floats over the net to smash it</dd>
       </dl>
-      <p>Hit where the block is not. Full skull bar: fireball. Full wall bar (front): your next block is a sure point.</p>
+      <p>Hit where the block is not. Full skull bar: fireball.</p>
+      <h3 id="howBack">Multiplayer: back</h3>
+      <p>You serve, defend and spike, with the moves above.</p>
+      <dl class="moves">
+        <dt>Fireball</dt><dd>Get into its lane, then tap when the fiery ring closes. Hit it right and you dig it</dd>
+      </dl>
+      <h3 id="howFront">Multiplayer: front</h3>
+      <p>You set for your hitter and block theirs.</p>
+      <p class="sub">Your side has the ball</p>
+      <dl class="moves">
+        <dt>Tap</dt><dd>Set to your hitter when the ring closes</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Quick set to that side. Your hitter runs there</dd>
+        <dt><kbd>↑</kbd></dt><dd>Dump it over the net yourself</dd>
+      </dl>
+      <p class="sub">Their side has the ball</p>
+      <dl class="moves">
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Step along the net. Stand in front of their hitter (red arrow on the net)</dd>
+        <dt><kbd>↖</kbd> <kbd>↗</kbd></dt><dd>Block that side</dd>
+        <dt><kbd>↑</kbd></dt><dd>Split block: both sides, but weaker</dd>
+        <dt><kbd>↓</kbd></dt><dd>Drop back for the short ball (lob, dump)</dd>
+        <dt>Tap</dt><dd>Jump when the ring closes</dd>
+      </dl>
+      <p>Your block shows on the net in yellow. Guess where the hitter aims, they see your block too. Blocked from the next lane, you only get fingertips on it.</p>
+      <p>Also: tap on the ring to cover when your hitter gets blocked, or to smash a dig that floats over. Good blocks fill your wall bar; full bar: the next block is a sure point.</p>
       <p>Every win earns 10 coins for the shop.</p>
       <button class="btn" id="howOk">Got it</button>
     </div>
@@ -219,6 +243,8 @@ html{background:var(--screen)}
           <button class="slot" id="slot1" aria-pressed="false"><i>Front</i><b>CPU</b></button>
           <button class="slot" id="slot3" aria-pressed="false"><i>Front</i><b>CPU</b></button>
         </div>
+        <p id="mpRole" aria-live="polite"></p>
+        <button class="btn ghost" id="mpHow">How to play</button>
         <button class="btn ghost" id="mpShare">Share link</button>
         <button class="btn" id="mpGo">Start</button>
         <button class="btn ghost" id="mpLeave">Leave</button>
@@ -229,6 +255,7 @@ html{background:var(--screen)}
     <div class="ov dim" id="pauseOv" hidden>
       <h2>PAUSE</h2>
       <button class="btn" id="resumeBtn">Resume</button>
+      <button class="btn ghost" id="pauseHow">How to play</button>
       <button class="btn ghost" id="quitBtn">Menu</button>
     </div>
 
@@ -300,7 +327,8 @@ const G5 = {
   "'":'..#..|..#..|.....|.....|.....|.....|.....', '·':'.....|.....|.....|..#..|.....|.....|.....',
   '←':'.....|..#..|.#...|#####|.#...|..#..|.....', '→':'.....|..#..|...#.|#####|...#.|..#..|.....',
   '↑':'..#..|.###.|#.#.#|..#..|..#..|..#..|.....', '↓':'.....|..#..|..#..|..#..|#.#.#|.###.|..#..',
-  '↙':'.....|....#|#..#.|#.#..|##...|####.|.....', '↘':'.....|#....|.#..#|..#.#|...##|.####|.....'
+  '↙':'.....|....#|#..#.|#.#..|##...|####.|.....', '↘':'.....|#....|.#..#|..#.#|...##|.####|.....',
+  '↖':'.....|####.|##...|#.#..|#..#.|....#|.....', '↗':'.....|.####|...##|..#.#|.#..#|#....|.....'
 };
 const FONT = {};
 for (const k in G5) FONT[k] = G5[k].split('|');
@@ -476,7 +504,7 @@ function handWorld(f, idx) {
   return { x: f.x + f.pose[idx * 2] * b, y: f.y + f.pose[idx * 2 + 1] * b, z: f.z };
 }
 function updFig(f, dt) {
-  const dx = f.tx - f.x, dz = f.tz - f.z;
+  const dx = f.tx - f.x, dz = f.tz - f.z, x0 = f.x, z0 = f.z;
   if (f.spring) {
     // critically damped spring: quick start, soft arrival, no overshoot
     const w = 30, e = Math.exp(-w * dt), off = f.x - f.tx, tmp = (f.vx + w * off) * dt;
@@ -498,6 +526,7 @@ function updFig(f, dt) {
   const tp = POSES[f.tgt], k = Math.min(1, dt * f.rate);
   for (let i = 0; i < 26; i++) f.pose[i] += (tp[i] - f.pose[i]) * k;
   if (!f.spring) f.lean += (f.leanT - f.lean) * Math.min(1, dt * 8);
+  if (dt > 0) { f.mvx = (f.x - x0) / dt; f.mvz = (f.z - z0) / dt; } // sent to the other phones so they can run ahead
 }
 
 /* ---------------- ball ---------------- */
@@ -509,6 +538,7 @@ function launch(to, T, o = {}) {
   ball.v = { x: (to.x - from.x) / T, y: (to.y - from.y) / T + 0.5 * GRAV * T, z: (to.z - from.z) / T };
   ball.t0 = G.t; ball.T = T; ball.mode = 'flight'; ball.holder = null;
   ball.wob = o.wob || 0; ball.wobF = o.wobF || 0; ball.fire = !!o.fire; ball.spinV = o.spin != null ? o.spin : 9;
+  ball.hang = !!o.hang;
 }
 function updBall(dt) {
   if (ball.mode !== 'flight' && ball.trail.length) ball.trail.shift();
@@ -518,7 +548,8 @@ function updBall(dt) {
     return;
   }
   if (ball.mode === 'flight') {
-    const t = G.t - ball.t0, u = t / ball.T;
+    // a hanging ball stops at its end point (the defender's arms) instead of flying on behind them
+    const t = ball.hang ? Math.min(G.t - ball.t0, ball.T) : G.t - ball.t0, u = t / ball.T;
     let x = ball.p0.x + ball.v.x * t;
     const y = ball.p0.y + ball.v.y * t - 0.5 * GRAV * t * t;
     const z = ball.p0.z + ball.v.z * t;
@@ -546,6 +577,12 @@ function updBall(dt) {
   }
 }
 function bounceFx() { dust(ball.x, ball.z, 5); SFX.bounce(); }
+// a hanging ball nobody got to: it flies on from where it waits and drops
+function letFly(mp) {
+  if (ball.mode !== 'flight' || !ball.hang) return;
+  const vy = ball.v.y - GRAV * ball.T, tau = Math.max(0.05, (vy + Math.sqrt(vy * vy + 2 * GRAV * Math.max(0, ball.y - 0.11))) / GRAV);
+  (mp ? mlaunch : launch)({ x: ball.x + ball.v.x * tau, y: 0.11, z: ball.z + ball.v.z * tau }, tau, { spin: ball.spinV });
+}
 
 /* ---------------- particles & popups ---------------- */
 function dust(x, z, n) {
@@ -642,13 +679,18 @@ function D() {
 }
 function shake(n) { if (!reduceMotion) G.shake = Math.max(G.shake, n); }
 function slowmo(s) { G.slow = Math.max(G.slow, s); }
-// gesture hints: icons only, shown the first few times, then never again
-const HINTS = { serve: 'TAP', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← → ↑ ↓ TAP', set: 'TAP ← → ↑' };
+// gesture hints, shown the first few times, then never again ('|' = second line)
+const HINTS = { serve: 'TAP', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑',
+  // multiplayer coaching: a few words on what to do right now
+  mpSet: 'TAP ON THE RING: SET|← → QUICK SET  ↑ DUMP', mpRead: '← → STAY IN FRONT|OF THEIR HITTER',
+  mpBlock: '← → MOVE  ↖ ↗ BLOCK|↑ SPLIT  ↓ SHORT BALL', mpJump: 'TAP ON THE RING: JUMP',
+  mpCover: 'TAP ON THE RING: COVER', mpSmash: 'TAP ON THE RING: SMASH', mpGrab: '↓ GRAB THE SHORT BALL',
+  mpFire: 'FIREBALL! ← → ITS LANE|TAP ON THE RING' };
 const hintSeen = store.get('hints', {});
 let hint = '', hintT = 0;
 function setHint(key) {
   hint = '';
-  if (!HINTS[key] || (hintSeen[key] || 0) >= 3) return;
+  if (!HINTS[key] || (hintSeen[key] || 0) >= (key.startsWith('mp') ? 5 : 3)) return;
   hintSeen[key] = (hintSeen[key] || 0) + 1; store.set('hints', hintSeen);
   hint = HINTS[key]; hintT = G.t;
 }
@@ -856,9 +898,9 @@ function oppServeHit() {
   });
   const float = kind === 'sFloat', hammer = kind === 'sHammer';
   const T = lerp(BAL.oppServeT[0], BAL.oppServeT[1], d) * (hammer ? 0.8 : 1) * (1 - AI.speed());
-  const o = float ? { wob: rand(0.9, 1.4) * (Math.random() < 0.5 ? -1 : 1), wobF: Math.PI * 2 * rand(1.0, 1.6), spin: 1 } : { spin: hammer ? 26 : 12 };
+  const o = float ? { wob: rand(0.9, 1.4) * (Math.random() < 0.5 ? -1 : 1), wobF: Math.PI * 2 * rand(1.0, 1.6), spin: 1, hang: true } : { spin: hammer ? 26 : 12 };
   launch({ x: LX[lane], y: 0.85, z: DZ + 0.1 }, T, o);
-  incoming('serve', lane, LX[lane], DZ + 0.1, T, float ? T * 0.5 : lerp(0, 0.15, d)).tac = kind;
+  incoming('serve', lane, LX[lane], DZ + 0.1, T, float ? T * 0.5 : lerp(0, 0.15, d), float).tac = kind;
   if (hammer) { shake(2); SFX.spike(); }
   after(0.35, () => { oA.tx = pick([-2.4, 0, 2.4]); oA.tz = LIB_Z; oA.sx = oA.sz = 6; setBase(oA, 'ready'); });
 }
@@ -870,11 +912,12 @@ function pickLane() {
 }
 
 /* ---------------- our defense ---------------- */
-function incoming(type, lane, x, z, T, markDelay) {
-  const inc = G.incoming = { type, lane, x, z, tArr: G.t + T, tMark: G.t + markDelay, done: false, tac: null };
+function incoming(type, lane, x, z, T, markDelay, float) {
+  const inc = G.incoming = { type, lane, x, z, tArr: G.t + T, tMark: G.t + markDelay, done: false, tac: null, float: !!float };
   G.phase = 'defend';
   setHint(type === 'tip' ? 'tip' : type === 'out' ? '' : 'defend');
-  after(T, resolveDefense);
+  // floaters wait a moment at the arms (the ball hangs), so a step that is a hair late still counts
+  after(T + (float ? 0.08 : 0), resolveDefense);
   // split step: a little hop as the ball is struck
   if (!me.air && !me.lock && type !== 'block') { jump(me, 1.5); setPose(me, 'ready', 0.2, 20); }
   return inc;
@@ -929,10 +972,11 @@ function resolveDefense() {
   if (inc.type === 'out') { resolveOut(inc); return; }
   inc.done = true; G.incoming = null;
   const dx = Math.abs(me.x - inc.x), dz = Math.abs(me.z - inc.z);
-  const ok = dx < 0.95 && dz < (inc.type === 'tip' ? 1.0 : 1.5);
+  // a floater counts by lane: a step taken just now still gets there (diving)
+  const ok = (inc.float && me.lane === inc.lane && !me.dash) || (dx < 0.95 && dz < (inc.type === 'tip' ? 1.0 : 1.5));
   me.dash = false;
-  const late = G.t - (me.arriveT || 0) < 0.08;
-  if (ok && (!late || Math.random() < lerp(BAL.diveOk[0], BAL.diveOk[1], D()))) { AI.defended(inc, false); ourDig(inc, late); return; }
+  const late = G.t - (me.arriveT || 0) < (inc.float ? 0 : 0.08);
+  if (ok && (!late || inc.float || Math.random() < lerp(BAL.diveOk[0], BAL.diveOk[1], D()))) { AI.defended(inc, false); ourDig(inc, late); return; }
   AI.defended(inc, true);
   G.phase = 'dead'; setHint('');
   const side = inc.x < me.x - 0.05 ? -1 : inc.x > me.x + 0.05 ? 1 : (me.moveDir || 1);
@@ -944,6 +988,7 @@ function resolveDefense() {
     after(0.7, () => point(1, 'LATE!'));
     return;
   }
+  letFly(false);
   if (dx < 2.6) defAnim(me, inc.type === 'tip' ? 'missTip' : 'miss', side);
   else defAnim(me, 'lunge', side);
   after(0.45, () => point(1, inc.type === 'block' ? 'BLOCKED!' : inc.type === 'tip' ? 'TIP!' : 'MISSED'));
@@ -1597,7 +1642,7 @@ cv.addEventListener('pointermove', e => {
     const tot = e.clientX - ptr.x0, need = Math.max(SW * 4, frameEl.clientWidth * 0.5);
     if (Math.sign(tot) !== ptr.dir || Math.abs(tot) < need) return;
     ptr.chain = false;
-    moveLane(ptr.dir);
+    if (G.mode === 'mp') { if (!G.paused) mpSwipe(ptr.dir * 60, 0); } else moveLane(ptr.dir);
     return;
   }
   const dx = e.clientX - ptr.x, dy = e.clientY - ptr.y;
@@ -1620,7 +1665,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 addEventListener('keydown', e => {
   const k = e.key;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(k) && (G.mode === 'play' || G.mode === 'mp') && document.activeElement === document.body) e.preventDefault();
-  if (G.mode === 'mp') { if (e.repeat) return; if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; } if (G.paused) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
+  if (G.mode === 'mp') { if (e.repeat) return; if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; } if (G.paused) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], q: [-1, -1], e: [1, -1] }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
   if (e.repeat) return;
   if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; }
   if (G.mode !== 'play' || G.paused) return;
@@ -1643,9 +1688,21 @@ $('#playBtn').addEventListener('click', () => {
   if (!store.get('seenHow', false)) { store.set('seenHow', true); openHow('play'); return; }
   startGame();
 });
-function openHow(next) { showOnly('how'); $('#how').scrollTop = 0; $('#howOk').dataset.next = next; $('#howOk').focus({ preventScroll: true }); }
+function openHow(next, sec) {
+  showOnly('how'); $('#how').scrollTop = 0; $('#howOk').dataset.next = next; $('#howOk').focus({ preventScroll: true });
+  if (sec) { const el = $('#' + sec); if (el) $('#how').scrollTop = el.offsetTop - 12; }
+}
+// the guide part for my multiplayer position
+const mpHowSec = () => MP.mySlot >= 0 && (MP.mySlot & 1) ? 'howFront' : 'howBack';
 $('#howBtn').addEventListener('click', () => openHow('menu'));
-$('#howOk').addEventListener('click', () => { if ($('#howOk').dataset.next === 'play') startGame(); else showOnly('menu'); });
+$('#howOk').addEventListener('click', () => {
+  const n = $('#howOk').dataset.next;
+  if (n === 'play') startGame();
+  else if (n === 'lobby') { if (G.mode === 'mp') showOnly(MP.view && MP.view.paused ? 'pauseOv' : null); else if (MP.net) mpLobbyShow(); else menuScene(); }
+  else if (n === 'pause') showOnly(G.paused ? 'pauseOv' : null);
+  else showOnly('menu');
+});
+$('#pauseHow').addEventListener('click', () => openHow('pause', G.mode === 'mp' ? mpHowSec() : null));
 $('#resumeBtn').addEventListener('click', () => togglePause(false));
 $('#quitBtn').addEventListener('click', () => { G.paused = false; $('#pauseOv').hidden = true; if (MP.net) mpLeave(); else menuScene(); });
 $('#againBtn').addEventListener('click', () => { if (MP.net) mpBegin(); else startGame(); });
@@ -1744,8 +1801,8 @@ const lane2x = (t, l) => sgn(t) * LX[l];
 const MPCODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MP = {
   net: null, host: false, code: '', slots: [null, null, null, null], myId: '', mySlot: -1, team: 0, role: 0,
-  st: null, view: null, level: 1, snapT: 0, off: 0, offOk: false, rtt: 0.12, pingT: 0, lastBall: null, pred: { lane: 1, until: 0 },
-  hintAtk: null
+  st: null, view: null, level: 1, snapT: 0, off: 0, offOk: false, rtt: 0.12, rttN: 0, pingT: 0, lastBall: null, pred: { lane: 1, until: 0, x: 0, fig: null },
+  lat: {}, coach: ''
 };
 
 /* ---------- transport: PeerJS (WebRTC) online, BroadcastChannel for same-device tests (?bc) ---------- */
@@ -1870,6 +1927,9 @@ function mpLobbyDraw() {
   }
   $('#mpGo').hidden = !MP.host;
   if (!/copied|http/.test($('#mpWait').textContent) || !MP.host) $('#mpWait').textContent = MP.host ? '' : 'Waiting for start';
+  const front = MP.mySlot >= 0 && (MP.mySlot & 1);
+  $('#mpRole').textContent = MP.mySlot < 0 ? '' : front ? 'Front: you set for your hitter and block theirs.' : 'Back: you serve, defend and spike.';
+  if (front && !store.get('guideFront', false) && !$('#mpOv').hidden && !$('#mpLobby').hidden && G.mode !== 'mp') { store.set('guideFront', true); openHow('lobby', 'howFront'); }
 }
 function inviteURL() {
   const base = /github\.io$/.test(location.hostname) || location.hostname === 'localhost' ? location.origin + location.pathname : 'https://johannesmaletius-lgtm.github.io/Knochenhart/';
@@ -1888,7 +1948,7 @@ function mpPickSlot(i) {
 function mpHostMsg(id, d) {
   const i = MP.slots.findIndex(s => s && s.id === id);
   if (d.t === 'slot') { if (i >= 0 && !MP.slots[d.i] && G.mode !== 'mp') { MP.slots[d.i] = MP.slots[i]; MP.slots[i] = null; mpLobbySync(); } }
-  else if (d.t === 'p') MP.net.send(id, { t: 'q', c: d.c });
+  else if (d.t === 'p') { MP.net.send(id, { t: 'q', c: d.c }); if (typeof d.r === 'number') MP.lat[id] = clamp(d.r, 0, 0.6); }
   else if (d.t === 'skin' && i >= 0 && SKIN[d.sk]) { MP.slots[i].sk = d.sk; mpLobbySync(); if (G.mode === 'mp') mpRoles(); }
   else if (d.t === 'in' && i >= 0 && G.mode === 'mp') hostInput(i, d.k, d.dx, d.dy, d.ht);
 }
@@ -1898,7 +1958,7 @@ function mpClientMsg(d) {
   else if (d.t === 'start') { MP.level = d.level; mpEnter(); }
   else if (d.t === 's') mpSnap(d);
   else if (d.t === 'fx') applyFx(d.e);
-  else if (d.t === 'q') { const r = (performance.now() - d.c) / 1000; MP.rtt = MP.rtt * 0.7 + r * 0.3; }
+  else if (d.t === 'q') { const r = (performance.now() - d.c) / 1000; MP.rtt = MP.rttN ? MP.rtt * 0.7 + r * 0.3 : r; MP.rttN++; }
   else if (d.t === 'over') mpOverShow(d.score, d.stats);
 }
 
@@ -1912,6 +1972,8 @@ function mpRoles() {
 function mpEnter() {
   G.mode = 'mp'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 1; G.fadeV = -4; G.hype = 0;
   oA.spring = true; mpRoles();
+  for (const f of FIGS) f.sT = null;
+  MP.snap = null; MP.coach = ''; MP.pred = { lane: 1, until: 0, x: 0, fig: null };
   MP.view = { score: [0, 0], server: 0, meter: 0, fire: false, ring: null, inc: null, blk: null, ph: '' };
   showOnly(null); setHint('');
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
@@ -1958,26 +2020,61 @@ function applyFx(e) {
     case 'hold': ball.mode = 'held'; ball.holder = FIGS[e.f]; ball.idx = e.i; ball.fire = false; ball.trail.length = 0; break;
     case 'ball':
       ball.p0 = e.p0; ball.v = e.v; ball.t0 = e.t0; ball.T = e.T; ball.mode = 'flight'; ball.holder = null;
-      ball.wob = e.wob || 0; ball.wobF = e.wobF || 0; ball.fire = !!e.fire; ball.spinV = e.spin; break;
+      ball.wob = e.wob || 0; ball.wobF = e.wobF || 0; ball.fire = !!e.fire; ball.spinV = e.spin; ball.hang = !!e.hang; break;
   }
 }
 const S = (n, a) => fx({ k: 'sfx', n, a });
 function mlaunch(to, T, o = {}) {
   launch(to, T, o);
-  fx({ k: 'ball', p0: ball.p0, v: ball.v, t0: ball.t0, T, wob: ball.wob, wobF: ball.wobF, fire: ball.fire, spin: ball.spinV });
+  fx({ k: 'ball', p0: ball.p0, v: ball.v, t0: ball.t0, T, wob: ball.wob, wobF: ball.wobF, fire: ball.fire, spin: ball.spinV, hang: ball.hang ? 1 : 0 });
 }
 function mhold(f, i) { fx({ k: 'hold', f: FIGS.indexOf(f), i }); }
 function msparks(n, c) { fx({ k: 'sparks', x: ball.x, y: ball.y, z: ball.z, n, c }); }
 
 /* ---------- host: match rules ---------- */
 const human = i => !!MP.slots[i];
-const grace = i => MP.slots[i] && MP.slots[i].id !== MP.myId ? 0.2 : 0;
+// how long the host waits for a remote player's input: half their round trip plus some jitter
+const grace = i => { const sl = MP.slots[i]; if (!sl || sl.id === MP.myId) return 0; const r = MP.lat[sl.id]; return clamp((r != null ? r : 0.24) / 2 + 0.06, 0.09, 0.24); };
+// launch from where the ball was when the player hit it: their input reaches the host a little later
+function rewindBall(ht) {
+  if (ball.mode !== 'flight' || ht == null || ht >= G.t) return;
+  const t = ball.hang ? clamp(ht - ball.t0, 0, ball.T) : Math.max(0, ht - ball.t0);
+  ball.x = ball.p0.x + ball.v.x * t; ball.y = Math.max(0.11, ball.p0.y + ball.v.y * t - 0.5 * GRAV * t * t); ball.z = ball.p0.z + ball.v.z * t;
+}
+// front player: is the ball on the other side (so the front player is a blocker, free to move along the net)?
+function blkFree(t) {
+  const st = MP.st, ph = st.phase;
+  if (ph === 'point' || ph === 'dead') return false;
+  if (st.setq && st.setq.t === t) return false;
+  if (ph === 'pass' && st.passT === t) return false;
+  if (st.ovp && st.ovp.t === t) return false;
+  return true;
+}
+// front player swipes: sideways = step along the net, up-left/up-right = block that side, up = split block, down = drop back
+function blkGesture(dx, dy) {
+  const ax = Math.abs(dx), ay = Math.abs(dy);
+  if (dy > 0 && ay >= ax * 0.7) return 'D';
+  if (dy >= 0 || ax >= ay * 1.7) return dx < 0 ? 'ml' : 'mr';
+  if (ax <= ay * 0.45) return 'W';
+  return dx < 0 ? 'bl' : 'br';
+}
+const blkV = (t, g) => g === 'bl' ? -sgn(t) : g === 'br' ? sgn(t) : g; // block side in world x
+// lanes between the blocker and the hitter, in world x (0 = right in front of the hitter)
+const blkOff = A => Math.round((lane2x(1 - A.a, A.bl) - lane2x(A.a, A.hl)) / 1.9);
+// which hits the block stops: 2 = in front of the hitter on that side, 1 = fingertips from the next lane
+function blockCover(A, wx) {
+  if (A.block == null || A.block === 'D' || !A.bj || A.bq === 'miss') return 0;
+  const off = blkOff(A);
+  if (off === 0) return A.block === 'W' || A.block === wx ? 2 : 0;
+  if (Math.abs(off) === 1 && wx === Math.sign(off) && (A.block === -wx || A.block === 'W')) return 1;
+  return 0;
+}
 const mpDiff = () => [0.2, 0.45, 0.7][MP.level] != null ? [0.2, 0.45, 0.7][MP.level] : 0.45;
 function laneOfX(t, wx) { const lx = sgn(t) * wx; return lx < -0.95 ? 0 : lx > 0.95 ? 2 : 1; }
 function goBack(t) { const b = tfig(t, 0); b.tx = lane2x(t, MP.st.lane[t]); b.tz = sgn(t) * DZ; b.sz = 6; setBase(b, 'ready'); }
 function mpRally() {
   const st = MP.st; if (!st || G.mode !== 'mp') return;
-  G.ev.length = 0; st.inc = st.atk = st.srv = null; st.rally = 0; st.dash = [false, false];
+  G.ev.length = 0; st.inc = st.atk = st.srv = null; st.rally = 0; st.dash = [false, false]; st.passT = null; st.pre = [null, null];
   for (let t = 0; t < 2; t++) {
     const b = tfig(t, 0), f = tfig(t, 1), s = sgn(t);
     st.lane[t] = 1; place(b, 0, s * DZ); snapPose(b, 'ready'); b.sx = 15; b.sz = 7;
@@ -2010,6 +2107,7 @@ function mpServeHit(t, h, ht) {
   const auto = ht == null, dt = auto ? 1 : ht - Sv.tp;
   if (!auto && dt < -0.32) { fx({ k: 'burst', c: 'bad' }); S('err'); return; }
   Sv.hit = true;
+  if (!auto) rewindBall(ht);
   const adt = Math.abs(dt), q = auto ? 'weak' : adt < 0.08 ? 'perfect' : adt < 0.18 ? 'good' : 'weak';
   if (q === 'perfect') { mpMeter(t, 1); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); }
   const b = tfig(t, 0), r = 1 - t;
@@ -2020,7 +2118,7 @@ function mpServeHit(t, h, ht) {
   st.phase = 'served';
   const lane = 1 - h; // the server's left is the receiver's right
   const T = { perfect: 0.95, good: 1.05, weak: 1.2 }[q], md = { perfect: 0.32, good: 0.18, weak: 0.06 }[q];
-  const o = q === 'perfect' && Math.random() < 0.5 ? { wob: rand(0.8, 1.2) * (Math.random() < 0.5 ? -1 : 1), wobF: Math.PI * 2 * rand(1, 1.5), spin: 1 } : { spin: 14 };
+  const o = q === 'perfect' && Math.random() < 0.5 ? { wob: rand(0.8, 1.2) * (Math.random() < 0.5 ? -1 : 1), wobF: Math.PI * 2 * rand(1, 1.5), spin: 1, hang: true } : { spin: 14, hang: true };
   // faults: weak or missed serves (and the computer now and then) go into the net or long
   const fault = human(slotOf(t, 0)) ? (auto ? 0.3 : q === 'weak' ? 0.12 : 0.015) : ([0.1, 0.07, 0.045][MP.level] || 0.07);
   if (Math.random() < fault) {
@@ -2033,13 +2131,14 @@ function mpServeHit(t, h, ht) {
     mlaunch({ x: lane2x(r, lane) * 0.7, y: 2.47, z: sgn(r) * 0.05 }, 0.7, { spin: 4 });
     after(0.7, () => {
       fx({ k: 'net', v: 0.6 }); S('tick'); msparks(4, ['bone']);
-      mlaunch({ x: lane2x(r, lane) * 0.85, y: 0.45, z: sgn(r) * 3.0 }, 0.72, { spin: 2 });
+      mlaunch({ x: lane2x(r, lane) * 0.85, y: 0.45, z: sgn(r) * 3.0 }, 0.72, { spin: 2, hang: true });
       mpIncoming(r, 'tip', lane, 0.72, 0.05, 'good').by = slotOf(t, 0);
     });
     return;
   }
   mlaunch({ x: lane2x(r, lane), y: 0.85, z: sgn(r) * (DZ + 0.1) }, T, o);
-  mpIncoming(r, 'serve', lane, T, md, q).by = slotOf(t, 0);
+  // floaters (wobbling or standing serves) forgive a step that comes a little late
+  mpIncoming(r, 'serve', lane, T, md, q, 0, { float: !!o.wob || !b.air }).by = slotOf(t, 0);
 }
 // the ball smacks into the net and drops on the hitter's side
 function mpIntoNet(t, x, cb) {
@@ -2051,7 +2150,7 @@ function mpIntoNet(t, x, cb) {
 }
 // a ball flying out: the defender has to get out of its way (red X)
 function mpOutBall(d, lane, T, md, by) {
-  mlaunch({ x: lane2x(d, lane), y: 1.35, z: sgn(d) * (DZ + 0.1) }, T, { spin: 18 });
+  mlaunch({ x: lane2x(d, lane), y: 1.35, z: sgn(d) * (DZ + 0.1) }, T, { spin: 18, hang: true });
   const inc = mpIncoming(d, 'out', lane, T, md, 'good');
   inc.by = by;
   return inc;
@@ -2061,14 +2160,15 @@ function mpMeter(t, n) {
   st.meter[t] = clamp(st.meter[t] + n, 0, BAL.meterMax);
   if (st.meter[t] >= BAL.meterMax) { st.fire[t] = true; S('fire'); }
 }
-function mpIncoming(d, type, lane, T, md, q, extra) {
+function mpIncoming(d, type, lane, T, md, q, extra, o = {}) {
   const st = MP.st, s = sgn(d);
   const lz = type === 'tip' ? 3.0 : type === 'block' ? 3.3 : DZ + 0.1;
-  const inc = st.inc = { d, type, lane, x: s * LX[lane] * (type === 'tip' ? 0.85 : 1), z: s * lz, tArr: G.t + T, tMark: G.t + md, done: false, q, ai: null };
+  const inc = st.inc = { d, type, lane, x: s * LX[lane] * (type === 'tip' ? 0.85 : 1), z: s * lz, tArr: G.t + T, tMark: G.t + md, done: false, q, ai: null, float: !!o.float };
   st.phase = 'defend'; st.dash[d] = false; MP.snapT = 0;
   const b = tfig(d, 0), sl = slotOf(d, 0);
   if (!b.air && !b.lock && type !== 'block' && type !== 'out') { jump(b, 1.5); setPose(b, 'ready', 0.2, 20); }
-  if (human(sl)) { after(T + grace(sl), mpResolve); return inc; }
+  // the ball waits at the defender's arms meanwhile (hang), so nobody sees it fly on behind them
+  if (human(sl)) { after(T + (type === 'fire' ? 0.17 : inc.float ? 0.1 : 0) + grace(sl), mpResolve); return inc; }
   // computer defender: decide, then move there like a person would
   const dif = mpDiff();
   if (type === 'out') {
@@ -2079,7 +2179,7 @@ function mpIncoming(d, type, lane, T, md, q, extra) {
     return inc;
   }
   let p = type === 'serve' ? { perfect: 0.55, good: 0.75, weak: 0.9 }[q] : type === 'spike' ? { perfect: 0.3, good: 0.5, weak: 0.72 }[q]
-    : type === 'tip' ? 0.6 : type === 'free' ? 0.88 : type === 'fire' ? 0.06 : 0.6;
+    : type === 'tip' ? 0.6 : type === 'free' ? 0.88 : type === 'fire' ? 0.14 : 0.6;
   p = clamp(p * (0.75 + 0.5 * dif) + (extra || 0), 0.03, 0.95);
   const ok = Math.random() < p;
   inc.ai = ok;
@@ -2128,14 +2228,22 @@ function mpResolve() {
     return;
   }
   if (inc.blkSave && inc.blkSave()) { mpDig(d, inc, false, tfig(d, 1)); return; }
+  let save = false, noDive = false;
   if (inc.ai != null) { ok = inc.ai; late = ok && Math.random() < 0.25; }
   else {
     ok = st.lane[d] === inc.lane && (inc.type !== 'tip' || st.dash[d]) && !(inc.type !== 'tip' && st.dash[d]);
-    late = st.arrive[d] > inc.tArr - 0.08;
+    const lateBy = st.arrive[d] - inc.tArr;
+    late = lateBy > (inc.float ? 0.02 : -0.08);
+    // a floater forgives a step that comes a little late: always a diving dig
+    if (inc.float && late && lateBy < 0.24) save = true;
+    if (inc.type === 'fire') {
+      // skill check: in its lane and a tap when the ring closes
+      if (ok && (inc.tapQ === 'perfect' || inc.tapQ === 'good')) { mpFireSave(d, inc); mpDig(d, inc, inc.tapQ === 'good', b); return; }
+      late = true; noDive = true;
+    }
   }
-  if (inc.type === 'fire' && inc.ai == null) late = true;
   const diveOk = lerp(BAL.diveOk[0], BAL.diveOk[1], mpDiff());
-  if (ok && (!late || Math.random() < diveOk)) { mpDig(d, inc, late, b); return; }
+  if (ok && (!late || save || (!noDive && Math.random() < diveOk))) { mpDig(d, inc, late, b); return; }
   st.phase = 'dead';
   const side = inc.x < b.x - 0.05 ? -1 : inc.x > b.x + 0.05 ? 1 : (b.moveDir || 1);
   if (ok) {
@@ -2144,12 +2252,28 @@ function mpResolve() {
     after(0.7, () => mpPoint(1 - d, 'LATE!'));
     return;
   }
+  letFly(true);
   defAnim(b, Math.abs(b.x - inc.x) < 2.6 ? (inc.type === 'tip' ? 'missTip' : 'miss') : 'lunge', side);
   if (inc.by != null) stat(inc.by, 'p');
   after(0.45, () => mpPoint(1 - d, inc.type === 'block' ? 'BLOCKED!' : inc.type === 'tip' ? 'TIP!' : inc.type === 'serve' ? 'ACE!' : 'POINT!'));
 }
+// fireball skill check: one tap per fireball, judged against the moment it arrives
+function mpFireTap(t, ht) {
+  const st = MP.st, inc = st.inc; if (!inc || inc.done || inc.d !== t || inc.type !== 'fire' || inc.tapQ) return;
+  const dt = ht - inc.tArr, adt = Math.abs(dt);
+  inc.tapQ = dt < -0.32 ? 'miss' : adt < 0.09 ? 'perfect' : adt < 0.17 ? 'good' : 'miss';
+  MP.snapT = 0;
+  if (inc.tapQ === 'miss') { fx({ k: 'burst', c: 'bad' }); S('err'); } else S('tick');
+}
+function mpFireSave(d, inc) {
+  const perfect = inc.tapQ === 'perfect';
+  fx({ k: 'burst', c: perfect ? 'accent' : 'bone', big: true }); msparks(14, ['fire1', 'fire2', 'bone']);
+  S('perfect', perfect ? 4 : 2); fx({ k: 'shake', v: 3 }); fx({ k: 'vib', ms: 25, team: d }); fx({ k: 'hype', v: 2 });
+  if (perfect) mpMeter(d, 2);
+}
 function mpDig(d, inc, late, digger) {
   const st = MP.st, s = sgn(d), b = tfig(d, 0), set = tfig(d, 1);
+  st.passT = d;
   const off = inc.x - digger.x;
   let kind;
   if (inc.type === 'tip') { kind = 'pancake'; mpMeter(d, 1); }
@@ -2181,7 +2305,15 @@ function mpDig(d, inc, late, digger) {
   if (human(ssl)) at(tset + 0.18 + grace(ssl), () => mpSetGo(d, 'weak', 'high'));
   else {
     const dif = mpDiff(), r = Math.random();
-    at(tset, () => mpSetGo(d, Math.random() < 0.3 + 0.5 * dif ? 'perfect' : 'good', r < 0.06 + 0.08 * dif ? 'dump' : r < 0.3 + 0.1 * dif ? 'quick' : 'high'));
+    at(tset, () => {
+      const mode = r < 0.06 + 0.08 * dif ? 'dump' : r < 0.3 + 0.1 * dif ? 'quick' : 'high';
+      // quick sets go to a side lane, mostly the one away from their blocker
+      const bl = laneOfX(d, tfig(1 - d, 1).tx);
+      let lane = null;
+      if (mode === 'quick') lane = Math.random() < 0.3 + 0.5 * dif ? (bl === 0 ? 2 : bl === 2 ? 0 : pick([0, 2])) : pick([0, 2]);
+      else if (mode === 'high' && !human(slotOf(d, 0)) && Math.random() < 0.3) lane = (Math.random() * 3) | 0;
+      mpSetGo(d, Math.random() < 0.3 + 0.5 * dif ? 'perfect' : 'good', mode, lane);
+    });
   }
 }
 function mpOverpass(d) {
@@ -2202,32 +2334,34 @@ function mpSmash(t, ht, q0) {
   let q = q0;
   if (!q) { const dt = (ht == null ? G.t : ht) - ov.tc; if (dt < -0.3) { S('err'); return; } q = Math.abs(dt) < 0.08 ? 'perfect' : Math.abs(dt) < 0.18 ? 'good' : 'weak'; }
   st.ovp = null;
+  rewindBall(ht);
   const f = tfig(t, 1), d = ov.d;
   setPose(f, PZ(f, 'spike'), 0.2, 40); setBase(f, 'ready'); S('spike'); fx({ k: 'shake', v: q === 'perfect' ? 4 : 2 }); msparks(q === 'perfect' ? 9 : 5, ['bone', 'bad']);
   if (q === 'perfect') fx({ k: 'burst', c: 'accent', big: true });
   const lane = (Math.random() * 3) | 0, T = { perfect: 0.5, good: 0.6, weak: 0.75 }[q], md = { perfect: 0.04, good: 0.07, weak: 0.12 }[q];
-  mlaunch({ x: lane2x(d, lane), y: 0.85, z: sgn(d) * (DZ + 0.1) }, T, { spin: 22 });
+  mlaunch({ x: lane2x(d, lane), y: 0.85, z: sgn(d) * (DZ + 0.1) }, T, { spin: 22, hang: true });
   mpIncoming(d, 'spike', lane, T, md, q).by = slotOf(t, 1);
 }
-function mpSetGo(d, q, mode) {
+function mpSetGo(d, q, mode, lane, ht) {
   const st = MP.st; if (!st || !st.setq || st.setq.t !== d) return;
   st.setq = null;
+  rewindBall(ht);
   if (q === 'perfect') stat(slotOf(d, 1), 's');
-  if (mode === 'dump') mpDump(d); else mpSet(d, q, mode === 'quick');
+  if (mode === 'dump') mpDump(d); else mpSet(d, q, mode === 'quick', lane);
 }
-function mpSetInput(t, ht, mode) {
+function mpSetInput(t, ht, mode, lane) {
   const st = MP.st, sq = st.setq; if (!sq || sq.t !== t) return;
   const dt = ht - sq.ts;
   if (dt < -0.35) { S('err'); return; }
   const adt = Math.abs(dt), q = adt < 0.08 ? 'perfect' : adt < 0.18 ? 'good' : 'weak';
-  mpSetGo(t, q, mode);
+  mpSetGo(t, q, mode, lane, ht);
 }
 // setter dump: a soft push over the net while everyone expects a set
 function mpDump(d) {
   const st = MP.st, o = 1 - d, set = tfig(d, 1), so = sgn(o);
   jump(set, 3.2); setPose(set, PZ(set, 'lob'), 0.35, 30); setBase(set, 'ready'); S('lob');
   const lane = (Math.random() * 3) | 0, T = 0.8;
-  mlaunch({ x: so * LX[lane] * 0.85, y: 0.4, z: so * 1.6 }, T, { spin: 2 });
+  mlaunch({ x: so * LX[lane] * 0.85, y: 0.4, z: so * 1.6 }, T, { spin: 2, hang: true });
   st.rally++; stat(slotOf(d, 1), 'f');
   const D0 = st.dump = { o, save: false };
   const inc = mpIncoming(o, 'tip', lane, T, 0.1, 'good');
@@ -2246,10 +2380,12 @@ function mpDumpSave(t) {
   if (inc && inc.d === t) { blk.tx = inc.x; blk.tz = inc.z - sgn(t) * 0.3; blk.sx = blk.sz = 9; }
   S('step');
 }
-function mpSet(a, sq, quick) {
+function mpSet(a, sq, quick, lane) {
   const st = MP.st; if (!st || G.mode !== 'mp') return;
-  const o = 1 - a, s = sgn(a), b = tfig(a, 0), set = tfig(a, 1), blk = tfig(o, 1), def = tfig(o, 0), dif = mpDiff();
+  const o = 1 - a, s = sgn(a), so = sgn(o), b = tfig(a, 0), set = tfig(a, 1), blk = tfig(o, 1), def = tfig(o, 0), dif = mpDiff();
   sq = sq || 'good';
+  // a set to another lane: the hitter runs over
+  if (lane != null && lane !== st.lane[a]) { b.moveDir = Math.sign(lane - st.lane[a]) * s; st.lane[a] = lane; b.tx = lane2x(a, lane); b.sx = 15; }
   setPose(set, 'set', 0.3); S('set');
   // quick set: low and fast, the block has almost no time to read it
   if (quick) { S('set'); msparks(4, ['bone']); }
@@ -2260,11 +2396,23 @@ function mpSet(a, sq, quick) {
   mlaunch(Cp, TS, { spin: quick ? 8 : 3 });
   const tc = G.t + TS;
   // a clean set gives the hitter a wider timing window
-  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null, win: { perfect: 1.4, good: 1, weak: 0.8 }[sq] * (quick ? 0.85 : 1), tb: tc - 0.3, bj: false, bq: null, quick: !!quick };
+  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null, win: { perfect: 1.4, good: 1, weak: 0.8 }[sq] * (quick ? 0.85 : 1), tb: tc - 0.3, bj: false, bq: null, quick: !!quick,
+    hl: st.lane[a], bl: laneOfX(o, blk.tx) };
   st.phase = 'attack'; MP.snapT = 0;
-  blk.tx = clamp(Cp.x, -2.8, 2.8); blk.tz = sgn(o) * 0.5; blk.sx = blk.sz = 7; setBase(blk, 'blockReady'); setPose(blk, 'blockReady');
+  // after the set the setter steps back to the net in its lane, ready to block the next ball
+  after(0.35, () => { if (st.atk === A && !A.hit && !set.air) { set.tx = lane2x(a, laneOfX(a, set.x)); set.tz = s * 0.5; set.sx = set.sz = 5; } });
   const bsl = slotOf(o, 1), asl = slotOf(a, 0), dsl = slotOf(o, 0);
-  if (!human(bsl)) {
+  setBase(blk, 'blockReady'); if (!blk.lock) setPose(blk, 'blockReady');
+  if (human(bsl)) {
+    // the human blocker moves along the net on their own; a block picked early (while they were setting up) counts now
+    blk.tz = so * 0.5; blk.sz = 6;
+    const pre = st.pre[o]; st.pre[o] = null;
+    if (pre != null) mpBlock(A, pre, G.t);
+  } else {
+    // computer blocker: walks in front of the hitter (now and then it misreads the set)
+    const hl = laneOfX(o, lane2x(a, A.hl));
+    A.bl = Math.random() < 0.8 + 0.2 * dif - (quick ? 0.15 : 0) ? hl : clamp(hl + pick([-1, 1]), 0, 2);
+    after(rand(0.06, 0.24) * (1.3 - dif), () => { if (st.atk === A && !A.bj) { blk.tx = lane2x(o, A.bl); blk.tz = so * 0.5; blk.sx = 10; blk.sz = 7; } });
     // computer blocker: leans on what this hitter likes, sometimes shows one side and switches
     const h = st.hist[a], tot = h.L + h.R + h.LOB + 1;
     const w = { L: 1 + 1.4 * h.L / tot, R: 1 + 1.4 * h.R / tot, W: 0.35 + 0.5 * dif + 0.3 * (h.L + h.R) / tot, D: 0.15 + 0.3 * dif + 2 * h.LOB / tot };
@@ -2296,9 +2444,11 @@ function mpSet(a, sq, quick) {
     if (st.atk !== A || A.hit) return;
     // computer hitter reads the block (better on higher levels)
     let dir;
-    const bl = A.block, read = Math.random() < 0.35 + 0.55 * dif;
-    if (typeof bl === 'number' && read) dir = bl * s < 0 ? 'R' : 'L';
-    else if (bl === 'W' && read) dir = Math.random() < 0.6 ? 'LOB' : pick(['L', 'R']);
+    const bl = A.block, read = Math.random() < 0.35 + 0.55 * dif, off = blkOff(A);
+    const toward = w => w === -s ? 'L' : 'R'; // world side -> the hitter's L/R
+    if (read && Math.abs(off) === 1 && bl !== 'D') dir = toward(-Math.sign(off));
+    else if (read && typeof bl === 'number' && off === 0) dir = toward(-bl);
+    else if (read && bl === 'W' && off === 0) dir = Math.random() < 0.6 ? 'LOB' : pick(['L', 'R']);
     else dir = Math.random() < 0.15 ? 'LOB' : pick(['L', 'R']);
     mpAttack(a, dir, G.t);
   });
@@ -2309,10 +2459,10 @@ function mpBlock(A, v, ht) {
   if (A.block === v) return;
   const prev = A.block;
   A.block = v; S('tick'); MP.snapT = 0;
-  const blk = tfig(1 - A.a, 1), so = sgn(1 - A.a);
-  if (v === 'D') { blk.tz = so * 2.4; blk.sz = 5; setBase(blk, 'ready'); setPose(blk, 'ready'); return; }
+  const o = 1 - A.a, blk = tfig(o, 1), so = sgn(o);
+  if (v === 'D') { blk.tx = lane2x(o, A.bl); blk.tz = so * 2.4; blk.sz = 5; setBase(blk, 'ready'); setPose(blk, 'ready'); return; }
   blk.tz = so * 0.5; blk.sx = 8; blk.sz = 6;
-  const nx = clamp(A.C.x + (v === 'W' ? 0 : v * 0.45), -3, 3);
+  const nx = lane2x(o, A.bl) + (v === 'W' ? 0 : v * 0.25);
   const side = nx < blk.x - 0.1 ? -1 : nx > blk.x + 0.1 ? 1 : 0;
   blk.tx = nx;
   const p = v === 'W' ? 'blockW' : v < 0 ? 'blockL' : 'blockR';
@@ -2320,6 +2470,22 @@ function mpBlock(A, v, ht) {
   // quick side shuffle when the block moves over
   if (side && prev !== 'D') seq(blk, [['shuffle' + (side < 0 ? 'L' : 'R'), 0.1, 30], [p, 0.05, 26]]);
   else setPose(blk, p, 0, 22);
+}
+// front player steps along the net between the three lanes (like the back player does)
+function mpBlkLane(t, dl) {
+  const st = MP.st, f = tfig(t, 1), s = sgn(t);
+  const A = st.atk && st.atk.a === 1 - t && !st.atk.hit ? st.atk : null;
+  if (A && A.bj) return; // already in the air
+  const cur = A ? A.bl : laneOfX(t, f.tx), nl = clamp(cur + dl, 0, 2);
+  if (nl === cur) return;
+  if (A) A.bl = nl;
+  const v = A ? A.block : null;
+  f.tx = lane2x(t, nl) + (typeof v === 'number' ? v * 0.25 : 0);
+  if (v !== 'D') f.tz = s * 0.5;
+  f.sx = 11; f.sz = 6; f.moveDir = Math.sign(dl) * s; MP.snapT = 0;
+  fx({ k: 'dust', x: f.x, z: f.z, n: 2 }); S('step');
+  if (!A) setBase(f, 'blockReady');
+  if (!f.air) { f.lock = false; seq(f, [['shuffle' + (f.moveDir < 0 ? 'L' : 'R'), 0.12, 30], [f.base, 0.05, 22]]); }
 }
 // the jump: on time it seals the net, too early and the ball goes over the hands
 function mpBlockJump(A, ht, q0) {
@@ -2345,7 +2511,7 @@ function mpLateHit(A) {
   setPose(b, PZ(b, 'lob'), 0.25); setBase(b, PZ(b, 'follow'));
   b.onLand = () => goBack(a);
   const lane = (Math.random() * 3) | 0;
-  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.3, { spin: 3 });
+  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.3, { spin: 3, hang: true });
   mpIncoming(o, 'free', lane, 1.3, 0.15, 'weak');
 }
 function mpAttack(a, dir, ht) {
@@ -2354,6 +2520,7 @@ function mpAttack(a, dir, ht) {
   if (dt < -0.3) { fx({ k: 'burst', c: 'bad' }); S('err'); return; }
   if (dt > 0.2) return;
   A.hit = true;
+  rewindBall(ht);
   const wn = A.win || 1, adt = Math.abs(dt), q = adt < 0.075 * wn ? 'perfect' : adt < 0.17 * wn ? 'good' : 'weak';
   const h = st.hist[a]; for (const k in h) h[k] *= 0.8; h[dir] += 1;
   if (q === 'perfect') { mpMeter(a, 1); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); } else if (q === 'good') fx({ k: 'burst', c: 'bone' });
@@ -2366,22 +2533,28 @@ function mpAttack(a, dir, ht) {
   if (st.fire[a] && dir !== 'LOB' && q !== 'weak') { mpFire(A, wx); return; }
   if (dir === 'LOB') { mpLob(A, q); return; }
   const blk = tfig(o, 1);
-  const inLine = A.block === 'W' || A.block === wx;
-  const blocked = inLine && A.bj && A.bq !== 'miss';
-  if (blocked && st.wall[o] >= WALLMAX) {
+  const cov = blockCover(A, wx), blocked = cov > 0;
+  if (cov === 2 && st.wall[o] >= WALLMAX) {
     st.wall[o] = 0;
     fx({ k: 'flash', v: 0.6 }); fx({ k: 'shake', v: 6 }); S('fire');
     mpStuff(A, wx, 2);
     return;
   }
   if (blocked) {
-    const bq = A.bq, m = { perfect: [0.4, 0.6, 0.15], good: [1, 1, 0], weak: [1.6, 1.5, -0.15] }[bq];
-    const r = Math.random(), tool = BAL.tool[q] * m[0], touch = BAL.touch * m[1];
-    if (r < tool) mpBlockOut(A, wx); else if (r < tool + touch) mpTouch(A, wx); else mpStuff(A, wx, m[2]);
-    return;
+    // from the next lane only the fingertips get there: off the hands or a touch
+    if (cov === 1) { if (Math.random() < 0.3) mpBlockOut(A, wx); else mpTouch(A, wx); return; }
+    const bq = A.bq, m = { perfect: [0.4, 0.6, 0.15], good: [1, 1, 0], weak: [1.6, 1.5, -0.15] }[bq].slice();
+    // the split block covers both sides, but the hands are spread: some balls go right through, more touches, fewer stuffs
+    const split = A.block === 'W';
+    if (split) { m[0] *= 1.5; m[1] *= 1.5; m[2] -= 0.2; }
+    if (!split || Math.random() > 0.3) {
+      const r = Math.random(), tool = BAL.tool[q] * m[0], touch = BAL.touch * m[1];
+      if (r < tool) mpBlockOut(A, wx); else if (r < tool + touch) mpTouch(A, wx); else mpStuff(A, wx, m[2]);
+      return;
+    }
   }
   // the ball got past the block: the blocker shrugs
-  if (A.bj || inLine) after(0.15, () => setPose(blk, 'shrug', 0.5, 16));
+  if (A.bj) after(0.15, () => setPose(blk, 'shrug', 0.5, 16));
   // weak human hits and computer hitters sometimes miss: into the net or long
   const errP = human(slotOf(a, 0)) ? (q === 'weak' ? 0.22 : 0) : ([0.09, 0.06, 0.04][MP.level] || 0.06);
   if (Math.random() < errP) {
@@ -2393,7 +2566,7 @@ function mpAttack(a, dir, ht) {
   S('spike'); fx({ k: 'shake', v: q === 'perfect' ? 3 : 2 }); fx({ k: 'vib', ms: 18, team: a }); msparks(q === 'perfect' ? 10 : 5);
   const tx = clamp(A.C.x + wx * rand(2.0, 2.8), -4.1, 4.1), lane = laneOfX(o, tx);
   const T = { perfect: 0.58, good: 0.68, weak: 0.8 }[q], md = { perfect: 0.14, good: 0.08, weak: 0.03 }[q] - (A.block === 'D' ? 0.03 : 0);
-  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, T, { spin: 22 });
+  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, T, { spin: 22, hang: true });
   mpIncoming(o, 'spike', lane, T, Math.max(0, md), q, (A.block === 'D' ? 0.15 : 0) + (A.defRead === lane ? 0.2 : 0)).by = slotOf(a, 0);
 }
 function mpFire(A, wx) {
@@ -2402,8 +2575,9 @@ function mpFire(A, wx) {
   S('fire'); S('spike'); fx({ k: 'shake', v: 6 }); fx({ k: 'flash', v: 1 }); fx({ k: 'vib', ms: 40 });
   msparks(16, ['fire1', 'fire2', 'fire3']);
   const lane = laneOfX(o, clamp(A.C.x + wx * 2.6, -4.1, 4.1));
-  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 0.42, { fire: true, spin: 30 });
-  mpIncoming(o, 'fire', lane, 0.42, 0.3, 'perfect');
+  // the defender gets a skill check: be in its lane and tap when the ring closes
+  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 0.85, { fire: true, spin: 30, hang: true });
+  mpIncoming(o, 'fire', lane, 0.85, 0.2, 'perfect').by = slotOf(a, 0);
   after(0.2, () => setPose(tfig(o, 1), 'sad', 1.2));
 }
 function mpLob(A, q) {
@@ -2413,14 +2587,15 @@ function mpLob(A, q) {
   if (A.block === 'D') {
     // the blocker dropped back for exactly this
     const blk = tfig(o, 1), lx = LX[lane] * 0.85;
-    mlaunch({ x: so * lx, y: 0.6, z: so * 3.0 }, T, { spin: 3 });
+    mlaunch({ x: so * lx, y: 0.6, z: so * 3.0 }, T, { spin: 3, hang: true });
     blk.tx = so * lx; blk.tz = so * 2.9; blk.sx = blk.sz = 7;
     if (Math.random() < BAL.lobD) { after(T, () => mpDig(o, { type: 'free', x: so * lx, lane }, false, blk)); return; }
     after(T * 0.8, () => defAnim(blk, 'missTip', 1));
+    after(T, () => letFly(true));
     after(T + 0.25, () => mpPoint(a, 'LOB POINT!'));
     return;
   }
-  mlaunch({ x: so * LX[lane] * 0.85, y: 0.45, z: so * 3.0 }, T, { spin: 3 });
+  mlaunch({ x: so * LX[lane] * 0.85, y: 0.45, z: so * 3.0 }, T, { spin: 3, hang: true });
   const inc = mpIncoming(o, 'tip', lane, T, A.block === 'W' ? 0.4 : A.block != null ? 0.22 : 0.15, q);
   inc.by = slotOf(a, 0);
   const D0 = st.dump = { o, save: false, until: G.t + 0.5 };
@@ -2449,7 +2624,7 @@ function mpTouch(A, wx) {
     seq(tfig(o, 1), [['blockOw', 0.18, 34], [wx < 0 ? 'blockL' : 'blockR', 0.15, 20]]);
     mpWall(o, 1);
     const lane = (Math.random() * 3) | 0;
-    mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.0, { spin: 14 });
+    mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.0, { spin: 14, hang: true });
     mpIncoming(o, 'free', lane, 1.0, 0.12, 'good');
   });
 }
@@ -2475,7 +2650,7 @@ function mpStuff(A, wx, bonus) {
     mpWall(1 - a, 1);
     // it bounces back: the hitter covers, and the setter can jump in (tap on the ring)
     const rl = (Math.random() * 3) | 0, T = lerp(BAL.reboundT[0], BAL.reboundT[1], mpDiff());
-    mlaunch({ x: lane2x(a, rl), y: 0.8, z: sa * 3.3 }, T, { spin: -14 });
+    mlaunch({ x: lane2x(a, rl), y: 0.8, z: sa * 3.3 }, T, { spin: -14, hang: true });
     const inc = mpIncoming(a, 'block', rl, T, 0, 'good');
     const cov = st.cover = { t: a, tc: G.t + T * 0.55, ok: false };
     inc.blkSave = () => cov.ok;
@@ -2543,6 +2718,8 @@ function hostInput(slot, k, dx, dy, ht) {
   if (r === 0) {
     if (ph === 'serveReady' && st.server === t) { mpToss(t); return; }
     if (ph === 'serveToss' && st.srv && st.srv.t === t) { mpServeHit(t, k === 'tap' ? 0 : ax > ay * 0.5 ? Math.sign(dx) : 0, ht); return; }
+    // fireball coming: the tap is the skill check
+    if (k === 'tap' && st.inc && st.inc.d === t && st.inc.type === 'fire') { mpFireTap(t, ht); return; }
     if (k !== 'swipe') return;
     if (ph === 'attack' && st.atk && st.atk.a === t && !st.atk.hit) {
       const dir = dy < 0 && ay > ax * 1.1 ? 'LOB' : dx < 0 ? 'L' : dx > 0 ? 'R' : pick(['L', 'R']);
@@ -2553,20 +2730,31 @@ function hostInput(slot, k, dx, dy, ht) {
     if (ax >= ay * 0.8) mpLane(t, dx < 0 ? -1 : 1, ht);
     else if (dy < 0 && ph === 'defend') mpDash(t, ht);
   } else {
-    // setter: tap on the ring = set, swipe up = dump over the net
-    if (st.setq && st.setq.t === t) { mpSetInput(t, ht, k !== 'swipe' ? 'high' : dy < 0 && ay > ax * 1.1 ? 'dump' : ax > ay ? 'quick' : 'high'); return; }
+    const g = k === 'swipe' ? blkGesture(dx, dy) : 'tap';
+    // setter: tap on the ring = high set, sideways = quick set to that side, up = dump over the net
+    if (st.setq && st.setq.t === t) {
+      if (g === 'ml' || g === 'mr') mpSetInput(t, ht, 'quick', g === 'ml' ? 0 : 2);
+      else mpSetInput(t, ht, k === 'swipe' && dy < 0 && ay > ax * 1.1 ? 'dump' : 'high');
+      return;
+    }
     // the other team dumped or lobbed: swipe down to turn and grab it
-    if (st.dump && st.dump.o === t && k === 'swipe' && dy > 0 && ay > ax) { mpDumpSave(t); return; }
+    if (st.dump && st.dump.o === t && g === 'D') { mpDumpSave(t); return; }
     // own hitter got blocked: tap on the ring to cover the rebound
     if (st.cover && st.cover.t === t && k === 'tap') { mpCover(t, ht); return; }
     // the other side's dig came over the net: tap on the ring to smash it
     if (st.ovp && st.ovp.t === t && k === 'tap') { mpSmash(t, ht); return; }
-    if (ph === 'attack' && st.atk && st.atk.a === 1 - t) {
-      // blocker: sideways = that side of the hitter, up = wide, down = drop back, tap = jump
-      if (k === 'tap') { mpBlockJump(st.atk, ht); return; }
-      const v = ay > ax * 1.1 ? (dy < 0 ? 'W' : 'D') : (dx < 0 ? -sgn(t) : sgn(t));
-      mpBlock(st.atk, v, ht);
+    const A = st.atk && st.atk.a === 1 - t && !st.atk.hit ? st.atk : null;
+    if (A) {
+      // blocker: sideways = step along the net, up-left/up-right = block that side, up = split block, down = drop back, tap = jump
+      if (g === 'tap') mpBlockJump(A, ht);
+      else if (g === 'ml' || g === 'mr') mpBlkLane(t, g === 'ml' ? -1 : 1);
+      else mpBlock(A, blkV(t, g), ht);
+      return;
     }
+    if (g === 'tap' || !blkFree(t)) return;
+    if (g === 'ml' || g === 'mr') mpBlkLane(t, g === 'ml' ? -1 : 1);
+    // their setter has the ball: a block picked now counts as soon as the set goes up
+    else if (st.setq && st.setq.t === 1 - t) { st.pre[t] = blkV(t, g); S('tick'); MP.snapT = 0; }
   }
 }
 function mpSwipe(dx, dy) {
@@ -2574,11 +2762,23 @@ function mpSwipe(dx, dy) {
   const v = MP.view, ax = Math.abs(dx), ay = Math.abs(dy);
   // predict my own lane move so it feels instant
   let lane = false;
-  if (MP.role === 0 && v && ax >= ay * 0.8 && !v.ring && v.ph !== 'serveReady' && v.ph !== 'point' && v.ph !== 'dead') {
+  const pr = MP.pred, now = performance.now();
+  if (MP.role === 0 && v && ax >= ay * 0.8 && (!v.ring || v.ringFire) && v.ph !== 'serveReady' && v.ph !== 'point' && v.ph !== 'dead') {
     lane = true;
     if (!MP.host) {
-      const b = tfig(MP.team, 0), nl = clamp(MP.pred.lane + (dx < 0 ? -1 : 1), 0, 2);
-      if (nl !== MP.pred.lane) { MP.pred.lane = nl; MP.pred.until = performance.now() + 450; b.tx = lane2x(MP.team, nl); SFX.step(); }
+      const b = tfig(MP.team, 0), nl = clamp(pr.lane + (dx < 0 ? -1 : 1), 0, 2);
+      if (nl !== pr.lane) { pr.lane = nl; pr.until = now + 450; pr.fig = b; pr.x = lane2x(MP.team, nl); SFX.step(); }
+    }
+  }
+  if (MP.role === 1 && v && v.frontFree) {
+    const g = blkGesture(dx, dy);
+    if (g === 'ml' || g === 'mr') {
+      lane = true;
+      if (!MP.host) {
+        const f = tfig(MP.team, 1), cur = now < pr.until && pr.fig === f ? pr.lane : v.myBl != null ? v.myBl : laneOfX(MP.team, f.ntx != null ? f.ntx : f.x);
+        const nl = clamp(cur + (g === 'ml' ? -1 : 1), 0, 2);
+        if (nl !== cur) { pr.lane = nl; pr.until = now + 450; pr.fig = f; pr.x = lane2x(MP.team, nl); SFX.step(); }
+      }
     }
   }
   mpSend('swipe', dx, dy);
@@ -2607,25 +2807,45 @@ function mpPause(v) {
 }
 function mpSnapOut() {
   const st = MP.st; if (!st) return null;
-  const f = FIGS.map(g => [+g.x.toFixed(3), +g.y.toFixed(3), +g.z.toFixed(3), g.tgt, g.rate, +g.lean.toFixed(2), g.lock ? 1 : 0]);
+  // position, pose, and velocity + target so the phones can run the figures ahead to the present
+  const r2 = n => Math.round((n || 0) * 100) / 100;
+  const f = FIGS.map(g => [+g.x.toFixed(3), +g.y.toFixed(3), +g.z.toFixed(3), g.tgt, g.rate, +g.lean.toFixed(2), g.lock ? 1 : 0, r2(g.mvx), r2(g.air ? g.vy : 0), r2(g.mvz), r2(g.tx), r2(g.tz)]);
   const A = st.atk, I = st.inc, V = st.srv;
   const Q = st.setq;
   const CV = st.cover, OV = st.ovp;
   return { t: 's', ov: OV ? [OV.t, OV.tc] : 0, T: G.t, ph: st.phase, pz: st.paused ? 1 : 0, sq: Q ? [Q.t, Q.ts] : 0, w: st.wall, cv: CV ? [CV.t, CV.tc] : 0, sc: st.score, sv: st.server, m: st.meter, fi: st.fire, ln: st.lane, f,
-    a: A ? [A.a, A.tc, A.hit ? 1 : 0, A.block, A.C.x, A.tb, A.bj ? 1 : 0] : 0, i: I ? [I.x, I.z, I.tMark, I.d, I.type === 'out' ? 1 : 0] : 0, v: V ? [V.t, V.tp, V.hit ? 1 : 0] : 0 };
+    a: A ? [A.a, A.tc, A.hit ? 1 : 0, A.block, A.C.x, A.tb, A.bj ? 1 : 0, A.bl, A.hl] : 0,
+    i: I ? [I.x, I.z, I.tMark, I.d, I.type === 'out' ? 1 : I.type === 'fire' ? 2 : 0, I.tArr, I.tapQ ? 1 : 0] : 0, v: V ? [V.t, V.tp, V.hit ? 1 : 0] : 0,
+    dp: st.dump ? st.dump.o + 1 : 0, pt: st.passT == null ? -1 : st.passT };
+}
+// client: where a figure is now, from the last snapshot plus its velocity (never past where it is heading)
+function predFig(f, t) {
+  const a = clamp(t - f.sT, 0, 0.25);
+  const go = (p, v, tg) => { const d = v * a; if (tg == null || !v) return p + d; const r = tg - p; return Math.sign(r) === Math.sign(v) && Math.abs(d) > Math.abs(r) ? tg : p + d; };
+  const y = f.ny > 0.001 || f.nvy ? Math.max(0, f.ny + f.nvy * a - 0.5 * GRAV * a * a) : 0;
+  return { x: go(f.nx, f.nvx, f.ntx), y, z: go(f.nz, f.nvz, f.ntz) };
 }
 function mpSnap(d) {
-  const now = performance.now() / 1000;
-  const off = d.T + MP.rtt / 2 - now;
-  if (!MP.offOk || Math.abs(off - MP.off) > 0.3) { MP.off = off; MP.offOk = true; } else MP.off += (off - MP.off) * 0.1;
+  if (MP.snap && d.T < MP.snap.T && MP.snap.T - d.T < 5) return; // an old one that overtook nothing
+  const nowS = performance.now() / 1000;
+  const off = d.T + MP.rtt / 2 - nowS;
+  // network jitter only ever makes a snapshot late: follow the early ones quickly, the late ones slowly
+  if (!MP.offOk || Math.abs(off - MP.off) > 0.3) { MP.off = off; MP.offOk = true; } else MP.off += (off - MP.off) * (off > MP.off ? 0.25 : 0.04);
   MP.snap = d;
+  const tNow = nowS + MP.off;
   for (let i = 0; i < 4; i++) {
     const g = FIGS[i], s = d.f[i];
     g.nx = s[0]; g.ny = s[1]; g.nz = s[2]; g.lean = s[5]; g.lock = !!s[6];
+    g.nvx = s[7] || 0; g.nvy = s[8] || 0; g.nvz = s[9] || 0; g.ntx = s[10]; g.ntz = s[11];
     if (g.tgt !== s[3]) { g.tgt = s[3]; g.rate = s[4]; }
-    if (g.nx0 == null) { g.x = g.nx; g.y = g.ny; g.z = g.nz; g.nx0 = 1; }
+    const first = g.sT == null; g.sT = d.T;
+    if (first) { g.x = g.nx; g.y = g.ny; g.z = g.nz; g.ex = g.ey = g.ez = 0; continue; }
+    // keep drawing it where it is; the gap to the new prediction melts away over a few frames
+    const p = predFig(g, tNow);
+    g.ex = g.x - p.x; g.ey = g.y - p.y; g.ez = g.z - p.z;
+    if (Math.abs(g.ex) + Math.abs(g.ez) > 2.5) g.ex = g.ez = 0;
   }
-  if (performance.now() > MP.pred.until) MP.pred.lane = d.ln[MP.team];
+  if (MP.role === 0 && performance.now() > MP.pred.until) MP.pred.lane = d.ln[MP.team];
   mpViewFrom(d);
 }
 // what this phone draws: my team's score first, ring only for me, marker, block on the net
@@ -2633,26 +2853,40 @@ function mpViewFrom(d) {
   const v = MP.view; if (!v) return;
   const T = MP.team;
   v.score = [d.sc[T], d.sc[1 - T]]; v.server = d.sv === T ? 0 : 1; v.meter = d.m[T]; v.fire = d.fi[T]; v.ph = d.ph;
-  v.ring = null;
-  if (MP.role === 0 && d.a && d.a[0] === T && !d.a[2]) v.ring = d.a[1];
+  v.ring = null; v.ringFire = false;
+  const A = d.a && !d.a[2] ? d.a : null, I = d.i;
+  if (MP.role === 0 && A && A[0] === T) v.ring = A[1];
   if (MP.role === 0 && d.v && d.v[0] === T && !d.v[2] && d.ph === 'serveToss') v.ring = d.v[1];
-  // front player: ring for the set, ring for the block jump
+  // fireball coming at me: skill-check ring until I tapped
+  if (MP.role === 0 && I && I[3] === T && I[4] === 2 && !I[6]) { v.ring = I[5]; v.ringFire = true; }
+  // front player: ring for the set, the cover, the smash, the block jump
   if (MP.role === 1 && d.sq && d.sq[0] === T) v.ring = d.sq[1];
   if (MP.role === 1 && d.cv && d.cv[0] === T) v.ring = d.cv[1];
   if (d.w) { v.wall = d.w[T]; tfig(0, 1).glow = d.w[0] >= WALLMAX; tfig(1, 1).glow = d.w[1] >= WALLMAX; }
-  if (MP.role === 1 && d.a && d.a[0] !== T && !d.a[2] && !d.a[6] && d.a[3] !== 'D') v.ring = d.a[5];
+  if (MP.role === 1 && A && A[0] !== T && !A[6] && A[3] != null && A[3] !== 'D') v.ring = A[5];
   if (!!d.pz !== !!v.paused) { v.paused = !!d.pz; if (!MP.host) mpShowPause(v.paused); }
   if (MP.role === 1 && d.ov && d.ov[0] === T) v.ring = d.ov[1];
-  v.inc = d.i ? { x: d.i[0], z: d.i[1], tMark: d.i[2], done: false, type: d.i[4] ? 'out' : '' } : null;
-  v.blk = d.a && d.a[3] != null && d.a[3] !== 'D' && !d.a[2] ? { cx: d.a[4], v: d.a[3], mine: d.a[0] === T } : null;
-  // gesture hints, first few times only
-  const atkKey = d.a ? d.a[1] : null;
-  if (atkKey !== MP.hintAtk) {
-    MP.hintAtk = atkKey;
-    if (d.a && !d.a[2]) setHint(MP.role === 1 && d.a[0] !== T ? 'block' : MP.role === 0 && d.a[0] === T ? 'attack' : '');
+  v.inc = I ? { x: I[0], z: I[1], tMark: I[2], done: false, type: I[4] === 1 ? 'out' : I[4] === 2 ? 'fire' : '' } : null;
+  v.blk = A ? { a: A[0], cx: A[4], v: A[3], mine: A[0] === T, bj: !!A[6], bl: A[7], hl: A[8] } : null;
+  // can my front player step along the net right now? (for the instant local step)
+  v.myBl = A && A[0] !== T ? A[7] : null;
+  v.frontFree = d.ph !== 'point' && d.ph !== 'dead' && !(d.sq && d.sq[0] === T) && !(d.ph === 'pass' && d.pt === T) && !(d.ov && d.ov[0] === T) && !(A && A[0] !== T && A[6]);
+  // coaching: a few words on what to do right now, the first few times only
+  let ck = '';
+  if (MP.role === 1) {
+    if (d.sq && d.sq[0] === T) ck = 'mpSet';
+    else if (d.cv && d.cv[0] === T) ck = 'mpCover';
+    else if (d.ov && d.ov[0] === T) ck = 'mpSmash';
+    else if (d.dp && d.dp - 1 === T) ck = 'mpGrab';
+    else if (A && A[0] !== T) ck = A[3] == null ? 'mpBlock' : A[3] !== 'D' && !A[6] ? 'mpJump' : '';
+    else if ((d.sq && d.sq[0] !== T) || (d.ph === 'pass' && d.pt === 1 - T)) ck = 'mpRead';
+  } else if (MP.mySlot >= 0) {
+    if (I && I[3] === T && I[4] === 2) ck = 'mpFire';
+    else if (A && A[0] === T) ck = 'attack';
+    else if (d.ph === 'serveReady' && d.sv === T) ck = 'serve';
+    else if (I && I[3] === T && I[4] !== 1) ck = 'defend';
   }
-  const sqKey = d.sq ? d.sq[1] : null;
-  if (sqKey !== MP.hintSet) { MP.hintSet = sqKey; if (d.sq && MP.role === 1 && d.sq[0] === T) setHint('set'); }
+  if (ck !== MP.coach) { MP.coach = ck; if (ck) setHint(ck); else hint = ''; }
 }
 function mpUpdate(dt) {
   if (G.fadeV) { G.fade = clamp(G.fade + G.fadeV * dt, 0, 1); if (G.fade <= 0 || G.fade >= 1) G.fadeV = 0; }
@@ -2665,21 +2899,23 @@ function mpUpdate(dt) {
       for (const f of FIGS) updFig(f, dt);
     }
     MP.snapT -= dt;
-    if (MP.snapT <= 0 && MP.net) { MP.snapT = 0.05; const s = mpSnapOut(); if (s) { MP.net.all(s); mpViewFrom(s); } }
+    if (MP.snapT <= 0 && MP.net) { MP.snapT = 0.04; const s = mpSnapOut(); if (s) { MP.net.all(s); mpViewFrom(s); } }
   } else if (frozen) {
     MP.offOk = false; // resync the clock on resume
   } else {
     G.t = performance.now() / 1000 + MP.off;
-    if (MP.net && performance.now() > MP.pingT) { MP.pingT = performance.now() + 2000; MP.net.toHost({ t: 'p', c: performance.now() }); }
-    const k = Math.min(1, dt * 16);
+    if (MP.net && performance.now() > MP.pingT) { MP.pingT = performance.now() + (MP.rttN < 3 ? 500 : 2000); MP.net.toHost({ t: 'p', c: performance.now(), r: MP.rttN ? MP.rtt : undefined }); }
+    // figures run ahead from the last snapshot to the present (host time), so every phone shows the same moment
+    const dec = Math.exp(-dt * 9), decY = Math.exp(-dt * 18), now = performance.now(), pr = MP.pred;
     for (let i = 0; i < 4; i++) {
-      const f = FIGS[i]; if (f.nx == null) continue;
-      const own = MP.role === 0 && MP.mySlot >= 0 && f === tfig(MP.team, 0) && performance.now() < MP.pred.until;
-      const px = f.x, wasAir = f.y > 0.03;
-      f.x += ((own ? f.tx : f.nx) - f.x) * (own ? Math.min(1, dt * 22) : k);
-      f.z += (f.nz - f.z) * k; f.y += (f.ny - f.y) * Math.min(1, dt * 24);
+      const f = FIGS[i]; if (f.sT == null) continue;
+      const p = predFig(f, G.t), px = f.x, pz = f.z, wasAir = f.y > 0.03;
+      f.ex *= dec; f.ez *= dec; f.ey *= decY;
+      if (pr.fig === f && now < pr.until) { f.x += (pr.x - f.x) * Math.min(1, dt * 22); f.ex = f.x - p.x; } // my own step, predicted
+      else f.x = p.x + f.ex;
+      f.z = p.z + f.ez; f.y = Math.max(0, p.y + f.ey);
       f.air = f.y > 0.03;
-      f.moving = Math.abs(f.x - px) > dt * 0.4;
+      f.moving = Math.abs(f.x - px) > dt * 0.4 || Math.abs(f.z - pz) > dt * 0.4;
       if (f.moving && !f.air) f.ph += dt * 15;
       if (wasAir && !f.air) dust(f.x, f.z, 3);
       const tp = POSES[f.tgt]; if (tp) { const kk = Math.min(1, dt * (f.rate || 14)); for (let j = 0; j < 26; j++) f.pose[j] += (tp[j] - f.pose[j]) * kk; }
@@ -2705,6 +2941,7 @@ $('#mpBack').addEventListener('click', () => { if (MP.net) { MP.net.close(); MP.
 $('#mpLeave').addEventListener('click', mpLeave);
 $('#mpGo').addEventListener('click', mpBegin);
 $('#mpShare').addEventListener('click', mpShare);
+$('#mpHow').addEventListener('click', () => openHow('lobby', mpHowSec()));
 for (let i = 0; i < 4; i++) $('#slot' + i).addEventListener('click', () => mpPickSlot(i));
 
 /* ---------------- render ---------------- */
@@ -2850,12 +3087,24 @@ function drawNet() {
   // block zone on the net tape (assist on Leicht and Normal)
   const A = G.attack;
   const B = G.mode === 'mp' ? MP.view && MP.view.blk : null;
-  const showMp = B && B.mine && MP.level < 2;
-  if (showMp || (A && A.shown && A.shown !== 'D' && G.level < 2 && G.mode === 'play')) {
-    const sd = showMp ? (B.v === 'W' ? 'W' : B.v < 0 ? 'L' : 'R') : A.shown, cx = showMp ? B.cx : A.C.x;
+  const tape = (x0, x1, col) => { const p = pv(clamp(x0, -4.5, 4.5), top, 0), q = pv(clamp(x1, -4.5, 4.5), top, 0); line(p.x, p.y - 1, q.x, q.y - 1, col); line(p.x, p.y, q.x, q.y, col); };
+  if (B) {
+    // multiplayer: the hitter (easy, normal) sees their block, the blocker always sees their own
+    const own = !B.mine && MP.role === 1;
+    if (B.v != null && B.v !== 'D' && (own || (B.mine && MP.level < 2))) {
+      const bx = tfig(1 - B.a, 1).x;
+      const sp = B.v === 'W' ? [bx - 1.1, bx + 1.1] : B.v < 0 ? [bx - 1.25, bx + 0.45] : [bx - 0.45, bx + 1.25];
+      tape(sp[0], sp[1], own ? C.accent : C.bad);
+    }
+    if (own && !B.bj && ((G.t * 6) | 0) % 2 === 0) {
+      // where their hitter will hit: a little arrow above the tape
+      const p = pv(B.cx, top + 0.42, 0);
+      rect(p.x - 2, p.y - 2, 5, 1, C.bad); rect(p.x - 1, p.y - 1, 3, 1, C.bad); rect(p.x, p.y, 1, 1, C.bad);
+    }
+  } else if (A && A.shown && A.shown !== 'D' && G.level < 2 && G.mode === 'play') {
+    const sd = A.shown, cx = A.C.x;
     const span = sd === 'L' ? [cx - 1.8, cx + 0.15] : sd === 'R' ? [cx - 0.15, cx + 1.8] : [cx - 1.8, cx + 1.8];
-    const p = pv(clamp(span[0], -4.5, 4.5), top, 0), q = pv(clamp(span[1], -4.5, 4.5), top, 0);
-    line(p.x, p.y - 1, q.x, q.y - 1, C.bad); line(p.x, p.y, q.x, q.y, C.bad);
+    tape(span[0], span[1], C.bad);
   }
   const c = proj(-4.5, bot, 0), d = proj(4.5, bot, 0); line(c.x, c.y, d.x, d.y, C.boneDim);
   for (const sx of [-1, 1]) for (let i = 0; i < 4; i++) { const p = proj(sx * 4.5, top + i * 0.2, 0), q = proj(sx * 4.5, top + (i + 1) * 0.2, 0); line(p.x, p.y, q.x, q.y, i % 2 ? C.bone : C.bad); }
@@ -2872,9 +3121,9 @@ function drawRing() {
   const u = (G.t - (tc - RING)) / RING; if (u < 0) return;
   const p = pv(ball.x, ball.y, ball.z), rb = clamp(Math.round(0.14 * p.s), 1, 5);
   const r = Math.max(rb + 1, lerp(17, rb + 1, Math.min(1, u)));
-  const hot = Math.abs(G.t - tc) < 0.075;
-  ring(p.x, p.y, r, hot ? C.accent : (u > 1 ? C.bad : C.boneMid));
-  if (hot) ring(p.x, p.y, r + 1, C.accent);
+  const hot = Math.abs(G.t - tc) < 0.075, fire = G.mode === 'mp' && MP.view && MP.view.ringFire;
+  ring(p.x, p.y, r, hot ? C.accent : u > 1 ? C.bad : fire ? C.fire2 : C.boneMid);
+  if (hot || fire) ring(p.x, p.y, r + 1, hot ? C.accent : C.fire3);
 }
 function miniSkull(x, y, col, ours) {
   rect(x + 1, y, 3, 1, col); rect(x, y + 1, 5, 2, col); rect(x + 1, y + 3, 3, 1, col); rect(x + 1, y + 4, 1, 1, col); rect(x + 3, y + 4, 1, 1, col);
@@ -2910,7 +3159,8 @@ function drawHUD() {
   }
   if (hint && (G.mode === 'play' || G.mode === 'mp')) {
     const a = Math.min(1, (G.t - hintT) * 4) * (0.65 + 0.35 * Math.sin(G.t * 6));
-    ctx.globalAlpha = a; text(hint, cx, Math.round(H * 0.69), C.bone, 1, 'c'); ctx.globalAlpha = 1;
+    const ls = hint.split('|'), y0 = Math.round(H * 0.69);
+    ctx.globalAlpha = a; ls.forEach((l, i) => text(l, cx, y0 + i * 9, C.bone, 1, 'c')); ctx.globalAlpha = 1;
   }
 }
 function drawFx() {
@@ -3063,7 +3313,7 @@ function boot(data) {
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ level: G.level, mode: G.mode, score: G.score, server: G.server, meter: G.meter, fire: G.fire, stats: G.stats })); } catch (e) {}
 const hot = window.claude && window.claude.hot;
 if (hot && hot.ready) hot.ready(boot); else boot(hot && hot.data ? hot.data : {});
-window.__kh = { MP, AI, FIGS, G, me, mate, oB, oA, ball, startRally, BAL, CAM, LX, startGame, onSwipe, onTap, update, render };
+window.__kh = { MP, AI, FIGS, G, me, mate, oB, oA, ball, startRally, BAL, CAM, LX, startGame, onSwipe, onTap, update, render, hostInput };
 })();
 </script>
 <script>
