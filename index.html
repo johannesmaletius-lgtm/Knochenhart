@@ -2039,30 +2039,28 @@ const MP = {
   hintAtk: null
 };
 
-/* ---------- transport: PeerJS (WebRTC) online, BroadcastChannel for same-device tests (?bc) ---------- */
+/* ---------- transport: WebRTC via Trystero (signalling over several public Nostr relays), BroadcastChannel for same-device tests (?bc) ---------- */
 function loadPeer() {
-  if (window.Peer) return Promise.resolve();
-  const urls = ['lib/peerjs.min.js', 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];
-  return urls.reduce((p, u) => p.catch(() => new Promise((ok, no) => {
-    const s = document.createElement('script'); s.src = u; s.onload = () => window.Peer ? ok() : no(); s.onerror = no; document.head.appendChild(s);
-  })), Promise.reject()).catch(() => { throw new Error('nolib'); });
+  if (window.Trystero) return Promise.resolve();
+  return new Promise((ok, no) => {
+    const s = document.createElement('script'); s.src = 'lib/trystero.min.js';
+    s.onload = () => window.Trystero ? ok() : no(new Error('nolib')); s.onerror = () => no(new Error('nolib')); document.head.appendChild(s);
+  });
 }
 const useBC = /[?&]bc\b/.test(location.search);
 const LAG = +((location.search.match(/lag=(\d+)/) || [])[1] || 0); // test only: fake network delay in ms
 const bcPost = (bc, m) => LAG ? setTimeout(() => { try { bc.postMessage(m); } catch (e) {} }, LAG * (0.8 + Math.random() * 0.4)) : bc.postMessage(m);
-// explicit ICE servers: several STUN hosts plus the PeerJS TURN relays (needed on mobile data / strict NATs)
-const PEEROPT = { debug: 1, config: { iceServers: [
-  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
-  { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }
-], sdpSemantics: 'unified-plan' } };
-const FATAL = { 'browser-incompatible': 1, 'invalid-id': 1, 'invalid-key': 1, 'network': 1, 'server-error': 1, 'socket-error': 1, 'socket-closed': 1, 'ssl-unavailable': 1 };
-function keepOnline(peer) {
-  const again = () => { if (!peer.__off && !peer.destroyed && peer.disconnected) try { peer.reconnect(); } catch (e) {} };
-  peer.on('disconnected', () => setTimeout(again, 800));
-  const vis = () => { if (!document.hidden) again(); };
-  document.addEventListener('visibilitychange', vis);
-  peer.on('close', () => document.removeEventListener('visibilitychange', vis));
-  const iv = setInterval(() => { if (peer.__off || peer.destroyed) clearInterval(iv); else again(); }, 4000);
+const RELAYS = (location.search.match(/[?&]relay=([^&]+)/) || [])[1]; // test only: own relay
+const TRCONF = {
+  appId: 'volleyskull-knochenhart-v1',
+  relayConfig: { urls: RELAYS ? [decodeURIComponent(RELAYS)] : ['nos.lol', 'relay.damus.io', 'relay.primal.net', 'nostr.mom', 'relay.nostr.dev.br', 'nostr.robosats.org', 'cdn.satellite.earth', 'relay.degmods.com'].map(u => 'wss://' + u), warnOnRelayFailure: false },
+  // TURN relays for phones on mobile data / strict NATs (Trystero adds its own STUN servers)
+  turnConfig: [{ urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }]
+};
+function trRoom(code) {
+  const room = Trystero.joinRoom(TRCONF, 'room-' + code);
+  const act = room.makeAction('d');
+  return { room, send: (d, to) => Promise.resolve(act.send(d, to ? { target: to } : undefined)).catch(() => {}), on: f => { act.onMessage = (d, meta) => f(d, typeof meta === 'string' ? meta : meta && meta.peerId); } };
 }
 function netCreate(code, h) {
   // h: { open(), conn(id), msg(id, data), gone(id), fail(kind) }
@@ -2072,27 +2070,21 @@ function netCreate(code, h) {
     setTimeout(() => h.open(), 0);
     return { send: (id, d) => bcPost(bc, { to: id, from: 'H', d }), all: d => { for (const id of peers) bcPost(bc, { to: id, from: 'H', d }); }, close() { for (const id of peers) bc.postMessage({ to: id, from: 'H', d: { t: 'bye' } }); bc.close(); } };
   }
-  const conns = {};
-  const peer = new Peer('vsk-' + code, PEEROPT);
-  let opened = false;
-  peer.on('open', () => { if (!opened) { opened = true; h.open(); } });
-  // the signalling socket drops when the phone locks or the share sheet sends the page to the background:
-  // without it nobody can find the room any more, so log back in under the same id
-  keepOnline(peer);
-  peer.on('error', e => {
-    if (e.type === 'unavailable-id' && !opened) h.fail('taken');
-    else if (!opened && FATAL[e.type]) h.fail('net');
+  // the host announces itself to everyone who shows up in the room; guests only talk to the host
+  const r = trRoom(code), peers = new Set();
+  r.room.onPeerJoin = id => r.send({ t: 'host' }, id);
+  r.room.onPeerLeave = id => { if (peers.delete(id)) h.gone(id); };
+  r.on((d, id) => {
+    if (!d || !id) return;
+    if (d.t === 'host') return; // someone else hosts this code too
+    if (!peers.has(id)) { if (d.t !== 'hi') return; peers.add(id); h.conn(id); }
+    if (d.t !== 'hi') h.msg(id, d);
   });
-  peer.on('connection', c => {
-    c.on('open', () => { conns[c.peer] = c; h.conn(c.peer); });
-    c.on('data', d => h.msg(c.peer, d));
-    const bye = () => { if (conns[c.peer] === c) { delete conns[c.peer]; h.gone(c.peer); } };
-    c.on('close', bye); c.on('error', bye);
-  });
+  setTimeout(() => h.open(), 0);
   return {
-    send: (id, d) => { const c = conns[id]; if (c && c.open) c.send(d); },
-    all: d => { for (const id in conns) if (conns[id].open) conns[id].send(d); },
-    close() { peer.__off = true; try { peer.destroy(); } catch (e) {} }
+    send: (id, d) => { if (peers.has(id)) r.send(d, id); },
+    all: d => { if (peers.size) r.send(d, [...peers]); },
+    close() { try { r.room.leave(); } catch (e) {} }
   };
 }
 function netJoin(code, h) {
@@ -2103,24 +2095,15 @@ function netJoin(code, h) {
     setTimeout(() => { net.toHost({ t: 'hi' }); h.open(id); }, 0);
     return net;
   }
-  const peer = new Peer(PEEROPT);
-  let conn = null, tries = 0, opened = false;
-  const net = { id: '', toHost: d => { if (conn && conn.open) conn.send(d); }, close() { peer.__off = true; try { peer.destroy(); } catch (e) {} } };
-  const dial = () => {
-    conn = peer.connect('vsk-' + code, { reliable: true });
-    const c = conn;
-    c.on('open', () => { if (c !== conn) return; opened = true; net.toHost({ t: 'hi' }); h.open(net.id); });
-    c.on('data', d => { if (c === conn) h.msg(d); });
-    c.on('close', () => { if (c === conn && opened) h.gone(); });
-  };
-  peer.on('open', id => { net.id = id; if (!conn) dial(); });
-  keepOnline(peer);
-  peer.on('error', e => {
-    if (opened) return;
-    // the host may just be reconnecting its socket: look again a couple of times before giving up
-    if (e.type === 'peer-unavailable') { if (++tries < 2) setTimeout(() => { if (!peer.__off && !opened) dial(); }, 1500); else h.fail('nofound'); }
-    else if (FATAL[e.type]) h.fail('net');
+  const r = trRoom(code), id = Trystero.selfId;
+  let host = '', done = false;
+  const net = { id, toHost: d => { if (host) r.send(d, host); }, close() { done = true; try { r.room.leave(); } catch (e) {} } };
+  r.on((d, from) => {
+    if (!d || done) return;
+    if (!host) { if (d.t !== 'host') return; host = from; net.toHost({ t: 'hi' }); h.open(id); return; }
+    if (from === host) h.msg(d);
   });
+  r.room.onPeerLeave = p => { if (p === host && !done) h.gone(); };
   return net;
 }
 
@@ -2155,11 +2138,11 @@ async function mpJoin() {
   audioInit();
   const code = $('#mpCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length !== 4) { $('#mpCode').focus(); return; }
-  mpMsg('…');
+  mpMsg('Connecting…');
   try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
   if (MP.net) { try { MP.net.close(); } catch (e) {} MP.net = null; }
   MP.host = false; MP.code = code; MP.mySlot = -1; MP.myId = '';
-  const t0 = setTimeout(() => { if (!MP.myId && MP.net) { const n = MP.net; MP.net = null; n.close(); mpMsg('Could not connect, try again'); } }, 25000);
+  const t0 = setTimeout(() => { if (!MP.myId && MP.net) { const n = MP.net; MP.net = null; n.close(); mpMsg('Room not found'); } }, 25000);
   MP.net = netJoin(code, {
     open(id) { clearTimeout(t0); MP.myId = id; MP.net.toHost({ t: 'skin', sk: mySkin }); },
     msg(d) { mpClientMsg(d); },
@@ -2179,7 +2162,7 @@ function mpLobbySync() {
   MP.net.all({ t: 'lobby', slots: MP.slots, code: MP.code, level: MP.level, live: G.mode === 'mp' });
   mpLobbyDraw();
 }
-function mpLobbyShow() { showOnly('mpOv'); $('#mpStart').hidden = true; $('#mpLobby').hidden = false; mpLobbyDraw(); }
+function mpLobbyShow() { mpMsg(''); showOnly('mpOv'); $('#mpStart').hidden = true; $('#mpLobby').hidden = false; mpLobbyDraw(); }
 function mpLobbyDraw() {
   $('#mpRoom').textContent = MP.code;
   MP.mySlot = MP.slots.findIndex(s => s && s.id === MP.myId);
@@ -2195,7 +2178,7 @@ function mpLobbyDraw() {
 }
 function inviteURL() {
   const base = /github\.io$/.test(location.hostname) || location.hostname === 'localhost' ? location.origin + location.pathname : 'https://johannesmaletius-lgtm.github.io/Knochenhart/';
-  return base + '?raum=' + MP.code + (useBC ? '&bc' : '');
+  return base + '?raum=' + MP.code + (useBC ? '&bc' : '') + (RELAYS ? '&relay=' + RELAYS : '');
 }
 async function mpShare() {
   const url = inviteURL();
