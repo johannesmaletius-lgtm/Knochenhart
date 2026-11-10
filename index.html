@@ -414,6 +414,7 @@ html{background:var(--screen)}
         </div>
         <button class="btn ghost" id="mpBack">Back</button>
         <p class="rec" id="mpMsg" aria-live="polite"></p>
+        <p class="rec" style="opacity:.45;font-size:11px;margin:0">build 2026-11-10c</p>
       </div>
       <div class="panel" id="mpLobby" hidden>
         <p class="label">Room code</p>
@@ -2057,8 +2058,9 @@ const TRCONF = {
   // TURN relays for phones on mobile data / strict NATs (Trystero adds its own STUN servers)
   turnConfig: [{ urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }]
 };
-function trRoom(code) {
-  const room = Trystero.joinRoom(TRCONF, 'room-' + code);
+const relaysUp = () => { try { return Object.values(Trystero.getRelaySockets()).filter(w => w && w.readyState === 1).length; } catch (e) { return -1; } };
+function trRoom(code, onJoinError) {
+  const room = Trystero.joinRoom(TRCONF, 'room-' + code, { onJoinError: e => onJoinError && onJoinError(e) });
   const act = room.makeAction('d');
   return { room, send: (d, to) => Promise.resolve(act.send(d, to ? { target: to } : undefined)).catch(() => {}), on: f => { act.onMessage = (d, meta) => f(d, typeof meta === 'string' ? meta : meta && meta.peerId); } };
 }
@@ -2095,9 +2097,11 @@ function netJoin(code, h) {
     setTimeout(() => { net.toHost({ t: 'hi' }); h.open(id); }, 0);
     return net;
   }
-  const r = trRoom(code), id = Trystero.selfId;
-  let host = '', done = false;
-  const net = { id, toHost: d => { if (host) r.send(d, host); }, close() { done = true; try { r.room.leave(); } catch (e) {} } };
+  let host = '', done = false, seen = false;
+  // a peer was found in the room but WebRTC could not open a direct line to it (strict mobile / guest networks)
+  const r = trRoom(code, () => { seen = true; }), id = Trystero.selfId;
+
+  const net = { id, seen: () => seen, toHost: d => { if (host) r.send(d, host); }, close() { done = true; try { r.room.leave(); } catch (e) {} } };
   r.on((d, from) => {
     if (!d || done) return;
     if (!host) { if (d.t !== 'host') return; host = from; net.toHost({ t: 'hi' }); h.open(id); return; }
@@ -2142,12 +2146,18 @@ async function mpJoin() {
   try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
   if (MP.net) { try { MP.net.close(); } catch (e) {} MP.net = null; }
   MP.host = false; MP.code = code; MP.mySlot = -1; MP.myId = '';
-  const t0 = setTimeout(() => { if (!MP.myId && MP.net) { const n = MP.net; MP.net = null; n.close(); mpMsg('Room not found'); } }, 25000);
+  // status while searching: how many matchmaking servers this phone reaches, then a precise reason on timeout
+  const t1 = useBC ? 0 : setInterval(() => { if (MP.myId || !MP.net) return clearInterval(t1); const n = relaysUp(); mpMsg('Connecting… ' + (n >= 0 ? n + '/' + TRCONF.relayConfig.urls.length + ' servers' : '')); }, 1000);
+  const t0 = setTimeout(() => {
+    clearInterval(t1); if (MP.myId || !MP.net) return;
+    const n = MP.net; MP.net = null; const seen = n.seen && n.seen(); n.close();
+    mpMsg(!useBC && relaysUp() === 0 ? 'No internet connection to the servers' : seen ? 'Room found, but your networks block the connection. Try Wi-Fi on both phones' : 'Room not found. Is the host app open in front?');
+  }, 25000);
   MP.net = netJoin(code, {
-    open(id) { clearTimeout(t0); MP.myId = id; MP.net.toHost({ t: 'skin', sk: mySkin }); },
+    open(id) { clearTimeout(t0); clearInterval(t1); MP.myId = id; MP.net.toHost({ t: 'skin', sk: mySkin }); },
     msg(d) { mpClientMsg(d); },
     gone() { if (MP.net) { mpLeave(); popup('DISCONNECTED', C.bad); } },
-    fail(k) { clearTimeout(t0); const n = MP.net; MP.net = null; if (n) n.close(); mpMsg(k === 'nofound' ? 'Room not found' : 'No connection'); }
+    fail(k) { clearTimeout(t0); clearInterval(t1); const n = MP.net; MP.net = null; if (n) n.close(); mpMsg(k === 'nofound' ? 'Room not found' : 'No connection'); }
   });
 }
 function mpLeave() {
