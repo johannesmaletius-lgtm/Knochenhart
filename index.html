@@ -414,7 +414,7 @@ html{background:var(--screen)}
         </div>
         <button class="btn ghost" id="mpBack">Back</button>
         <p class="rec" id="mpMsg" aria-live="polite"></p>
-        <p class="rec" style="opacity:.45;font-size:11px;margin:0">build 2026-11-10c</p>
+        <p class="rec" style="opacity:.45;font-size:11px;margin:0">build 2026-11-10d</p>
       </div>
       <div class="panel" id="mpLobby" hidden>
         <p class="label">Room code</p>
@@ -2058,6 +2058,16 @@ const TRCONF = {
   // TURN relays for phones on mobile data / strict NATs (Trystero adds its own STUN servers)
   turnConfig: [{ urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }]
 };
+// watch the WebRTC links Trystero opens: one appears as soon as another phone is found over the servers
+const DIAG = { pcs: 0, state: '', ok: 0 };
+const DiagPC = typeof RTCPeerConnection === 'function' ? class extends RTCPeerConnection {
+  constructor(c) {
+    super(c); DIAG.pcs++; DIAG.state = 'new';
+    const upd = () => { DIAG.state = this.connectionState || this.iceConnectionState; if (DIAG.state === 'connected') DIAG.ok++; };
+    this.addEventListener('connectionstatechange', upd); this.addEventListener('iceconnectionstatechange', upd);
+  }
+} : undefined;
+if (DiagPC) TRCONF.rtcPolyfill = DiagPC;
 const relaysUp = () => { try { return Object.values(Trystero.getRelaySockets()).filter(w => w && w.readyState === 1).length; } catch (e) { return -1; } };
 function trRoom(code, onJoinError) {
   const room = Trystero.joinRoom(TRCONF, 'room-' + code, { onJoinError: e => onJoinError && onJoinError(e) });
@@ -2147,10 +2157,15 @@ async function mpJoin() {
   if (MP.net) { try { MP.net.close(); } catch (e) {} MP.net = null; }
   MP.host = false; MP.code = code; MP.mySlot = -1; MP.myId = '';
   // status while searching: how many matchmaking servers this phone reaches, then a precise reason on timeout
-  const t1 = useBC ? 0 : setInterval(() => { if (MP.myId || !MP.net) return clearInterval(t1); const n = relaysUp(); mpMsg('Connecting… ' + (n >= 0 ? n + '/' + TRCONF.relayConfig.urls.length + ' servers' : '')); }, 1000);
+  DIAG.pcs = 0; DIAG.state = ''; DIAG.ok = 0;
+  const t1 = useBC ? 0 : setInterval(() => {
+    if (MP.myId || !MP.net) return clearInterval(t1);
+    const n = relaysUp();
+    mpMsg('Connecting… ' + (n >= 0 ? n + '/' + TRCONF.relayConfig.urls.length + ' servers' : '') + (DIAG.pcs ? ' · host found, linking (' + DIAG.state + ')' : ' · looking for host'));
+  }, 1000);
   const t0 = setTimeout(() => {
     clearInterval(t1); if (MP.myId || !MP.net) return;
-    const n = MP.net; MP.net = null; const seen = n.seen && n.seen(); n.close();
+    const n = MP.net; MP.net = null; const seen = (n.seen && n.seen()) || DIAG.pcs > 0; n.close();
     mpMsg(!useBC && relaysUp() === 0 ? 'No internet connection to the servers' : seen ? 'Room found, but your networks block the connection. Try Wi-Fi on both phones' : 'Room not found. Is the host app open in front?');
   }, 25000);
   MP.net = netJoin(code, {
