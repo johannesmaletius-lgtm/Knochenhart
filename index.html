@@ -2050,6 +2050,20 @@ function loadPeer() {
 const useBC = /[?&]bc\b/.test(location.search);
 const LAG = +((location.search.match(/lag=(\d+)/) || [])[1] || 0); // test only: fake network delay in ms
 const bcPost = (bc, m) => LAG ? setTimeout(() => { try { bc.postMessage(m); } catch (e) {} }, LAG * (0.8 + Math.random() * 0.4)) : bc.postMessage(m);
+// explicit ICE servers: several STUN hosts plus the PeerJS TURN relays (needed on mobile data / strict NATs)
+const PEEROPT = { debug: 1, config: { iceServers: [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+  { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }
+], sdpSemantics: 'unified-plan' } };
+const FATAL = { 'browser-incompatible': 1, 'invalid-id': 1, 'invalid-key': 1, 'network': 1, 'server-error': 1, 'socket-error': 1, 'socket-closed': 1, 'ssl-unavailable': 1 };
+function keepOnline(peer) {
+  const again = () => { if (!peer.__off && !peer.destroyed && peer.disconnected) try { peer.reconnect(); } catch (e) {} };
+  peer.on('disconnected', () => setTimeout(again, 800));
+  const vis = () => { if (!document.hidden) again(); };
+  document.addEventListener('visibilitychange', vis);
+  peer.on('close', () => document.removeEventListener('visibilitychange', vis));
+  const iv = setInterval(() => { if (peer.__off || peer.destroyed) clearInterval(iv); else again(); }, 4000);
+}
 function netCreate(code, h) {
   // h: { open(), conn(id), msg(id, data), gone(id), fail(kind) }
   if (useBC) {
@@ -2059,18 +2073,26 @@ function netCreate(code, h) {
     return { send: (id, d) => bcPost(bc, { to: id, from: 'H', d }), all: d => { for (const id of peers) bcPost(bc, { to: id, from: 'H', d }); }, close() { for (const id of peers) bc.postMessage({ to: id, from: 'H', d: { t: 'bye' } }); bc.close(); } };
   }
   const conns = {};
-  const peer = new Peer('vsk-' + code);
-  peer.on('open', () => h.open());
-  peer.on('error', e => h.fail(e.type === 'unavailable-id' ? 'taken' : 'net'));
+  const peer = new Peer('vsk-' + code, PEEROPT);
+  let opened = false;
+  peer.on('open', () => { if (!opened) { opened = true; h.open(); } });
+  // the signalling socket drops when the phone locks or the share sheet sends the page to the background:
+  // without it nobody can find the room any more, so log back in under the same id
+  keepOnline(peer);
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id' && !opened) h.fail('taken');
+    else if (!opened && FATAL[e.type]) h.fail('net');
+  });
   peer.on('connection', c => {
     c.on('open', () => { conns[c.peer] = c; h.conn(c.peer); });
     c.on('data', d => h.msg(c.peer, d));
-    c.on('close', () => { delete conns[c.peer]; h.gone(c.peer); });
+    const bye = () => { if (conns[c.peer] === c) { delete conns[c.peer]; h.gone(c.peer); } };
+    c.on('close', bye); c.on('error', bye);
   });
   return {
     send: (id, d) => { const c = conns[id]; if (c && c.open) c.send(d); },
     all: d => { for (const id in conns) if (conns[id].open) conns[id].send(d); },
-    close() { try { peer.destroy(); } catch (e) {} }
+    close() { peer.__off = true; try { peer.destroy(); } catch (e) {} }
   };
 }
 function netJoin(code, h) {
@@ -2081,17 +2103,24 @@ function netJoin(code, h) {
     setTimeout(() => { net.toHost({ t: 'hi' }); h.open(id); }, 0);
     return net;
   }
-  const peer = new Peer();
-  let conn = null;
-  const net = { id: '', toHost: d => { if (conn && conn.open) conn.send(d); }, close() { try { peer.destroy(); } catch (e) {} } };
-  peer.on('open', id => {
-    net.id = id;
+  const peer = new Peer(PEEROPT);
+  let conn = null, tries = 0, opened = false;
+  const net = { id: '', toHost: d => { if (conn && conn.open) conn.send(d); }, close() { peer.__off = true; try { peer.destroy(); } catch (e) {} } };
+  const dial = () => {
     conn = peer.connect('vsk-' + code, { reliable: true });
-    conn.on('open', () => { net.toHost({ t: 'hi' }); h.open(id); });
-    conn.on('data', d => h.msg(d));
-    conn.on('close', () => h.gone());
+    const c = conn;
+    c.on('open', () => { if (c !== conn) return; opened = true; net.toHost({ t: 'hi' }); h.open(net.id); });
+    c.on('data', d => { if (c === conn) h.msg(d); });
+    c.on('close', () => { if (c === conn && opened) h.gone(); });
+  };
+  peer.on('open', id => { net.id = id; if (!conn) dial(); });
+  keepOnline(peer);
+  peer.on('error', e => {
+    if (opened) return;
+    // the host may just be reconnecting its socket: look again a couple of times before giving up
+    if (e.type === 'peer-unavailable') { if (++tries < 2) setTimeout(() => { if (!peer.__off && !opened) dial(); }, 1500); else h.fail('nofound'); }
+    else if (FATAL[e.type]) h.fail('net');
   });
-  peer.on('error', e => h.fail(e.type === 'peer-unavailable' ? 'nofound' : 'net'));
   return net;
 }
 
@@ -2102,6 +2131,7 @@ function mpNewCode() { let s = ''; for (let i = 0; i < 4; i++) s += MPCODE[(Math
 async function mpCreate() {
   audioInit(); mpMsg('…');
   try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
+  if (MP.net) { try { MP.net.close(); } catch (e) {} MP.net = null; }
   const code = mpNewCode();
   MP.host = true; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
   MP.net = netCreate(code, {
@@ -2118,7 +2148,7 @@ async function mpCreate() {
     },
     msg(id, d) { mpHostMsg(id, d); },
     gone(id) { const i = MP.slots.findIndex(s => s && s.id === id); if (i >= 0) { MP.slots[i] = null; mpLobbySync(); } },
-    fail(k) { if (k === 'taken') { MP.net.close(); mpCreate(); } else mpMsg('No connection'); }
+    fail(k) { const n = MP.net; MP.net = null; if (n) n.close(); if (k === 'taken') mpCreate(); else mpMsg('No connection'); }
   });
 }
 async function mpJoin() {
@@ -2127,13 +2157,14 @@ async function mpJoin() {
   if (code.length !== 4) { $('#mpCode').focus(); return; }
   mpMsg('…');
   try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
-  MP.host = false; MP.code = code; MP.mySlot = -1;
-  const t0 = setTimeout(() => { if (!MP.myId) mpMsg('Room not found'); }, 9000);
+  if (MP.net) { try { MP.net.close(); } catch (e) {} MP.net = null; }
+  MP.host = false; MP.code = code; MP.mySlot = -1; MP.myId = '';
+  const t0 = setTimeout(() => { if (!MP.myId && MP.net) { const n = MP.net; MP.net = null; n.close(); mpMsg('Could not connect, try again'); } }, 25000);
   MP.net = netJoin(code, {
     open(id) { clearTimeout(t0); MP.myId = id; MP.net.toHost({ t: 'skin', sk: mySkin }); },
     msg(d) { mpClientMsg(d); },
     gone() { if (MP.net) { mpLeave(); popup('DISCONNECTED', C.bad); } },
-    fail(k) { clearTimeout(t0); mpMsg(k === 'nofound' ? 'Room not found' : 'No connection'); MP.net = null; }
+    fail(k) { clearTimeout(t0); const n = MP.net; MP.net = null; if (n) n.close(); mpMsg(k === 'nofound' ? 'Room not found' : 'No connection'); }
   });
 }
 function mpLeave() {
