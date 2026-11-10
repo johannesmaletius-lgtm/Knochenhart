@@ -59,3 +59,14 @@ Hochskillen ca. 3 Tage bei normalem Spielen (Ziel: ~20 Matches/Tag); Kosten pro 
 - Lane-Zuordnung der Swipes (oben links = Mitte, rechts = hinten, links = links).
 - "Block recyceln" = Angreifer-Team rettet den abgeblockten Ball; Quote hängt am Block-Skill des Blockers.
 - Aufschlag ab 90 optional Sprungaufschlag.
+
+## Orchestrator-Prompt (alle Phasen autonom, frischer Subagent pro Phase)
+```
+Du bist Orchestrator. Lies nur in docs/FABLE_PROMPTS.md die Abschnitte "Arbeitsregeln" und "Phasen" (nicht die ganze index.html).
+Arbeite P0 bis P8 nacheinander ab. Pro Phase:
+1. Starte einen eigenen Subagenten (frischer Kontext). Gib ihm: die Arbeitsregeln, "Festgelegte Regeln" und genau diese eine Phase. Er liest nur, was er für die Phase braucht (grep, Read mit offset/limit, Edit statt Write).
+2. Er setzt um, lässt die Node-Tests laufen, committet und pusht auf den aktuellen Branch. Rückgabe an dich: max. 5 Zeilen.
+3. Du prüfst nur: Commit vorhanden, Tests grün, Spiel startet (Playwright-Smoke-Test, deviceScaleFactor 1, ein Screenshot). Bei Fehlschlag: derselbe Subagent bessert nach, max. 3 Versuche, dann stoppen und mir melden.
+4. Erst dann nächste Phase. Keine Rückfragen, außer bei Blockern. Bei Unklarheit die Annahmen aus "Zu prüfen" verwenden.
+Nach P8: max. 10 Zeilen Gesamtzusammenfassung und Liste, was ich selbst spielen/prüfen soll (P3, P4, P8).
+```
