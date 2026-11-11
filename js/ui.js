@@ -25,7 +25,7 @@ function demoBump() {
 function startGame() {
   audioInit();
   G.mode = 'play'; G.paused = false; G.score = [0, 0]; G.server = 1; G.meter = 0; G.combo = 0; G.fire = false; G.streak = 0; G.aceRun = 0; G.lastAim = null;
-  G.hist = { L: 0, R: 0, LOB: 0 }; G.stats = newStats(); AI.start(); G.pops.length = 0; G.ev.length = 0; G.fade = 1;
+  G.hist = { L: 0, R: 0, LOB: 0 }; G.stats = newStats(); dailyStart(); AI.start(); G.pops.length = 0; G.ev.length = 0; G.fade = 1;
   showOnly(null);
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
   setHint('');
@@ -47,6 +47,7 @@ function gameOver() {
   const rows = [['Perfect', s.perfect], ['Rally', s.maxRally], ['Aces', s.aces]];
   $('#ovStats').innerHTML = rows.map(r => '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>').join('');
   showCoinWin(win);
+  dailyMatch(win);
   sgEnd();
   caOver(win);
   updOverMeta();
@@ -62,11 +63,11 @@ function togglePause(force) {
 }
 function showOnly(id) {
   if (id === 'over' && !MP.net) $('#againBtn').hidden = false;
-  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop', 'skillOv', 'campOv']) $('#' + k).hidden = k !== id;
+  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop', 'skillOv', 'campOv', 'dailyOv']) $('#' + k).hidden = k !== id;
   $('#pauseBtn').hidden = G.mode !== 'play' && G.mode !== 'mp';
   if (typeof emoteUI === 'function') emoteUI();
-  if (id === 'menu') { updRecord(); updCoins(); updMenuMeta(); }
-  if (id !== 'over') $('#ovCoins').hidden = $('#ovCamp').hidden = true;
+  if (id === 'menu') { updRecord(); updCoins(); updMenuMeta(); dailyMenu(); }
+  if (id !== 'over') $('#ovCoins').hidden = $('#ovCamp').hidden = $('#ovDaily').hidden = true;
 }
 function updRecord() {
   const rec = store.get('rec', null);
@@ -74,6 +75,7 @@ function updRecord() {
   const w = r ? r[0] : 0, l = r ? r[1] : 0;
   $('#stW').textContent = w; $('#stL').textContent = l;
   $('#stR').textContent = w + l ? Math.round(w / (w + l) * 100) + '%' : '–';
+  if (typeof earnWin === 'function') $('#stPay').textContent = '+' + earnWin({ lv: G.level }).n; // coins a win pays here (daily.js loads later)
 }
 
 /* ---------------- input ---------------- */
@@ -146,6 +148,7 @@ addEventListener('keydown', e => {
   if (G.mode === 'mp') { if (e.repeat) return; if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; } if (G.paused) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], ...(MP.hy ? { q: [-0.8, -1], e: [0.8, -1] } : {}) }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
   if (e.repeat) return;
   if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; }
+  if (G.mode === 'menu' && !$('#menu').hidden && menuKey(k)) { e.preventDefault(); return; }
   if (G.mode !== 'play' || G.paused) return;
   audioInit();
   const m = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], A: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], D: [1, 0.2],
@@ -181,3 +184,48 @@ $('#soundBtn').addEventListener('click', () => { muted = !muted; store.set('mute
 updSoundIcon();
 setLevel(G.level);
 
+/* ---------------- waiting screens: your skull keeps a ball up + rotating tips ---------------- */
+const WAIT_TIPS = ['Hit where the block is not.', 'Spike off the block, the daily challenges love it.', 'Hard wins pay ×1.6 coins.',
+  'Full skull bar: fireball!', 'Block up high? Lob over it.', 'First win of the day pays double.', 'Beat a stronger skull: underdog bonus.',
+  'Short ball? Swipe ↑ and dive.', 'Red X: the ball goes out. Let it go.'];
+const WAIT = { tick: 0, i: Math.floor(Math.random() * WAIT_TIPS.length) };
+// show / hide the animation right before the element anchor (one per anchor, made on first use)
+function waitFx(anchor, on) {
+  const a = typeof anchor === 'string' ? $(anchor) : anchor; if (!a) return;
+  let fx = a.previousElementSibling;
+  if (!fx || !fx.classList.contains('waitfx')) {
+    if (!on) return;
+    fx = document.createElement('div'); fx.className = 'waitfx'; fx.hidden = true; fx.setAttribute('aria-hidden', 'true');
+    fx.innerHTML = '<div class="wstage"><i class="wball"></i><img class="px wsk" alt=""><i class="wsh"></i></div><p class="wtip"></p>';
+    a.before(fx);
+  }
+  if (on && fx.hidden) { fx.querySelector('.wsk').src = skinIcon(SKIN[mySkin] || SKINS[0]); waitTip(fx); }
+  fx.hidden = !on;
+  const any = document.querySelector('.waitfx:not([hidden])');
+  if (any && !WAIT.tick) WAIT.tick = setInterval(() => document.querySelectorAll('.waitfx:not([hidden])').forEach(waitTip), 3600);
+  if (!any && WAIT.tick) { clearInterval(WAIT.tick); WAIT.tick = 0; }
+}
+function waitTip(fx) {
+  const t = fx.querySelector('.wtip');
+  t.textContent = WAIT_TIPS[WAIT.i++ % WAIT_TIPS.length];
+  t.classList.remove('in'); void t.offsetWidth; t.classList.add('in');
+}
+
+/* ---------------- main menu list: row infos + arrow keys ---------------- */
+// right-hand infos of the menu rows (campaign stage, Skill Games budget, your OVR)
+function menuInfo() {
+  const c = caProg(), n = caStages().length, beat = c.w.filter(x => x > 0).length;
+  $('#mCa').textContent = beat >= n ? 'all ' + n + ' beaten' : 'stage ' + (caNext(c) + 1) + '/' + n;
+  $('#mSg').textContent = 'budget ' + sgBudget();
+  $('#mOvr').textContent = 'OVR ' + ovr(PROFILE);
+}
+// ↑ ↓ move between the rows, ← → change the difficulty, Enter / Space press (native)
+function menuKey(k) {
+  const rows = [...document.querySelectorAll('#menu .mrow')], i = rows.indexOf(document.activeElement);
+  if (k === 'ArrowDown' || k === 'ArrowUp') {
+    const d = k === 'ArrowDown' ? 1 : -1;
+    rows[i < 0 ? 0 : (i + d + rows.length) % rows.length].focus(); SFX.tick(); return true;
+  }
+  if (k === 'ArrowLeft' || k === 'ArrowRight') { const l = clamp(G.level + (k === 'ArrowRight' ? 1 : -1), 0, 2); if (l !== G.level) { SFX.tick(); setLevel(l); } return true; }
+  return false;
+}

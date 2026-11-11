@@ -57,7 +57,7 @@ function sgStartSP(p) {
 }
 // match over or left: back to the real profile (untouched)
 function sgEnd() { PROFILE = sgLeave(SG, PROFILE); }
-function sgClose() { clearInterval(SG.tick); clearTimeout(SG.timer); SG.mp = false; if (typeof MP !== 'undefined') MP.sgOpen = false; pfSgClose(); }
+function sgClose() { clearInterval(SG.tick); clearTimeout(SG.timer); if (typeof waitFx === 'function') waitFx('#pfSgMsg', false); SG.mp = false; if (typeof MP !== 'undefined') MP.sgOpen = false; pfSgClose(); }
 
 /* ---------------- browser: multiplayer (host decides) ---------------- */
 function mpGoReq() { if (!MP.host) return; if (MP.sg) sgMpOpen(); else mpBegin(); }
@@ -80,6 +80,7 @@ function sgMpScreen(b, w) {
     const left = Math.max(0, Math.ceil((end - performance.now()) / 1000));
     if (left <= SKILLS.sg.grace && !pfSG.locked) { sgAuto(pfSG.p, pfSG.budget, Math.random, 0); sgMpReady(); }
     pfSgMsg((pfSG.locked ? 'Ready! ' : 'Spend your coins. ') + SG.ready[0] + '/' + SG.ready[1] + ' ready · ' + left + 's');
+    waitFx('#pfSgMsg', !!pfSG.locked); // done spending: wait for the others
   };
   SG.tick = setInterval(tick, 250); tick();
 }

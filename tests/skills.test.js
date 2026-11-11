@@ -26,7 +26,7 @@ let mono = true; for (let L = 61; L < 99; L++) if (S.levelCost(L) < S.levelCost(
 ok(mono, 'cost per level >= 1 and rising');
 ok(S.costTo(60, 99) * 6 === S.totalCost(), 'totalCost = 6 skills');
 const E = SKILLS.earn, P = SKILLS.plan;
-const perDay = P.matchesPerDay * (P.winRate * E.win + (1 - P.winRate) * E.loss) + (E.daily - E.win);
+const perDay = P.matchesPerDay * (P.winRate * E.win + (1 - P.winRate) * E.loss) + E.win * (E.dailyMul - 1) + P.chal;
 near(S.totalCost() / perDay, P.days, 0.4, 'all skills 60->99 ~ plan days of income');
 
 // buying, no respec

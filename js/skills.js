@@ -10,12 +10,34 @@ const SKILLS = {
   // OVR = weighted mean of all skills
   weight: { spike: 1, lob: 1, recv: 1, dig: 1, block: 1, serve: 1 },
   // coins to raise a skill from L to L+1: round(base + grow * x^pow), x = (L - min) / (max - 1 - min)
-  // tuned with tests/sim-progress.js: all six skills 60 -> 99 in ~3 days of plan (below)
-  cost: { base: 0.75, grow: 1.8, pow: 2 },
-  // coins per match (shop.js pays these); daily = first win of the day instead of win
-  earn: { win: 10, loss: 0, daily: 20 },
-  // progression target: normal play; campaign (P7): stage cleared once OVR >= stage OVR - campEdge, still >= campMin days
-  plan: { matchesPerDay: 20, winRate: 0.5, days: 3, campEdge: 4, campMin: 2.5 },
+  // tuned with tests/sim-progress.js: all six skills 60 -> 99 in ~3 days of plan (below), daily challenges included
+  cost: { base: 0.75, grow: 2.6, pow: 2 },
+  // coins per won match (daily.js earnWin): win x strength of the opponent. Normal singleplayer: lv[G.level] (Easy / Normal /
+  // Hard); explicit opponent profile (campaign, Skill Games): ovr[0] at OVR 60 -> ovr[1] at 99, plus under per OVR point the
+  // opponent is above you (max underMax). First win of the day x dailyMul. Multiplayer: x1. loss = coins for a lost match
+  earn: { win: 10, loss: 0, dailyMul: 2, lv: [0.6, 1, 1.6], ovr: [0.6, 1.8], under: 0.03, underMax: 0.5 },
+  // daily challenges (daily.js): n picked per day from pool (seeded by the date), progress over all singleplayer matches of
+  // the day (campaign + Skill Games count, multiplayer not). k = match stat (G.stats), sum over matches or max (best single
+  // match); g = goal; c = coins once the goal is reached. Expected ~20 coins/day are in plan.chal (tests/sim-progress.js)
+  daily: {
+    n: 3,
+    pool: [
+      { id: 'bout', k: 'bout', g: 5, c: 12, t: 'Spike off the block' },
+      { id: 'lobs', k: 'lobs', g: 4, c: 10, t: 'Score lob points' },
+      { id: 'aces', k: 'aces', g: 3, c: 10, t: 'Serve aces' },
+      { id: 'perf', k: 'perfect', g: 15, c: 8, t: 'Perfect timings' },
+      { id: 'save', k: 'saves', g: 6, c: 10, t: 'Diving saves' },
+      { id: 'fire', k: 'fires', g: 2, c: 12, t: 'Fire fireballs' },
+      { id: 'rally', k: 'maxRally', g: 12, c: 10, t: 'Rally length (one rally)', max: true },
+      { id: 'kills', k: 'kills', g: 25, c: 8, t: 'Attack points' },
+      { id: 'digs', k: 'digs', g: 40, c: 8, t: 'Digs' },
+      { id: 'wins', k: 'wins', g: 3, c: 15, t: 'Win matches' },
+      { id: 'hard', k: 'hard', g: 1, c: 20, t: 'Win on Hard' }
+    ],
+    hardOvr: 86 // campaign / Skill Games: a win vs. this OVR or more counts as Hard
+  },
+  // progression target: normal play (chal = expected daily challenge coins per day); campaign (P7): stage cleared once OVR >= stage OVR - campEdge, still >= campMin days
+  plan: { matchesPerDay: 20, winRate: 0.5, days: 3, campEdge: 4, campMin: 2.5, chal: 20 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
   // P8 (tests/balance.js): 99 a bit stricter than P3 (0.55 / 0.4): very bad timing at 99 = weak, ~14 % net faults (60: 30 %)
