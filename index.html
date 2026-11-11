@@ -134,8 +134,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .next b{font-family:var(--font-display);font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--bone)}
 
 /* ---------- main menu ---------- */
-#menu{justify-content:flex-start;padding-top:calc(58px + env(safe-area-inset-top,0px) * 0);gap:16px}
-#menuCoins{position:absolute;top:10px;left:10px;z-index:2}
+#menu{justify-content:flex-start;padding-top:calc(58px + env(safe-area-inset-top,0px) * 0);gap:14px}
+#menu .card{max-width:310px;gap:10px;padding:14px}
+#menuCoins{position:absolute;top:10px;left:10px;z-index:2;border:0;cursor:pointer;transition:transform .08s}
+#menuCoins:active{transform:scale(.95)}
 .hero{display:flex;flex-direction:column;align-items:center;gap:6px}
 .logo{margin:0;font-family:var(--font-display);font-weight:700;line-height:.86;letter-spacing:.04em;display:flex;flex-direction:column;align-items:center}
 .logo span{display:block;font-size:clamp(34px,13vw,50px);
@@ -158,32 +160,30 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
   background:transparent;color:var(--bone-dim);border:0;padding:10px 4px;cursor:pointer;border-radius:10px;transition:color .2s}
 .seg button[aria-pressed="true"]{color:#2a1a04}
 
-/* career stats */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.stats div{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px 8px;border-radius:var(--r-sm);background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
-.stats b{font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--bone);font-variant-numeric:tabular-nums;line-height:1}
-.stats i{font-style:normal;font-family:var(--font-display);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim)}
+/* career record: one quiet line under the difficulty it belongs to */
+.stats{display:flex;justify-content:center;align-items:baseline;gap:6px;margin:-2px 0 0;font-size:16px;line-height:1;color:var(--bone-dim)}
+.stats b{font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--bone);font-variant-numeric:tabular-nums}
 .stats .w b{color:var(--good)}
 .stats .r b{color:var(--gold-hi)}
+.stats .sep{opacity:.4}
+/* daily bonus rides on the play button */
+.btn .tag{position:absolute;top:6px;right:8px;font-size:9px;letter-spacing:.06em;padding:3px 5px;border-radius:6px;line-height:1;
+  color:var(--gold-hi);background:#2a1a04;box-shadow:0 0 10px rgba(255,233,168,.35)}
 
 /* secondary actions as tiles */
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-.tile{position:relative;font-family:var(--font-display);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone);
-  display:flex;flex-direction:column;align-items:center;gap:8px;padding:13px 4px 11px;border:0;border-radius:var(--r-md);cursor:pointer;
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tile{position:relative;font-family:var(--font-display);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);
+  display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 2px 6px;border:0;border-radius:var(--r-sm);cursor:pointer;
   background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 4px 0 rgba(0,0,0,.35);
   transition:transform .08s,box-shadow .08s}
 .tile:active{transform:translateY(3px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 1px 0 rgba(0,0,0,.35)}
-.tile .ic{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:var(--ink)}
-.tile .ic svg{width:18px;height:18px;shape-rendering:crispEdges}
-.tile .ic.a{background:linear-gradient(180deg,#9fd6ff,#4c8fd1);box-shadow:0 4px 12px rgba(76,143,209,.35)}
-.tile .ic.b{background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));box-shadow:0 4px 12px rgba(242,194,94,.35)}
-.tile .ic.c{background:linear-gradient(180deg,#c9f2b8,#6fae5a);box-shadow:0 4px 12px rgba(111,174,90,.35)}
-.tile .ic.d{background:linear-gradient(180deg,#ffb8a8,#d2482f);box-shadow:0 4px 12px rgba(210,72,47,.35)}
-.badge{position:absolute;top:6px;right:8px;min-width:9px;height:9px;border-radius:99px;background:var(--bad);box-shadow:0 0 0 2px #13201c,0 0 10px rgba(236,107,85,.7)}
-.daily{display:flex;align-items:center;justify-content:center;gap:8px;margin:0;font-size:16px;color:var(--gold-hi);padding:7px 10px;border-radius:var(--r-sm);
-  background:linear-gradient(90deg,rgba(242,194,94,0),rgba(242,194,94,.12),rgba(242,194,94,0))}
-.daily b{font-family:var(--font-display);font-size:10px;letter-spacing:.1em;padding:3px 6px;border-radius:6px;color:#2a1a04;background:var(--gold)}
-.divider{height:1px;margin:0 -16px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.09),transparent)}
+.tile .ic{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;color:var(--ink)}
+.tile .ic svg{width:12px;height:12px;shape-rendering:crispEdges}
+.tile .ic.a{background:linear-gradient(180deg,#9fd6ff,#4c8fd1);box-shadow:0 2px 8px rgba(76,143,209,.3)}
+.tile .ic.b{background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));box-shadow:0 2px 8px rgba(242,194,94,.3)}
+.tile .ic.c{background:linear-gradient(180deg,#c9f2b8,#6fae5a);box-shadow:0 2px 8px rgba(111,174,90,.3)}
+.tile .ic.d{background:linear-gradient(180deg,#ffb8a8,#d2482f);box-shadow:0 2px 8px rgba(210,72,47,.3)}
+.badge{position:absolute;top:4px;right:6px;min-width:9px;height:9px;border-radius:99px;background:var(--bad);box-shadow:0 0 0 2px #13201c,0 0 10px rgba(236,107,85,.7)}
 
 /* ---------- shop ---------- */
 #shop{justify-content:flex-start;padding-top:58px}
@@ -222,7 +222,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 #shopAct{width:100%}
 /* ---------- campaign (P7) ---------- */
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.modes .btn{min-width:0;font-size:12px;letter-spacing:.06em;padding:12px 6px}
+.modes .btn{min-width:0;font-size:11px;letter-spacing:.06em;padding:9px 6px}
 #campOv{justify-content:flex-start;padding-top:58px}
 .ca-msg{margin:0;font-size:16px;line-height:1.05;color:var(--bone-dim);text-align:left}
 .ca-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padding:3px;margin:-3px;scrollbar-width:none}
@@ -405,7 +405,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
   border-radius:9px;background:rgba(8,14,12,.72);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 4px 12px rgba(0,0,0,.35)}
 .emo:active{transform:scale(.94);background:var(--gold);color:var(--ink)}
 
-@media (max-height: 720px){ .tagline,#menuNext,#menuDiv{display:none!important} #menu{padding-top:52px;gap:10px} .card{gap:9px;padding:13px} .tile{padding:9px 4px 8px} .tile .ic{width:28px;height:28px} }
+@media (max-height: 720px){ .tagline{display:none!important} #menu{padding-top:52px;gap:10px} .card{gap:9px;padding:13px} #menu .card{gap:8px;padding:12px} }
 @media (prefers-reduced-motion: reduce){
   .btn:active,.tile:active{transform:none} .btn::after{animation:none;display:none}
   .ov:not([hidden]) > .card,.ov:not([hidden]) > .hero,.coinwin:not([hidden]),.sc b.pop,.chip,.feat .stagep img,.side.flare img,.mt.fire i,.mt.wall.full i{animation:none}
@@ -450,7 +450,7 @@ html{background:var(--screen)}
     </button>
 
     <div class="ov" id="menu">
-      <p class="coins pill" id="menuCoins" aria-label="Coins"><span class="coin" aria-hidden="true"></span><span class="n">0</span></p>
+      <button class="coins pill" id="menuCoins" aria-label="Coins, open shop"><span class="coin" aria-hidden="true"></span><span class="n">0</span></button>
       <div class="hero">
         <h1 class="logo" aria-label="Volleyskull"><span>VOLLEY</span><span>SKULL</span></h1>
         <p class="tagline">Bone-hard volleyball</p>
@@ -462,12 +462,8 @@ html{background:var(--screen)}
           <button id="lv1" data-lv="1" aria-pressed="true">Normal</button>
           <button id="lv2" data-lv="2" aria-pressed="false">Hard</button>
         </div>
-        <div class="stats" aria-label="Record on this difficulty">
-          <div class="w"><b id="stW">0</b><i>Wins</i></div>
-          <div><b id="stL">0</b><i>Losses</i></div>
-          <div class="r"><b id="stR">–</b><i>Win rate</i></div>
-        </div>
-        <button class="btn big" id="playBtn"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M2 1L7 4L2 7Z" fill="currentColor"/></svg>Play</button>
+        <p class="stats" aria-label="Record on this difficulty"><span class="w"><b id="stW">0</b> won</span><span class="sep">·</span><span><b id="stL">0</b> lost</span><span class="sep">·</span><span class="r"><b id="stR">–</b></span></p>
+        <button class="btn big" id="playBtn"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M2 1L7 4L2 7Z" fill="currentColor"/></svg>Play<span class="tag" id="menuDaily" title="Double coins on your first win today" hidden>2× today</span></button>
         <div class="modes"><button class="btn ghost" id="sgBtn">Skill Games</button><button class="btn ghost" id="caBtn">Campaign</button></div>
         <div class="tiles">
           <button class="tile" id="mpBtn"><span class="ic a"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="1" y="1" width="2" height="2" fill="currentColor"/><rect x="5" y="1" width="2" height="2" fill="currentColor"/><rect x="0" y="4" width="4" height="3" fill="currentColor"/><rect x="4" y="4" width="4" height="3" fill="currentColor"/></svg></span>Online</button>
@@ -475,9 +471,7 @@ html{background:var(--screen)}
           <button class="tile" id="howBtn"><span class="ic c"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="2" y="0" width="4" height="1" fill="currentColor"/><rect x="1" y="1" width="1" height="2" fill="currentColor"/><rect x="6" y="1" width="1" height="2" fill="currentColor"/><rect x="5" y="3" width="1" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="1" fill="currentColor"/><rect x="3" y="5" width="2" height="1" fill="currentColor"/><rect x="3" y="7" width="2" height="1" fill="currentColor"/></svg></span>Guide</button>
           <button class="tile" id="skillBtn"><span class="ic d"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="3" y="0" width="2" height="1" fill="currentColor"/><rect x="2" y="1" width="4" height="1" fill="currentColor"/><rect x="1" y="2" width="6" height="1" fill="currentColor"/><rect x="3" y="3" width="2" height="5" fill="currentColor"/><rect x="0" y="6" width="2" height="2" fill="currentColor"/><rect x="6" y="5" width="2" height="3" fill="currentColor"/></svg></span>Skills</button>
         </div>
-        <div class="divider" id="menuDiv"></div>
         <div class="next" id="menuNext"></div>
-        <p class="daily" id="menuDaily" hidden><b>2×</b>coins on your first win today</p>
       </div>
     </div>
 
