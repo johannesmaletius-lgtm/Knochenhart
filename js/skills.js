@@ -69,7 +69,7 @@ const SKILLS = {
   // P5 MP social (social.js): emotes = pixel-text quick messages, dur = s shown over the player; rate limit per player
   // (own phone and host): gap = min s between two emotes, at most burst emotes per win s
   social: { emotes: ['NICE!', 'GG', 'OOPS', 'HAHA', 'WOW', 'SORRY'], dur: 2.2, gap: 1.0, burst: 3, win: 8 },
-  // P4 Hybrid multiplayer (js/hybrid.js, mp.js): setTilt = set swipe |dx|/|dy| split (straight up = dump, diagonal up-left = middle);
+  // P4 Hybrid multiplayer (js/hybrid.js, mp.js): setTilt = set swipe |dx|/|dy| split (straight up and diagonal up-left = middle ball, no dump);
   // laneLock = s before the hit the hitter's approach lane is checked against the set lane; computer mates by difficulty (0 -> 1):
   // botFollow = hitter runs into the set lane, botSetOk = setter sets the hitter's lane (else a neighbour lane), botReact = s;
   // lobFar = less dig chance for an aimed lob two lanes away; dankeT = flight of a free ball (s); setSpd = run speed of a back setter
@@ -80,7 +80,7 @@ const SKILLS = {
   // presets (buttons on the spend screen, sgPreset): reset to 60, raise each [skill, target] in order, spread the rest evenly
   // (lowest first); perk = badge picked for a skill that reaches 90. At budget 173: Attacker spike 99 / serve 80 / lob 75 / rest 69,
   // Blocker block 99 / dig 80 / recv 75 / rest 69, Defender dig + recv 90 / rest ~71, All-round all ~79
-  sg: { share: 0.3, aiMix: 0.35, wait: 45, grace: 1.5, coinMul: 1,
+  sg: { share: 0.3, aiMix: 0.35, coinMul: 1,
     presets: [
       { id: 'att', n: 'Attacker', t: [['spike', 99], ['serve', 80], ['lob', 75]], perk: { spike: 'hotHand' } },
       { id: 'blk', n: 'Blocker', t: [['block', 99], ['dig', 80], ['recv', 75]], perk: { block: 'longArms' } },

@@ -3,7 +3,7 @@
 // 60 -> 99) on a temporary profile before the match. It is never saved, never sent as a lobby profile (so it never enters a
 // leaderboard) and is dropped after the match; coins pay as usual (x SKILLS.sg.coinMul). Singleplayer: menu button, the
 // computer gets its own auto-spent budget profile. MP: host lobby option (with Classic/Hybrid), every phone spends, the host
-// checks each profile (P5 cleaning + budget), the match starts when all are ready or after SKILLS.sg.wait s (auto spread).
+// checks each profile (P5 cleaning + budget), the match starts as soon as everyone is ready (no timer).
 // The pure part (budget, spend, check, auto spread, profile swap) also runs in Node (tests/skillgames.test.js).
 if (typeof SKILLS === 'undefined' && typeof require === 'function') Object.assign(globalThis, require('./skills.js'), require('./profile.js'));
 /* ---------------- pure ---------------- */
@@ -72,24 +72,20 @@ function sgClose() { clearInterval(SG.tick); clearTimeout(SG.timer); if (typeof 
 /* ---------------- browser: multiplayer (host decides) ---------------- */
 function mpGoReq() { if (!MP.host) return; if (MP.sg) sgMpOpen(); else mpBegin(); }
 function sgMpOpen() {
-  const b = sgBudget(), w = SKILLS.sg.wait;
-  MP.sgp = [null, null, null, null]; MP.sgEnd = performance.now() + w * 1000;
-  MP.net.all({ t: 'sgo', b, w });
-  sgMpScreen(b, w); MP.sgOpen = true;
-  SG.timer = setTimeout(sgMpGo, (w + SKILLS.sg.grace) * 1000);
+  const b = sgBudget();
+  MP.sgp = [null, null, null, null];
+  MP.net.all({ t: 'sgo', b });
+  sgMpScreen(b); MP.sgOpen = true;
   sgMpCheck();
 }
-// every phone: spend screen with a countdown; grace s before the end the rest is auto-spent and sent
-function sgMpScreen(b, w) {
+// every phone: spend screen, no countdown; the match starts when every player pressed Ready
+function sgMpScreen(b) {
   clearInterval(SG.tick);
-  const end = performance.now() + w * 1000;
   SG.mp = true; SG.ready = [0, Math.max(1, MP.slots.filter(Boolean).length)];
   pfSgOpen({ p: sgNew(), budget: b, go: 'Ready', msg: '', onGo: sgMpReady, onBack: () => { sgClose(); mpLeave(); } });
   const tick = () => {
     if (!pfSG) return clearInterval(SG.tick);
-    const left = Math.max(0, Math.ceil((end - performance.now()) / 1000));
-    if (left <= SKILLS.sg.grace && !pfSG.locked) { sgAuto(pfSG.p, pfSG.budget, Math.random, 0); sgMpReady(); }
-    pfSgMsg((pfSG.locked ? 'Ready! ' : 'Spend your coins. ') + SG.ready[0] + '/' + SG.ready[1] + ' ready · ' + left + 's');
+    pfSgMsg((pfSG.locked ? 'Ready! Waiting for the others. ' : 'Spend your coins, then Ready. ') + SG.ready[0] + '/' + SG.ready[1] + ' ready');
     waitFx('#pfSgMsg', !!pfSG.locked); // done spending: wait for the others
   };
   SG.tick = setInterval(tick, 250); tick();
@@ -120,10 +116,10 @@ function sgMpGo() {
   sgClose(); mpBegin();
 }
 // host: someone joined while the others spend
-function sgMpJoin(id) { if (MP.sgOpen) MP.net.send(id, { t: 'sgo', b: sgBudget(), w: Math.max(0, (MP.sgEnd - performance.now()) / 1000) }); }
+function sgMpJoin(id) { if (MP.sgOpen) { MP.net.send(id, { t: 'sgo', b: sgBudget() }); sgMpCheck(); } }
 // client: host messages (peer data: clamp)
 function sgMpMsg(d) {
-  if (d.t === 'sgo') sgMpScreen(clamp(Math.round(+d.b) || 0, 0, totalCost()), clamp(+d.w || 0, 0, 120));
+  if (d.t === 'sgo') sgMpScreen(clamp(Math.round(+d.b) || 0, 0, totalCost()));
   else if (d.t === 'sgr') SG.ready = [clamp(Math.round(+d.n) || 0, 0, 4), clamp(Math.round(+d.of) || 0, 0, 4)];
 }
 function sgWireUI() {

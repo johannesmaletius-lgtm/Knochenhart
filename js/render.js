@@ -265,6 +265,24 @@ function drawFireHead() {
     rect(fx, fy, 1, 1, i % 3 === 0 ? C.fire1 : i % 3 === 1 ? C.fire2 : C.fire3);
   }
 }
+// multiplayer, start of a match and after a rotation: a name over every skeleton (YOU with an arrow, P2, CPU), MP.whoUntil
+function drawWho() {
+  const left = (MP.whoUntil || 0) - performance.now(); if (left <= 0) return;
+  if (left < 1000 && ((performance.now() / 120) | 0) % 2) return;
+  for (let i = 0; i < 4; i++) {
+    const t = i >> 1, f = tfig(t, hyFig(i, MP.rot)), h = f._head; if (!h) continue;
+    const sl = MP.slots[i], mine = i === MP.mySlot;
+    const col = mine ? C.accent : t === MP.team ? C.bone : C.bad;
+    let y = h.y - h.r - 10;
+    if (mine) {
+      const by = Math.round(Math.sin(performance.now() / 160) * 1.5);
+      y -= 5 + by;
+      for (let k = 0; k < 3; k++) rect(h.x - 2 + k, h.y - h.r - 6 - by + k, 5 - 2 * k, 1, col);
+    }
+    const nm = sl && sl.prof && sl.prof.name ? String(sl.prof.name).slice(0, 8) : sl ? 'P' + sl.n : 'CPU';
+    text(mine ? 'YOU' : nm, h.x, y, col, 1, 'c');
+  }
+}
 function render() {
   ctx.save();
   if (G.shake > 0.3) ctx.translate(Math.round(Math.sin(G.t * 61) * G.shake), Math.round(Math.cos(G.t * 47) * G.shake * 0.6));
@@ -279,6 +297,7 @@ function render() {
   items.sort((a, b) => a.z - b.z);
   for (const it of items) it.fn();
   drawFireHead();
+  if (G.mode === 'mp') drawWho();
   drawEmotes();
   drawParts();
   drawRing();

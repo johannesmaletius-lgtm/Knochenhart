@@ -262,7 +262,7 @@ function launch(to, T, o = {}) {
   ball.p0 = from;
   ball.v = { x: (to.x - from.x) / T, y: (to.y - from.y) / T + 0.5 * GRAV * T, z: (to.z - from.z) / T };
   ball.t0 = G.t; ball.T = T; ball.mode = 'flight'; ball.holder = null;
-  ball.wob = o.wob || 0; ball.wobF = o.wobF || 0; ball.fire = !!o.fire; ball.spinV = o.spin != null ? o.spin : 9;
+  ball.wob = o.wob || 0; ball.wobF = o.wobF || 0; ball.fire = !!o.fire; ball.spinV = o.spin != null ? o.spin : 9; ball.stop = false;
 }
 function updBall(dt) {
   if (ball.mode !== 'flight' && ball.trail.length) ball.trail.shift();
@@ -272,7 +272,8 @@ function updBall(dt) {
     return;
   }
   if (ball.mode === 'flight') {
-    const t = G.t - ball.t0, u = t / ball.T;
+    // stop: the ball waits at its target (multiplayer: the host still waits for a remote defender's input)
+    const t = ball.stop ? Math.min(G.t - ball.t0, ball.T) : G.t - ball.t0, u = t / ball.T;
     let x = ball.p0.x + ball.v.x * t;
     const y = ball.p0.y + ball.v.y * t - 0.5 * GRAV * t * t;
     const z = ball.p0.z + ball.v.z * t;
@@ -426,6 +427,9 @@ const BAL = {
   badRecv: { perfect: 0.2, good: 0.1, weak: 0.04 }, badRecvLv: [1.2, 0.8, 0.5],
   oppServeT: [1.2, 0.85], oppSpikeT: [0.75, 0.48], oppSetT: [0.88, 0.66], markDelay: [0.06, 0.16],
   tip: [0.14, 0.12], diveOk: [0.8, 0.45], reboundT: [0.75, 0.5],
+  // MP short balls: standing within tipNear m of the ball is enough (no dash); a dash reaches up to tipLane lanes away;
+  // the dash only counts as late tipLate s after the ball arrived
+  tipNear: 1.3, tipLane: 1, tipLate: 0.1,
   meterMax: 8,
   blockGraze: 0.05, // P3: base chance an attack grazes the block (Block-Anschlag), both sides
   // P3 skill effects (curves and thresholds: SKILLS in skills.js)
