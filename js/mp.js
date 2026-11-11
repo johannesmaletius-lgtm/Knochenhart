@@ -959,7 +959,7 @@ function mpOverShow(sc, stats) {
   const my = stats && MP.mySlot >= 0 ? stats[MP.mySlot] : null;
   const rows = !my ? [] : MP.hy ? [['Points', my.p], ['Digs', my.d], ['Block points', my.b], ['Perfect sets', my.s]] : MP.role === 1 ? [['Block points', my.b], ['Saves', my.d], ['Perfect sets', my.s], ['Dumps', my.f]] : [['Points', my.p], ['Digs', my.d]];
   $('#ovStats').innerHTML = rows.map(r => '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>').join('');
-  showCoinWin(win && MP.mySlot >= 0);
+  showCoinWin(win && MP.mySlot >= 0, MP.mySlot >= 0 ? mine : -1);
   updOverMeta();
   if (win) confetti();
   const b = tfig(MP.team, 0);

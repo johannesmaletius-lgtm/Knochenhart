@@ -1,4 +1,4 @@
-// P6 Skill Games (js/skillgames.js): budget = half of the max cost, spend / refund, host check (P5 cleaning + budget),
+// P6 Skill Games (js/skillgames.js): budget = 30% of the max cost, spend / refund, host check (P5 cleaning + budget),
 // auto spread inside the budget, the real profile + saved data + coins stay untouched by a Skill Games match.
 // Usage: node tests/skillgames.test.js   (exit 1 on any failure)
 'use strict';
@@ -8,10 +8,10 @@ const { SKILLS, totalCost, costTo, levelCost, skillsLoad, skillsSave, pickPerk, 
 let fails = 0, n = 0;
 const ok = (c, msg) => { n++; if (!c) { fails++; console.log('FAIL', msg); } };
 
-// budget: share (0.5) of the coins for all six skills 60 -> 99, from the cost curve
+// budget: share (0.3) of the coins for all six skills 60 -> 99, from the cost curve
 const B = G.sgBudget();
-ok(SKILLS.sg.share === 0.5, 'share parameter is 0.5');
-ok(B === Math.round(totalCost() * 0.5) && B === Math.round(costTo(SKILLS.min, SKILLS.max) * SKILLS.ids.length / 2), 'budget = half the max cost (' + B + ' of ' + totalCost() + ')');
+ok(SKILLS.sg.share === 0.3, 'share parameter is 0.3');
+ok(B === Math.round(totalCost() * 0.3) && B === 173, 'budget = 30% of the max cost (' + B + ' of ' + totalCost() + ')');
 const sh = SKILLS.sg.share; SKILLS.sg.share = 0.25; ok(G.sgBudget() === Math.round(totalCost() / 4), 'budget follows the share parameter'); SKILLS.sg.share = sh;
 
 // start at 60, spend up to the budget, never over it
@@ -75,5 +75,15 @@ ok(JSON.stringify(real) === realSnap, 'real profile unchanged');
 ok(JSON.stringify(mem) === snap && mem.coins === 123, 'saved skills and coins unchanged');
 ok(G.sgLeave(SG, PROFILE) === real, 'leaving twice is harmless');
 
+// presets: reset to 60, targets reached in order, whole budget used, preset perks, host check accepts them
+for (const pr of SKILLS.sg.presets) {
+  const x = G.sgNew(); G.sgUp(x, 'lob', B); x.badge.lob = 'feather';
+  G.sgPreset(x, B, pr.id);
+  ok(G.sgSpent(x) <= B && B - G.sgSpent(x) < Math.max(...SKILLS.ids.map(id => levelCost(x.sk[id]) || Infinity)), 'preset ' + pr.id + ': budget used, never over (' + G.sgSpent(x) + ')');
+  ok(pr.t.every(([id, to]) => x.sk[id] === to), 'preset ' + pr.id + ': targets reached ' + JSON.stringify(x.sk));
+  ok(Object.entries(pr.perk || {}).every(([id, k]) => x.badge[id] === k) && !x.badge.lob, 'preset ' + pr.id + ': preset perks only');
+  ok(!!G.sgCheck(G.sgWire(x), B), 'preset ' + pr.id + ': passes the host check');
+}
+ok(G.sgPreset(G.sgNew(), B, 'nope') === null, 'unknown preset refused');
 console.log((fails ? 'FAIL' : 'OK') + ' skillgames: ' + (n - fails) + '/' + n);
 process.exit(fails ? 1 : 0);

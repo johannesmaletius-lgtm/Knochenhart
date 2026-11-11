@@ -128,7 +128,7 @@ function profileDraw() {
   $('#pfCoins').textContent = sg ? pfSG.budget - sgSpent(P) : coins;
   $('#pfTitle').textContent = sg ? 'Skill Games' : 'Skills';
   $('#pfSeg').hidden = sg; $('#pfSg').hidden = !sg;
-  if (sg) { $('#pfGo').textContent = pfSG.locked ? 'Waiting' : pfSG.go; $('#pfGo').disabled = $('#pfAuto').disabled = !!pfSG.locked; }
+  if (sg) { $('#pfGo').textContent = pfSG.locked ? 'Waiting' : pfSG.go; $('#pfGo').disabled = $('#pfAuto').disabled = !!pfSG.locked; for (const b of document.querySelectorAll('#pfPre button')) b.disabled = !!pfSG.locked; }
   $('#pfSeg').dataset.lv = pfTab === 'sk' ? 0 : 1;
   $('#pfTabSk').setAttribute('aria-pressed', pfTab === 'sk'); $('#pfTabLb').setAttribute('aria-pressed', pfTab === 'lb');
   $('#pfList').hidden = pfTab !== 'sk'; $('#pfLb').hidden = pfTab !== 'lb';

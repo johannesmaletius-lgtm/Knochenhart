@@ -79,8 +79,16 @@ const owned = new Set(store.get('skins', ['knochen']));
 let mySkin = SKIN[store.get('skin', 'knochen')] ? store.get('skin', 'knochen') : 'knochen';
 function updCoins() { for (const el of document.querySelectorAll('#menuCoins .n, #shopCoins')) el.textContent = coins; }
 function addCoins(n) { coins += n; store.set('coins', coins); updCoins(); }
-function showCoinWin(win) {
-  const el = $('#ovCoins'); el.hidden = !win;
+// pts = your points in the match (a loss pays SKILLS.earn.loss from lossMin points on); -1 = watcher, no coins
+function showCoinWin(win, pts = -1) {
+  const el = $('#ovCoins'), ln = win ? 0 : earnLoss(pts, sgCoinMul());
+  el.hidden = !win && !ln;
+  if (ln) {
+    addCoins(ln);
+    el.querySelector('.n').textContent = '+' + ln;
+    $('#ovBonus').textContent = 'defeat';
+    setTimeout(() => tone(1320, 0.06, 'square', 0.03), 450);
+  }
   if (win) {
     // pay by opponent strength (daily.js winPay); first win of the day pays SKILLS.earn.dailyMul
     const bonus = store.get('bonusDay', 0) !== today();

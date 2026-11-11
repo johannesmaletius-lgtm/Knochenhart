@@ -25,6 +25,16 @@ function sgAuto(p, budget, rng, mix) {
   for (const id of SKILLS.ids) if (hasBadge(p, id) && !perk(p, id)) { const ks = SKILLS.perks[id]; pickPerk(p, id, ks[Math.min(ks.length - 1, Math.floor(rng() * ks.length))].id); }
   return p;
 }
+// preset (SKILLS.sg.presets id): back to 60, targets in order (as far as the budget goes), rest evenly, preset perks
+function sgPreset(p, budget, id) {
+  const pr = SKILLS.sg.presets.find(x => x.id === id); if (!pr) return null;
+  for (const s of SKILLS.ids) p.sk[s] = SKILLS.min;
+  p.badge = {};
+  for (const [s, to] of pr.t) while (p.sk[s] < to && sgUp(p, s, budget));
+  sgAuto(p, budget, () => 0.5, 0);
+  for (const [s, k] of Object.entries(pr.perk || {})) pickPerk(p, s, k);
+  return p;
+}
 // a temporary profile from another phone: P5 cleaning (profClean: 60..99, known perks of reached badges) + inside the budget
 function sgCheck(raw, budget) {
   if (!raw || typeof raw !== 'object') return null;
@@ -38,7 +48,7 @@ function sgClone(p) { const q = sgNew(); Object.assign(q.sk, p.sk); Object.assig
 function sgEnter(S, cur, prof, opp) { if (!S.on) S.real = cur; S.on = true; S.prof = prof; S.opp = opp || null; return prof; }
 function sgLeave(S, cur) { if (!S.on) return cur; const r = S.real; S.on = false; S.real = S.prof = S.opp = null; return r; }
 
-if (typeof module !== 'undefined' && typeof document === 'undefined') module.exports = { sgBudget, sgSpent, sgNew, sgUp, sgDown, sgAuto, sgCheck, sgWire, sgClone, sgEnter, sgLeave };
+if (typeof module !== 'undefined' && typeof document === 'undefined') module.exports = { sgBudget, sgSpent, sgNew, sgUp, sgDown, sgAuto, sgPreset, sgCheck, sgWire, sgClone, sgEnter, sgLeave };
 
 /* ---------------- browser: singleplayer ---------------- */
 // on = a Skill Games match runs (PROFILE is the temporary one), again = last spread (Again button), mp = MP spend screen open
@@ -119,6 +129,11 @@ function sgMpMsg(d) {
 function sgWireUI() {
   $('#sgBtn').addEventListener('click', () => { SFX.tick(); sgOpenSP(false); });
   $('#pfGo').addEventListener('click', () => { if (pfSG && !pfSG.locked) pfSG.onGo(); });
+  $('#pfPre').innerHTML = SKILLS.sg.presets.map(k => '<button class="btn ghost" data-pre="' + k.id + '">' + k.n + '</button>').join('');
+  $('#pfPre').addEventListener('click', e => {
+    const b = e.target.closest('[data-pre]'); if (!b || !pfSG || pfSG.locked) return;
+    sgPreset(pfSG.p, pfSG.budget, b.dataset.pre); SFX.tick(); profileDraw();
+  });
   $('#pfAuto').addEventListener('click', () => { if (!pfSG || pfSG.locked) return; sgAuto(pfSG.p, pfSG.budget, Math.random, 0); SFX.tick(); profileDraw(); });
 }
 if (typeof document !== 'undefined') sgWireUI();

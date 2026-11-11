@@ -312,7 +312,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .plus.minus{min-width:30px;padding:5px 0}
 .pf-sg{display:flex;flex-direction:column;gap:6px}
 .pf-sg .row{display:grid;grid-template-columns:1fr 2fr;gap:8px}
-.pf-sg .btn{padding:11px 8px}
+.pf-sg .btn{min-width:0;padding:11px 8px}
+.pf-sg .pre{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pf-sg .pre .btn{padding:8px 2px;font-size:11px;letter-spacing:0}
 #mpOv .mp-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
 #mpOv .mp-opts .btn{min-width:0;font-size:11px;letter-spacing:.04em;padding:11px 4px}
 .pf-name{display:flex;align-items:center;gap:8px}
@@ -560,13 +562,13 @@ html{background:var(--screen)}
         <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Multiplayer, front: block left, right, wide, drop back. Tap to jump when the ring closes</dd>
         <dt>Tap</dt><dd>Front, setting: tap on the ring. <kbd>←</kbd> <kbd>→</kbd> quick set, <kbd>↑</kbd> dump over the net</dd>
         <dt><kbd>↓</kbd></dt><dd>Front: grab a dump or lob. Tap when your hitter gets blocked to cover, or when their dig floats over the net to smash it</dd>
-        <dt>Skill Games</dt><dd>Menu button or lobby option: everyone starts at 60 and spends half the coins of a maxed player before the match. Only for that match, your own skills stay as they are</dd>
+        <dt>Skill Games</dt><dd>Menu button or lobby option: everyone starts at 60 and spends a budget of 30% of a maxed player's coins before the match. Only for that match, your own skills stay as they are</dd>
         <dt>Hybrid</dt><dd>Lobby option. Everyone plays back and front: you rotate when your team wins the serve back. Nobody may touch the ball twice in a row</dd>
         <dt><kbd>←</kbd> <kbd>↖</kbd> <kbd>→</kbd></dt><dd>Hybrid, setting: the swipe picks the lane: left, middle, right. <kbd>↑</kbd> dump. Front digs, then the back player sets and the front attacks</dd>
         <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Hybrid, hitting: run into the set lane before your approach. One lane off: only a free ball over, two off: the ball drops. <kbd>↖</kbd> <kbd>↗</kbd> short lob left or right</dd>
       </dl>
       <p>Hit where the block is not. EARLY / LATE shows your timing; higher skills forgive bad timing. Spike 85: full skull bar, fireball. Full wall bar (front): your next block is a sure point.</p>
-      <p>Every win earns 10 coins for the shop.</p>
+      <p>Every win earns about 10 coins, a loss with 5+ points 3. Spend them in the shop or on skills: each level costs 1 coin up to 70, 2 up to 80, 3 up to 90, 4 up to 99.</p>
       <button class="btn" id="howOk">Got it</button>
     </div>
 
@@ -623,6 +625,7 @@ html{background:var(--screen)}
         </div>
         <div class="pf-sg" id="pfSg" hidden>
           <p class="pf-hint" id="pfSgMsg" aria-live="polite"></p>
+          <div class="pre" id="pfPre" role="group" aria-label="Presets"></div>
           <div class="row"><button class="btn ghost" id="pfAuto">Auto</button><button class="btn" id="pfGo">Start</button></div>
         </div>
       </div>
