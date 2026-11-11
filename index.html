@@ -14,11 +14,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Volleyskull">
-<link rel="preload" href="fonts/silkscreen-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/tiny5-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/jacquard24-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/jersey10-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-@font-face{font-family:'Silkscreen';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/silkscreen-400-latin.woff2) format('woff2')}
-@font-face{font-family:'Silkscreen';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/silkscreen-700-latin.woff2) format('woff2')}
+@font-face{font-family:'Tiny5';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/tiny5-latin.woff2) format('woff2')}
+@font-face{font-family:'Jacquard 24';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/jacquard24-latin.woff2) format('woff2')}
 @font-face{font-family:'Jersey 10';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/jersey10-latin.woff2) format('woff2')}
 </style>
 <style>
@@ -43,7 +44,8 @@
   --r-lg:22px;
   --r-md:14px;
   --r-sm:10px;
-  --font-display:'Silkscreen', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --font-title:'Jacquard 24', 'Tiny5', serif;
+  --font-display:'Tiny5', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --font-body:'Jersey 10', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 }
 [hidden]{display:none!important}
@@ -438,6 +440,34 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .emo:active{transform:scale(.94);background:var(--gold);color:var(--ink)}
 
 @media (max-height: 720px){ .tagline{display:none!important} #menu{padding-top:52px;gap:10px} .card{gap:9px;padding:13px} #menu .card{gap:8px;padding:12px} }
+/* ---------- house style: pixel blackletter titles (Jacquard 24), Tiny5 labels, stepped bone frames instead of glass ---------- */
+html{font-synthesis:none}
+:root{--r-lg:0px;--r-md:4px;--r-sm:3px;--slab:#13221e;
+  --frame:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Crect x='1' y='1' width='7' height='7' fill='%2313221e'/%3E%3Crect x='2' y='0' width='5' height='1' fill='%23a88c52'/%3E%3Crect x='0' y='2' width='1' height='5' fill='%23a88c52'/%3E%3Crect x='2' y='8' width='5' height='1' fill='%235a4a2a'/%3E%3Crect x='8' y='2' width='1' height='5' fill='%235a4a2a'/%3E%3Crect x='1' y='1' width='1' height='1' fill='%23a88c52'/%3E%3Crect x='7' y='7' width='1' height='1' fill='%235a4a2a'/%3E%3Crect x='7' y='1' width='1' height='1' fill='%237f6a3e'/%3E%3Crect x='1' y='7' width='1' height='1' fill='%237f6a3e'/%3E%3C/svg%3E") 3 / 6px stretch}
+.card,.panel{border-radius:0;background:var(--slab);background-clip:padding-box;border:6px solid transparent;border-image:var(--frame);
+  padding:10px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;
+  filter:drop-shadow(0 6px 0 rgba(0,0,0,.45)) drop-shadow(0 20px 30px rgba(0,0,0,.45))}
+.card::before,.panel::before{display:none}
+#menu .card{padding:8px}
+.card.shop{padding:6px 6px 8px}
+#over .card,#pauseOv .card{padding:14px 12px}
+.pill,.coinwin,.ov-daily .ch{border-radius:4px}
+.badge{border-radius:1px}
+.seg .thumb,.seg button{border-radius:3px}
+.icon,.back{border-radius:4px}
+.tile .ic{border-radius:3px}
+.slot,.dly,.chal li,.stats div,#over dl div{border-radius:3px}
+/* titles in pixel blackletter: mixed case, no tracking */
+.logo,.ov h2:not(#mpCardName),.sheet-h h2,.card.daily .sheet-h h2{font-family:var(--font-title);font-weight:400;text-transform:none;letter-spacing:.01em}
+.logo{line-height:.78}
+.logo span{font-size:clamp(48px,18vw,70px)}
+.logo span + span{margin-top:-2px}
+.sheet-h h2,.card.daily .sheet-h h2{font-size:30px;line-height:1}
+#how h2{font-size:34px}
+#over h2{font-size:46px;line-height:1}
+#pauseOv h2{font-size:42px}
+.tagline{letter-spacing:.24em}
+@media (max-height: 720px){ #menu .card{padding:7px} .logo span{font-size:clamp(42px,15vw,58px)} }
 @media (prefers-reduced-motion: reduce){
   .btn:active,.tile:active{transform:none} .btn::after{animation:none;display:none}
   .ov:not([hidden]) > .card,.ov:not([hidden]) > .hero,.coinwin:not([hidden]),.sc b.pop,.chip,.feat .stagep img,.side.flare img,.mt.fire i,.mt.wall.full i{animation:none}
@@ -484,7 +514,7 @@ html{background:var(--screen)}
     <div class="ov" id="menu">
       <button class="coins pill" id="menuCoins" aria-label="Coins, open shop"><span class="coin" aria-hidden="true"></span><span class="n">0</span></button>
       <div class="hero">
-        <h1 class="logo" aria-label="Volleyskull"><span>VOLLEY</span><span>SKULL</span></h1>
+        <h1 class="logo" aria-label="Volleyskull"><span>Volley</span><span>skull</span></h1>
         <p class="tagline">Bone-hard volleyball</p>
       </div>
       <div class="card">
@@ -643,7 +673,7 @@ html{background:var(--screen)}
 
     <div class="ov dim" id="pauseOv" hidden>
       <div class="card">
-        <h2>PAUSE</h2>
+        <h2>Pause</h2>
         <button class="btn" id="resumeBtn">Resume</button>
         <button class="btn ghost" id="quitBtn">Menu</button>
       </div>

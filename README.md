@@ -10,4 +10,4 @@ Aufs Handy holen:
 
 Danach startet es im Vollbild und läuft auch offline.
 
-Schriften: Silkscreen und Jersey 10, SIL Open Font License 1.1.
+Schriften: Jacquard 24, Tiny5 und Jersey 10, SIL Open Font License 1.1.
