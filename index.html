@@ -167,7 +167,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .stats .r b{color:var(--gold-hi)}
 
 /* secondary actions as tiles */
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .tile{position:relative;font-family:var(--font-display);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone);
   display:flex;flex-direction:column;align-items:center;gap:8px;padding:13px 4px 11px;border:0;border-radius:var(--r-md);cursor:pointer;
   background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 4px 0 rgba(0,0,0,.35);
@@ -178,6 +178,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .tile .ic.a{background:linear-gradient(180deg,#9fd6ff,#4c8fd1);box-shadow:0 4px 12px rgba(76,143,209,.35)}
 .tile .ic.b{background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));box-shadow:0 4px 12px rgba(242,194,94,.35)}
 .tile .ic.c{background:linear-gradient(180deg,#c9f2b8,#6fae5a);box-shadow:0 4px 12px rgba(111,174,90,.35)}
+.tile .ic.d{background:linear-gradient(180deg,#ffb8a8,#d2482f);box-shadow:0 4px 12px rgba(210,72,47,.35)}
 .badge{position:absolute;top:6px;right:8px;min-width:9px;height:9px;border-radius:99px;background:var(--bad);box-shadow:0 0 0 2px #13201c,0 0 10px rgba(236,107,85,.7)}
 .daily{display:flex;align-items:center;justify-content:center;gap:8px;margin:0;font-size:16px;color:var(--gold-hi);padding:7px 10px;border-radius:var(--r-sm);
   background:linear-gradient(90deg,rgba(242,194,94,0),rgba(242,194,94,.12),rgba(242,194,94,0))}
@@ -219,6 +220,64 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .skin.on::after{content:"";position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good)}
 .skin[aria-pressed="true"]{transform:translateY(-1px);box-shadow:inset 0 0 0 2px var(--rc),0 6px 18px color-mix(in srgb,var(--rc) 35%,transparent)}
 #shopAct{width:100%}
+
+/* ---------- skills + local ranking ---------- */
+#skillOv{justify-content:flex-start;padding-top:58px}
+.card.pf{max-height:100%;min-height:0;gap:10px;padding:12px 12px 14px}
+.seg.two{grid-template-columns:repeat(2,1fr)}
+.seg.two .thumb{width:calc((100% - 8px) / 2)}
+.seg.two[data-lv="1"] .thumb{transform:translateX(100%)}
+.seg.two button{padding:8px 4px}
+.pf-top{display:grid;grid-template-columns:92px 1fr;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--r-md);background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.ovr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.ovr i{font-style:normal;font-family:var(--font-display);font-size:9px;letter-spacing:.2em;color:var(--bone-dim)}
+.ovr b{font-family:var(--font-display);font-weight:700;font-size:44px;line-height:.9;color:var(--gold-hi);font-variant-numeric:tabular-nums;filter:drop-shadow(0 3px 0 #3a2506) drop-shadow(0 0 14px rgba(242,194,94,.3))}
+.ovr span{font-size:15px;line-height:1;color:var(--bone-dim)}
+.ovr em{font-style:normal;font-family:var(--font-display);font-size:7px;letter-spacing:.12em;color:var(--bad)}
+.radar{display:block;width:100%;height:auto;max-height:132px;overflow:visible}
+.radar .g{fill:none;stroke:rgba(255,255,255,.1);stroke-width:1}
+.radar .v{fill:rgba(242,194,94,.28);stroke:var(--gold-hi);stroke-width:1.5;stroke-linejoin:round}
+.radar text{font-family:var(--font-display);font-size:7px;fill:var(--bone-dim);letter-spacing:.04em;text-transform:uppercase}
+.radar text.hi{fill:var(--gold-hi)}
+.pf-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padding:3px;margin:-3px;scrollbar-width:none;text-align:left}
+.pf-list::-webkit-scrollbar{display:none}
+.sk{display:flex;flex-direction:column;gap:5px;padding:7px 8px;border-radius:var(--r-sm);background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.sk-top{display:flex;align-items:center;gap:8px}
+.sk-top b{flex:1;font-family:var(--font-display);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.sk-top .lv{font-family:var(--font-display);font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;color:var(--bone)}
+.plus{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:62px;padding:5px 8px;border:0;border-radius:9px;cursor:pointer;
+  font-family:var(--font-display);font-weight:700;font-size:12px;color:#2a1a04;font-variant-numeric:tabular-nums;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-lo));box-shadow:0 3px 0 #7a5114,inset 0 1px 0 rgba(255,255,255,.6)}
+.plus .coin{width:10px;height:10px}
+.plus:active{transform:translateY(2px);box-shadow:0 1px 0 #7a5114}
+.plus:disabled{cursor:default;filter:grayscale(.85) brightness(.7)}
+.plus.max{cursor:default;color:var(--good);background:rgba(164,220,142,.12);box-shadow:inset 0 0 0 1px rgba(164,220,142,.4);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+.sk .bar{height:6px;border-radius:99px;background:rgba(0,0,0,.45);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);position:relative;overflow:hidden}
+.sk .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,var(--gold-lo),var(--gold-hi))}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-family:var(--font-display);font-size:7px;letter-spacing:.12em;text-transform:uppercase;padding:3px 5px;border-radius:5px;color:var(--bone-dim);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.tag.on{color:var(--ink);background:var(--good);box-shadow:none}
+.tag.on.gold{background:var(--gold)}
+.perks{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.perk{display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;padding:6px 7px;border:0;border-radius:8px;cursor:pointer;color:var(--bone);
+  background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.perk b{font-family:var(--font-display);font-size:9px;letter-spacing:.08em;text-transform:uppercase}
+.perk small{font-family:var(--font-body);font-size:14px;line-height:1;color:var(--bone-dim)}
+.perk[aria-pressed="true"]{background:linear-gradient(180deg,rgba(255,233,168,.22),rgba(242,194,94,.08));box-shadow:inset 0 0 0 2px var(--gold)}
+.perk[aria-pressed="true"] b{color:var(--gold-hi)}
+#pfLb{display:flex;flex-direction:column;gap:8px;min-height:0}
+.pf-name{display:flex;align-items:center;gap:8px}
+.pf-name input{flex:1;min-width:0;font-family:var(--font-display);font-size:14px;letter-spacing:.12em;text-transform:uppercase;
+  background:rgba(0,0,0,.45);color:var(--bone);border:0;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);padding:9px 10px;-webkit-user-select:text;user-select:text}
+.board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.board li{display:grid;grid-template-columns:26px 22px 1fr auto auto;align-items:center;gap:8px;padding:6px 9px;border-radius:var(--r-sm);background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.board li.me{background:linear-gradient(90deg,rgba(242,194,94,.16),rgba(242,194,94,.04));box-shadow:inset 0 0 0 1px rgba(242,194,94,.45)}
+.board i{font-style:normal;font-family:var(--font-display);font-size:10px;color:var(--bone-dim);font-variant-numeric:tabular-nums}
+.board img{width:22px;height:auto}
+.board b{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .you{font-family:var(--font-display);font-size:7px;letter-spacing:.16em;text-transform:uppercase;padding:2px 5px;border-radius:5px;color:#2a1a04;background:var(--gold)}
+.board em{font-style:normal;font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--gold-hi);font-variant-numeric:tabular-nums}
+.pf-hint{margin:0;font-size:15px;line-height:1.05;color:var(--bone-dim)}
 
 /* ---------- scoreboard ---------- */
 #board{position:absolute;z-index:1;top:8px;left:54px;right:54px;display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none}
@@ -363,6 +422,7 @@ html{background:var(--screen)}
           <button class="tile" id="mpBtn"><span class="ic a"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="1" y="1" width="2" height="2" fill="currentColor"/><rect x="5" y="1" width="2" height="2" fill="currentColor"/><rect x="0" y="4" width="4" height="3" fill="currentColor"/><rect x="4" y="4" width="4" height="3" fill="currentColor"/></svg></span>Online</button>
           <button class="tile" id="shopBtn"><span class="ic b"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="2" y="0" width="4" height="1" fill="currentColor"/><rect x="1" y="1" width="1" height="2" fill="currentColor"/><rect x="6" y="1" width="1" height="2" fill="currentColor"/><rect x="0" y="3" width="8" height="5" fill="currentColor"/></svg></span>Shop<span class="badge" id="shopBadge" hidden></span></button>
           <button class="tile" id="howBtn"><span class="ic c"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="2" y="0" width="4" height="1" fill="currentColor"/><rect x="1" y="1" width="1" height="2" fill="currentColor"/><rect x="6" y="1" width="1" height="2" fill="currentColor"/><rect x="5" y="3" width="1" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="1" fill="currentColor"/><rect x="3" y="5" width="2" height="1" fill="currentColor"/><rect x="3" y="7" width="2" height="1" fill="currentColor"/></svg></span>Guide</button>
+          <button class="tile" id="skillBtn"><span class="ic d"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="3" y="0" width="2" height="1" fill="currentColor"/><rect x="2" y="1" width="4" height="1" fill="currentColor"/><rect x="1" y="2" width="6" height="1" fill="currentColor"/><rect x="3" y="3" width="2" height="5" fill="currentColor"/><rect x="0" y="6" width="2" height="2" fill="currentColor"/><rect x="6" y="5" width="2" height="3" fill="currentColor"/></svg></span>Skills</button>
         </div>
         <div class="divider" id="menuDiv"></div>
         <div class="next" id="menuNext"></div>
@@ -401,6 +461,31 @@ html{background:var(--screen)}
         </div>
         <div class="skins" id="skinList" role="group" aria-label="Skins"></div>
         <button class="btn" id="shopAct">Equip</button>
+      </div>
+    </div>
+
+    <div class="ov dim" id="skillOv" hidden>
+      <div class="card pf">
+        <div class="sheet-h">
+          <button class="back" id="pfOk" aria-label="Back"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="4" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="2" width="2" height="2" fill="currentColor"/><rect x="2" y="4" width="2" height="2" fill="currentColor"/><rect x="4" y="6" width="2" height="2" fill="currentColor"/></svg></button>
+          <h2>Skills</h2>
+          <p class="coins pill" aria-label="Coins"><span class="coin" aria-hidden="true"></span><span class="n" id="pfCoins">0</span></p>
+        </div>
+        <div class="pf-top">
+          <div class="ovr"><i>OVR</i><b id="pfOvr">60</b><span id="pfRank">#1 local</span><em id="pfTmp" hidden>Debug</em></div>
+          <div id="pfRadar"></div>
+        </div>
+        <div class="seg two" id="pfSeg" data-lv="0" role="group" aria-label="View">
+          <span class="thumb" aria-hidden="true"></span>
+          <button id="pfTabSk" aria-pressed="true">Train</button>
+          <button id="pfTabLb" aria-pressed="false">Ranking</button>
+        </div>
+        <div class="pf-list" id="pfList"></div>
+        <div id="pfLb" hidden>
+          <label class="pf-name"><span class="label">Name</span><input id="pfName" maxlength="12" autocomplete="off" spellcheck="false" aria-label="Your name"></label>
+          <div class="pf-list"><ol class="board" id="pfBoard"></ol></div>
+          <p class="pf-hint">Players you meet online join this list.</p>
+        </div>
       </div>
     </div>
 
@@ -461,6 +546,7 @@ html{background:var(--screen)}
 <script src="js/ai.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/shop.js"></script>
+<script src="js/profile.js"></script>
 <script src="js/mp.js"></script>
 <script src="js/render.js"></script>
 <script src="js/main.js"></script>

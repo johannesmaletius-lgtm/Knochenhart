@@ -6,12 +6,13 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 ## File map
 | File | Content |
 |---|---|
-| `index.html` | markup + CSS (menus, shop, scoreboard, MP lobby, overlays), loads the scripts below, registers `sw.js` |
+| `index.html` | markup + CSS (menus, shop, skills, scoreboard, MP lobby, overlays), loads the scripts below, registers `sw.js` |
 | `js/engine.js` | helpers (`$`, `clamp`, `lerp`, `rand`), `store`, pixel font + `text()`, drawing primitives, camera `CAM`/`proj`, world constants (`LX`, `DZ`, ...), `POSES`, figures (`me`, `mate`, `oA`, `oB`, `FIGS`), `ball`, particles/popups, sound `SFX`, game state `G`, hints, balance `BAL`, rally setup, our defense/attack/serve, `point()` |
 | `js/skills.js` | `SKILLS` table (skills 60..99, OVR weights, level costs, coin income `earn`, timing/net-fault/recycle curves, unlocks, badge perks), helpers (`ovr`, `levelCost`, `recycleChance`, `netFault`, `timingQ`, `unlocked`, `perk`), profile `PROFILE` load/save (`knochenhart.skills`), `?ovr=NN` override; also a Node module |
 | `js/ai.js` | opponent brain `AI`/`PLANS`, opponent serve, opponent offense (pass, set, attack) |
 | `js/ui.js` | menu demo, game lifecycle (`startGame`, `gameOver`, pause), input (`onSwipe`, `onTap`, pointer/keys), menu button wiring |
 | `js/shop.js` | coins, `SKINS`, skull portraits `skinIcon`, unlock progress, shop screen, confetti |
+| `js/profile.js` | player id `PID` + name (`knochenhart.pid/name`), local leaderboard (`lbAdd`/`leaderboardAdd`, `knochenhart.board`), skill screen `#skillOv` (levels, OVR, radar, badge perks); pure helpers also a Node module |
 | `js/mp.js` | multiplayer: `MP` state, transport (Trystero/WebRTC, BroadcastChannel with `?bc`), lobby, host match rules (`mp*`), input relay, snapshot sync, MP UI wiring |
 | `js/render.js` | canvas rendering (`render()`, figures, net, ball, HUD), HTML scoreboard `BD`/`updBoard`, dither fade, main loop (`update`, `frame`) |
 | `js/main.js` | sizing (`resize`), `boot()`, debug handle `window.__kh` (must stay last) |
@@ -21,7 +22,7 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 
 ## How the scripts fit together
 - Classic `<script src>` tags (no ES modules), all `'use strict'`, loaded in this order:
-  engine, skills, ai, ui, shop, mp, render, main. They share one global scope: top-level `const`/`let`/`function`
+  engine, skills, ai, ui, shop, profile, mp, render, main. They share one global scope: top-level `const`/`let`/`function`
   of one file are visible in all others.
 - Code that runs at load time may only use things from the same or earlier files
   (functions from later files are not defined yet). Calls inside functions are fine.
@@ -41,5 +42,5 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 ## Testing
 - Serve the repo root with any static server (e.g. `python3 -m http.server`) and open `index.html`.
 - Debug handle in the console: `window.__kh` (`G`, `MP`, `AI`, `ball`, `startGame`, `onSwipe`, `onTap`, ...).
-- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/sim-progress.js` (days until all skills 99). Exit code != 0 = fail.
+- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/sim-progress.js` (days until all skills 99). Exit code != 0 = fail.
 - Playwright is available in the dev container for browser smoke tests.

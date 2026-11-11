@@ -25,6 +25,9 @@ const SKILLS = {
   recycle: [[60, 0.7], [70, 0.45], [80, 0.25], [90, 0.1], [99, 0.03]],
   // threshold unlocks: feature -> [skill, level]
   unlock: { lobAim: ['lob', 75], splitBlock: ['block', 75], float: ['serve', 75], dive: ['dig', 70], fireball: ['spike', 85] },
+  unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball' },
+  // local leaderboard (profile.js): stored entries, player name length
+  board: { max: 50, nameMax: 12 },
   // skill badge at 90: pick one perk in the same area; v = effect value for the engine (P3)
   badgeAt: 90,
   perks: {
