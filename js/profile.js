@@ -27,7 +27,30 @@ function lbAdd(list, e, max, nameMax) {
 }
 const lbRank = (list, id) => list.findIndex(x => x.id === id) + 1;
 
-if (typeof module !== 'undefined' && typeof document === 'undefined') module.exports = { nameClean, lbEntry, lbSort, lbAdd, lbRank };
+/* ---------------- pure helpers: MP profiles (P5) ---------------- */
+// Node: the profile helpers need the SKILLS table (in the browser it is a global from js/skills.js)
+if (typeof SKILLS === 'undefined' && typeof require === 'function') Object.assign(globalThis, require('./skills.js'));
+// a profile from another phone is untrusted: id must be a short token, skills are clamped to 60..99,
+// only known perks of reached badges survive, name sanitised; null = unusable
+function profClean(raw, nameMax) {
+  if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !/^[A-Za-z0-9_-]{1,32}$/.test(raw.id)) return null;
+  const p = skillsNew(), sk = raw.sk && typeof raw.sk === 'object' ? raw.sk : {}, bd = raw.badge && typeof raw.badge === 'object' ? raw.badge : {};
+  for (const id of SKILLS.ids) { const v = Math.round(+sk[id]); p.sk[id] = v >= SKILLS.min ? Math.min(SKILLS.max, v) : SKILLS.min; }
+  for (const id of SKILLS.ids) if (typeof bd[id] === 'string') pickPerk(p, id, bd[id]);
+  const skin = typeof raw.skin === 'string' && /^[A-Za-z0-9_-]{1,16}$/.test(raw.skin) ? raw.skin : '';
+  return { id: raw.id, name: nameClean(raw.name, nameMax || SKILLS.board.nameMax), ovr: ovr(p), sk: p.sk, badge: p.badge, skin };
+}
+// my card on the wire: no timestamp, the receiver recomputes the OVR from the skills
+const profWire = c => ({ id: c.id, name: c.name, sk: Object.assign({}, c.sk), badge: Object.assign({}, c.badge), skin: c.skin });
+// met players go into the board only when new or changed (seen: Map id -> last key), never my own id
+function meetNew(seen, p, selfId) {
+  if (!p || !p.id || p.id === selfId) return false;
+  const k = JSON.stringify([p.name, p.sk, p.badge, p.skin]);
+  if (seen.get(p.id) === k) return false;
+  seen.set(p.id, k); return true;
+}
+
+if (typeof module !== 'undefined' && typeof document === 'undefined') module.exports = { nameClean, lbEntry, lbSort, lbAdd, lbRank, profClean, profWire, meetNew };
 
 /* ---------------- browser: own id + name, stored board ---------------- */
 const PID = typeof store !== 'undefined' ? store.get('pid', null) || (() => { const id = Math.random().toString(36).slice(2, 10); store.set('pid', id); return id; })() : '';

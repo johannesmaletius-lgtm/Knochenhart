@@ -58,6 +58,7 @@ function showOnly(id) {
   if (id === 'over' && !MP.net) $('#againBtn').hidden = false;
   for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop', 'skillOv']) $('#' + k).hidden = k !== id;
   $('#pauseBtn').hidden = G.mode !== 'play' && G.mode !== 'mp';
+  if (typeof emoteUI === 'function') emoteUI();
   if (id === 'menu') { updRecord(); updCoins(); updMenuMeta(); }
   if (id !== 'over') $('#ovCoins').hidden = true;
 }

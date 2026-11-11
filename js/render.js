@@ -278,6 +278,7 @@ function render() {
   items.sort((a, b) => a.z - b.z);
   for (const it of items) it.fn();
   drawFireHead();
+  drawEmotes();
   drawParts();
   drawRing();
   drawFx();

@@ -37,6 +37,9 @@ const SKILLS = {
   unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball' },
   // local leaderboard (profile.js): stored entries, player name length
   board: { max: 50, nameMax: 12 },
+  // P5 MP social (social.js): emotes = pixel-text quick messages, dur = s shown over the player; rate limit per player
+  // (own phone and host): gap = min s between two emotes, at most burst emotes per win s
+  social: { emotes: ['NICE!', 'GG', 'OOPS', 'HAHA', 'WOW', 'SORRY'], dur: 2.2, gap: 1.0, burst: 3, win: 8 },
   // P4 Hybrid multiplayer (js/hybrid.js, mp.js): setTilt = set swipe |dx|/|dy| split (straight up = dump, diagonal up-left = middle);
   // laneLock = s before the hit the hitter's approach lane is checked against the set lane; computer mates by difficulty (0 -> 1):
   // botFollow = hitter runs into the set lane, botSetOk = setter sets the hitter's lane (else a neighbour lane), botReact = s;

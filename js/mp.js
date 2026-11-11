@@ -101,14 +101,14 @@ function netJoin(code, h) {
 
 /* ---------- lobby ---------- */
 function mpMsg(s) { $('#mpMsg').textContent = s; }
-function mpOpen() { showOnly('mpOv'); $('#mpStart').hidden = false; $('#mpLobby').hidden = true; mpMsg(''); }
+function mpOpen() { mpCardHide(); showOnly('mpOv'); $('#mpStart').hidden = false; $('#mpLobby').hidden = true; mpMsg(''); }
 function mpNewCode() { let s = ''; for (let i = 0; i < 4; i++) s += MPCODE[(Math.random() * MPCODE.length) | 0]; return s; }
 async function mpCreate() {
   audioInit(); mpMsg('…');
   try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
   if (MP.net) { try { MP.net.close(); } catch (e) {} MP.net = null; }
   const code = mpNewCode();
-  MP.host = true; MP.hy = false; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
+  MP.host = true; MP.hy = false; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin, prof: profIn(myProf()) }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
   MP.net = netCreate(code, {
     open() { mpLobbyShow(); },
     conn(id) {
@@ -147,7 +147,7 @@ async function mpJoin() {
     mpMsg(!useBC && relaysUp() === 0 ? 'No internet connection to the servers' : seen ? 'Room found, but your networks block the connection. Try Wi-Fi on both phones' : 'Room not found. Is the host app open in front?');
   }, 25000);
   MP.net = netJoin(code, {
-    open(id) { clearTimeout(t0); clearInterval(t1); MP.myId = id; MP.net.toHost({ t: 'skin', sk: mySkin }); },
+    open(id) { clearTimeout(t0); clearInterval(t1); MP.myId = id; MP.net.toHost({ t: 'skin', sk: mySkin }); MP.net.toHost({ t: 'prof', p: myProf() }); },
     msg(d) { mpClientMsg(d); },
     gone() { if (MP.net) { mpLeave(); popup('DISCONNECTED', C.bad); } },
     fail(k) { clearTimeout(t0); clearInterval(t1); const n = MP.net; MP.net = null; if (n) n.close(); mpMsg(k === 'nofound' ? 'Room not found' : 'No connection'); }
@@ -171,7 +171,9 @@ function mpLobbyDraw() {
   MP.mySlot = MP.slots.findIndex(s => s && s.id === MP.myId);
   for (let i = 0; i < 4; i++) {
     const s = MP.slots[i], b = $('#slot' + i);
-    b.querySelector('b').textContent = !s ? 'CPU' : s.id === MP.myId ? 'YOU' : 'P' + s.n;
+    // P5: name + OVR per slot (profile from the join), computer players by difficulty
+    b.querySelector('b').textContent = !s ? 'CPU' : s.prof ? s.prof.name : s.id === MP.myId ? 'YOU' : 'P' + s.n;
+    b.querySelector('em').textContent = 'OVR ' + (!s ? ovr(aiProfile(mpDiff())) : s.prof ? s.prof.ovr : '–');
     b.querySelector('b').style.color = s && s.sk && SKIN[s.sk] && i !== MP.mySlot ? SKIN[s.sk].bone : '';
     b.setAttribute('aria-pressed', String(i === MP.mySlot));
     b.classList.toggle('taken', !!s && i !== MP.mySlot);
@@ -201,9 +203,11 @@ function mpHostMsg(id, d) {
   else if (d.t === 'p') MP.net.send(id, { t: 'q', c: d.c });
   else if (d.t === 'skin' && i >= 0 && SKIN[d.sk]) { MP.slots[i].sk = d.sk; mpLobbySync(); if (G.mode === 'mp') mpRoles(); }
   else if (d.t === 'in' && i >= 0 && G.mode === 'mp') hostInput(i, d.k, d.dx, d.dy, d.ht);
+  else if (d.t === 'prof' && i >= 0) mpProfIn(i, d.p);
+  else if (d.t === 'emo' && i >= 0 && G.mode === 'mp') emoteHost(i, d.e);
 }
 function mpClientMsg(d) {
-  if (d.t === 'lobby') { MP.slots = d.slots; MP.code = d.code; MP.level = d.level; MP.hy = !!d.hy; if (G.mode !== 'mp') mpLobbyShow(); else mpRoles(); }
+  if (d.t === 'lobby') { MP.slots = mpProfSlots(d.slots); MP.code = d.code; MP.level = d.level; MP.hy = !!d.hy; if (G.mode !== 'mp') mpLobbyShow(); else mpRoles(); }
   else if (d.t === 'full') { mpMsg('Room full'); MP.net.close(); MP.net = null; }
   else if (d.t === 'start') { MP.level = d.level; MP.hy = !!d.hy; mpEnter(); }
   else if (d.t === 's') mpSnap(d);
@@ -228,7 +232,7 @@ function mpEnter() {
   G.mode = 'mp'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 1; G.fadeV = -4; G.hype = 0;
   oA.spring = true; MP.rot = [0, 0]; MP.sw = [false, false]; mpRoles();
   MP.view = { hy: MP.hy,  score: [0, 0], server: 0, meter: 0, fire: false, ring: null, inc: null, blk: null, ph: '' };
-  showOnly(null); setHint('');
+  mpCardHide(); showOnly(null); setHint('');
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
 }
 function mpBegin() {
@@ -273,6 +277,7 @@ function applyFx(e) {
     case 'res': if (MP.team === e.w) SFX.win(); else SFX.lose(); break;
     case 'sweat': sweat(); break;
     case 'hp': hitPop(e.dt, e.q, e.w); break;
+    case 'emo': emoteShow(e.s, e.e); break;
     case 'hold': ball.mode = 'held'; ball.holder = FIGS[e.f]; ball.idx = e.i; ball.fire = false; ball.trail.length = 0; break;
     case 'ball':
       ball.p0 = e.p0; ball.v = e.v; ball.t0 = e.t0; ball.T = e.T; ball.mode = 'flight'; ball.holder = null;
@@ -295,7 +300,7 @@ const mpDiff = () => [0.2, 0.45, 0.7][MP.level] != null ? [0.2, 0.45, 0.7][MP.le
 const HY = () => !!(MP.st && MP.st.hy);
 // position (0 back, 1 front) that attacks in team t's possession: the front player after it dug the ball itself (Hybrid)
 const hitIx = t => MP.st && MP.st.sw && MP.st.sw[t] ? 1 : 0;
-// skills per player slot: P5 fills MP.slots[i].prof ({ sk, badge }); players default to SKILLS.hy.defLv, computer mates by difficulty
+// skills per player slot (Classic + Hybrid): MP.slots[i].prof = cleaned join profile (social.js); fallback SKILLS.hy.defLv, computer players by difficulty
 const HYDEF = skillsNew(SKILLS.hy.defLv);
 function slotProf(i) { const s = MP.slots[i]; return s ? (s.prof && s.prof.sk ? s.prof : HYDEF) : aiProfile(mpDiff()); }
 // EARLY / LATE on every hit, on every phone (Hybrid only; the classic mode stays as it was)
@@ -765,8 +770,8 @@ function mpAttack(a, dir, ht, aim) {
   A.hit = true;
   const wn = A.win || 1, adt = Math.abs(dt);
   let q = adt < 0.075 * wn ? 'perfect' : adt < 0.17 * wn ? 'good' : 'weak';
-  // Hybrid: timing through the hitter's Spike / Lob skill (P3 curves), net faults by the skill curve
-  const hk = st.hy && human(A.hs) ? { p: slotProf(A.hs), err: timingErr(adt, [0.075 * wn, 0.17 * wn, BAL.atkWin[2]]) } : null;
+  // human hitters (Classic + Hybrid, P5 profiles): timing through the Spike / Lob skill (P3 curves), net faults by the skill curve
+  const hk = human(A.hs) ? { p: slotProf(A.hs), err: timingErr(adt, [0.075 * wn, 0.17 * wn, BAL.atkWin[2]]) } : null;
   if (hk) { hk.sk = hk.p.sk[dir === 'LOB' ? 'lob' : 'spike']; hk.bonus = dir === 'LOB' ? 0 : perkV(hk.p, 'spike', 'heavyArm', 0); q = hitTier(hk.sk, hk.err, hk.bonus); }
   const b = tfig(a, hitIx(a));
   hyOver(a); if (!mpContact(a, A.hs)) return;
@@ -877,8 +882,8 @@ function mpStuff(A, wx, bonus) {
     const st = MP.st, a = A.a, sa = sgn(a), blk = tfig(1 - a, 1);
     S('block'); fx({ k: 'shake', v: 4 }); fx({ k: 'net', v: 1 }); fx({ k: 'vib', ms: 30 }); msparks(8, ['bone', 'bad']);
     seq(blk, [['slam', 0.16, 42], ['blockW', 0.12, 20]]);
-    // Hybrid: the attacking team recycles a stuffed ball by the blocker's Block skill (SKILLS.recycle)
-    const pStuff = st.hy ? 1 - recycleP(slotProf(slotOf(1 - a, 1))) : lerp(BAL.stuff[0], BAL.stuff[0] + BAL.stuff[1], mpDiff());
+    // the attacking team recycles a stuffed ball by the blocker's Block skill (SKILLS.recycle; computer blockers by difficulty)
+    const pStuff = 1 - recycleP(slotProf(slotOf(1 - a, 1)));
     if (Math.random() < pStuff + (bonus || 0)) {
       // monster block: the blocker flexes on the way down
       fx({ k: 'burst', c: 'bad', big: true }); fx({ k: 'flash', v: 0.25 }); msparks(10, ['bone', 'bad', 'accent']);
@@ -1146,5 +1151,6 @@ $('#mpLeave').addEventListener('click', mpLeave);
 $('#mpGo').addEventListener('click', mpBegin);
 $('#mpShare').addEventListener('click', mpShare);
 $('#mpHy').addEventListener('click', () => { if (!MP.host || G.mode === 'mp') return; MP.hy = !MP.hy; mpLobbySync(); });
-for (let i = 0; i < 4; i++) $('#slot' + i).addEventListener('click', () => mpPickSlot(i));
+// tap on a player = his card (radar + badges), on a free slot = move there
+for (let i = 0; i < 4; i++) $('#slot' + i).addEventListener('click', () => { if (!(MP.slots[i] && mpCardShow(i))) mpPickSlot(i); });
 

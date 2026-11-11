@@ -13,7 +13,8 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 | `js/ai.js` | opponent brain `AI`/`PLANS`, opponent serve, opponent offense (pass, set, attack), our net block vs. it (`mateGraze`, `mateStuff`) |
 | `js/ui.js` | menu demo, game lifecycle (`startGame`, `gameOver`, pause), input (`onSwipe`, `onTap`, pointer/keys), menu button wiring |
 | `js/shop.js` | coins, `SKINS`, skull portraits `skinIcon`, unlock progress, shop screen, confetti |
-| `js/profile.js` | player id `PID` + name (`knochenhart.pid/name`), local leaderboard (`lbAdd`/`leaderboardAdd`, `knochenhart.board`), skill screen `#skillOv` (levels, OVR, radar, badge perks); pure helpers also a Node module |
+| `js/profile.js` | player id `PID` + name (`knochenhart.pid/name`), local leaderboard (`lbAdd`/`leaderboardAdd`, `knochenhart.board`), P5 peer profiles (`profClean`/`profWire`/`meetNew`), skill screen `#skillOv` (levels, OVR, radar, badge perks); pure helpers also a Node module |
+| `js/social.js` | P5: MP profiles (`mpProfIn`/`mpProfSlots`, lobby card `#mpCard`), met players -> board (`playerMet`), emotes (`#emoBtn`/`#emoMenu`, `emoteGate`, `drawEmotes`); numbers `SKILLS.social` |
 | `js/mp.js` | multiplayer: `MP` state, transport (Trystero/WebRTC, BroadcastChannel with `?bc`), lobby (+ Hybrid toggle `#mpHy`), host match rules (`mp*`, Hybrid hooks `st.hy`), input relay, snapshot sync, MP UI wiring |
 | `js/render.js` | canvas rendering (`render()`, figures, net, ball, HUD), HTML scoreboard `BD`/`updBoard`, dither fade, main loop (`update`, `frame`) |
 | `js/main.js` | sizing (`resize`), `boot()`, debug handle `window.__kh` (must stay last) |
@@ -23,7 +24,7 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 
 ## How the scripts fit together
 - Classic `<script src>` tags (no ES modules), all `'use strict'`, loaded in this order:
-  engine, skills, hybrid, ai, ui, shop, profile, mp, render, main. They share one global scope: top-level `const`/`let`/`function`
+  engine, skills, hybrid, ai, ui, shop, profile, mp, social, render, main. They share one global scope: top-level `const`/`let`/`function`
   of one file are visible in all others.
 - Code that runs at load time may only use things from the same or earlier files
   (functions from later files are not defined yet). Calls inside functions are fine.
@@ -43,13 +44,16 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 ## Testing
 - Serve the repo root with any static server (e.g. `python3 -m http.server`) and open `index.html`.
 - Debug handle in the console: `window.__kh` (`G`, `MP`, `AI`, `ball`, `startGame`, `onSwipe`, `onTap`, ...).
-- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/probabilities.test.js` (all skill rolls, 10k each), `node tests/hybrid.test.js` (P4 rules), `node tests/sim-progress.js` (days until all skills 99). Exit code != 0 = fail.
+- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/probabilities.test.js` (all skill rolls, 10k each), `node tests/hybrid.test.js` (P4 rules), `node tests/social.test.js` (P5 profile cleaning, board dedupe, emote limit), `node tests/sim-progress.js` (days until all skills 99). Exit code != 0 = fail.
 - Playwright is available in the dev container for browser smoke tests.
-- MP test: two tabs with `?bc` in one browser context (create, `#mpHy`, join with the code, Start).
-- Classic MP keeps the old fixed rules (`BAL.stuff`, `BAL.meterMax`). Hybrid (host decides, `MP.st.hy`): `MP.rot` = rotation
+- MP test: two tabs with `?bc` in one browser context (create, `#mpHy`, join with the code, Start). They share localStorage
+  (same `pid`): give the 2nd page its own in-memory `localStorage` via an init script to test profiles/board.
+- P5 profiles: join sends `{t:'prof'}` (`profWire`), host cleans it (`profClean`: skills 60..99, known perks, name) into
+  `MP.slots[i].prof` and resyncs; clients clean the lobby list again. Emotes: `{t:'emo'}` -> host limit per slot -> fx `emo`.
+- Classic MP also uses the skills since P5 (spike/lob tiers + net faults, recycle); EARLY/LATE pops stay Hybrid-only. Hybrid (host decides, `MP.st.hy`): `MP.rot` = rotation
   (side-out rotates the team winning the serve, applied at next `mpRally`), `st.sw[t]` = front player dug -> back sets, front
   attacks (`hitIx`); `MP.fig` = my position, `MP.role` = my controls. Skills per slot: `slotProf(i)` reads `MP.slots[i].prof`
-  (P5 fills it; default `SKILLS.hy.defLv` 60, bots `aiProfile`): spike/lob tiers + net faults, recycle vs. stuff. EARLY/LATE via fx `hp`.
+  (filled on join; default `SKILLS.hy.defLv` 60, bots `aiProfile`): spike/lob tiers + net faults, recycle vs. stuff. EARLY/LATE via fx `hp`.
 - Hybrid decisions: lanes are team-local 0 left / 1 middle / 2 right ("hinten" = right lane, back set over the setter);
   tap = middle; straight up = dump; hitter may change lane until `laneLock` s before the hit, then one lane off = free ball
   ("Danke-Ball"), two off = floor. Aimed lob ↖/↗ needs no Lob 75 in Hybrid. Double touch is a guard (`mpContact`), the
