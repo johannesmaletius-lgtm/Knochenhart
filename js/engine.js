@@ -382,7 +382,8 @@ const G = {
   ev: [], parts: [], pops: [], fx: [], bump: [-9, -9], fade: 0, fadeV: 0, incoming: null, attack: null, serve: null,
   hist: { L: 0, R: 0, LOB: 0 }, rally: 0, stats: null, crowd: []
 };
-function newStats() { return { perfect: 0, digs: 0, saves: 0, kills: 0, aces: 0, blocked: 0, maxRally: 0, fires: 0 }; }
+// bout = points off their block, lobs = lob points (daily challenges); wins/hard are set at the end of the match
+function newStats() { return { perfect: 0, digs: 0, saves: 0, kills: 0, aces: 0, blocked: 0, maxRally: 0, fires: 0, bout: 0, lobs: 0 }; }
 G.stats = newStats();
 function at(t, fn) { G.ev.push({ t, fn }); }
 function after(dt, fn) { at(G.t + dt, fn); }
@@ -892,7 +893,7 @@ function blockOut(sideX) {
     launch({ x: tx, y: 0, z: -rand(5, 9) }, 0.8, { spin: 25 });
     oA.tx = clamp(tx, -4.3, 4.3); oA.sx = 8;
     after(0.45, () => defAnim(oA, 'lunge', sideX));
-    after(0.95, () => { G.stats.kills++; point(0, 'BLOCK OUT!'); });
+    after(0.95, () => { G.stats.kills++; G.stats.bout++; point(0, 'BLOCK OUT!'); });
   });
 }
 // glanced off the fingertips, up into their court: their back defender has to chase it
@@ -941,7 +942,7 @@ function lob(q, aim) {
     launch({ x: tx, y: 0, z: tz }, T, { spin: 3 });
     oA.tx = lerp(oA.x, tx, 0.6); oA.tz = lerp(oA.z, tz, 0.5); oA.sx = oA.sz = 5;
     after(T * 0.8, () => defAnim(oA, 'missTip', 1));
-    after(T + 0.25, () => { G.stats.kills++; AI.blockResult(A, 0); point(0, A.block === 'W' ? 'OUTSMARTED!' : 'LOB POINT!'); });
+    after(T + 0.25, () => { G.stats.kills++; G.stats.lobs++; AI.blockResult(A, 0); point(0, A.block === 'W' ? 'OUTSMARTED!' : 'LOB POINT!'); });
   }
 }
 function fireball(sideX) {
@@ -1064,6 +1065,7 @@ function point(w, txt) {
   G.score[w]++; G.why = (w ? '-' : '+') + txt;
   AI.point(w);
   G.stats.maxRally = Math.max(G.stats.maxRally, G.rally);
+  dailyTick();
  
   setHint('');
   me.lock = false; me.dash = false; oA.leanT = 0;

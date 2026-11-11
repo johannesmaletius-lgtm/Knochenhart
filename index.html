@@ -166,6 +166,38 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .stats .w b{color:var(--good)}
 .stats .r b{color:var(--gold-hi)}
 .stats .sep{opacity:.4}
+.stats .pay{display:inline-flex;align-items:center;gap:3px}
+.stats .pay .coin{width:9px;height:9px;align-self:center}
+.stats .pay b{color:var(--gold-hi)}
+/* daily challenges: menu row + sheet */
+.dly{font:inherit;display:flex;align-items:center;gap:8px;width:100%;border:0;cursor:pointer;padding:7px 10px;border-radius:var(--r-sm);color:var(--bone);
+  background:linear-gradient(90deg,rgba(242,194,94,.14),rgba(242,194,94,.03));box-shadow:inset 0 0 0 1px rgba(242,194,94,.28)}
+.dly:active{transform:translateY(1px)}
+.dly .lb{font-family:var(--font-display);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-hi)}
+.dly .pips{display:flex;gap:4px}
+.dly .pips i{width:9px;height:9px;border-radius:2px;background:rgba(0,0,0,.45);box-shadow:inset 0 0 0 1px rgba(242,194,94,.4)}
+.dly .pips i.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));box-shadow:0 0 6px rgba(242,194,94,.5)}
+.dly .left{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:16px;line-height:1;color:var(--gold-hi)}
+.dly .left .coin{width:10px;height:10px}
+.dly svg{width:9px;height:9px;flex:none;color:var(--bone-dim);shape-rendering:crispEdges}
+.card.daily{gap:12px}
+.card.daily .sheet-h h2{margin:0;font-family:var(--font-display);font-size:18px;letter-spacing:.14em;text-transform:uppercase;text-align:left}
+.chal{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;text-align:left}
+.chal li{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:4px 10px;padding:9px 10px;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.chal .t{font-size:17px;line-height:1.05;color:var(--bone)}
+.chal .v{font-family:var(--font-display);font-size:10px;color:var(--bone-dim);font-variant-numeric:tabular-nums}
+.chal .c{display:inline-flex;align-items:center;gap:4px;font-size:17px;color:var(--gold-hi)}
+.chal .c .coin{width:11px;height:11px}
+.chal .bar{grid-column:1 / 3;height:6px;border-radius:99px;background:rgba(0,0,0,.45);position:relative;overflow:hidden}
+.chal .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,var(--gold-lo),var(--gold-hi))}
+.chal li.ok{box-shadow:inset 0 0 0 1px rgba(164,220,142,.45)}
+.chal li.ok .v{color:var(--good)}
+.ov-daily{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0}
+.ov-daily .ch{display:inline-flex;align-items:center;gap:4px;font-size:16px;line-height:1;padding:5px 9px;border-radius:99px;color:var(--good);
+  background:rgba(164,220,142,.1);box-shadow:inset 0 0 0 1px rgba(164,220,142,.4)}
+.ov-daily .coin{width:10px;height:10px}
+.chal li.ok .bar i{background:linear-gradient(90deg,#6fae5a,var(--good))}
 /* daily bonus rides on the play button */
 .btn .tag{position:absolute;top:6px;right:8px;font-size:9px;letter-spacing:.06em;padding:3px 5px;border-radius:6px;line-height:1;
   color:var(--gold-hi);background:#2a1a04;box-shadow:0 0 10px rgba(255,233,168,.35)}
@@ -462,7 +494,7 @@ html{background:var(--screen)}
           <button id="lv1" data-lv="1" aria-pressed="true">Normal</button>
           <button id="lv2" data-lv="2" aria-pressed="false">Hard</button>
         </div>
-        <p class="stats" aria-label="Record on this difficulty"><span class="w"><b id="stW">0</b> won</span><span class="sep">·</span><span><b id="stL">0</b> lost</span><span class="sep">·</span><span class="r"><b id="stR">–</b></span></p>
+        <p class="stats" aria-label="Record on this difficulty"><span class="w"><b id="stW">0</b> won</span><span class="sep">·</span><span><b id="stL">0</b> lost</span><span class="sep">·</span><span class="r"><b id="stR">–</b></span><span class="sep">·</span><span class="pay" title="Coins per win"><span class="coin" aria-hidden="true"></span><b id="stPay">+10</b></span></p>
         <button class="btn big" id="playBtn"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M2 1L7 4L2 7Z" fill="currentColor"/></svg>Play<span class="tag" id="menuDaily" title="Double coins on your first win today" hidden>2× today</span></button>
         <div class="modes"><button class="btn ghost" id="sgBtn">Skill Games</button><button class="btn ghost" id="caBtn">Campaign</button></div>
         <div class="tiles">
@@ -471,6 +503,7 @@ html{background:var(--screen)}
           <button class="tile" id="howBtn"><span class="ic c"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="2" y="0" width="4" height="1" fill="currentColor"/><rect x="1" y="1" width="1" height="2" fill="currentColor"/><rect x="6" y="1" width="1" height="2" fill="currentColor"/><rect x="5" y="3" width="1" height="1" fill="currentColor"/><rect x="3" y="4" width="2" height="1" fill="currentColor"/><rect x="3" y="5" width="2" height="1" fill="currentColor"/><rect x="3" y="7" width="2" height="1" fill="currentColor"/></svg></span>Guide</button>
           <button class="tile" id="skillBtn"><span class="ic d"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="3" y="0" width="2" height="1" fill="currentColor"/><rect x="2" y="1" width="4" height="1" fill="currentColor"/><rect x="1" y="2" width="6" height="1" fill="currentColor"/><rect x="3" y="3" width="2" height="5" fill="currentColor"/><rect x="0" y="6" width="2" height="2" fill="currentColor"/><rect x="6" y="5" width="2" height="3" fill="currentColor"/></svg></span>Skills</button>
         </div>
+        <button class="dly" id="dailyBtn"><span class="lb">Daily</span><span class="pips" id="dailyPips"></span><span class="left" id="dailyLeft"></span><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="2" y="0" width="2" height="2" fill="currentColor"/><rect x="4" y="2" width="2" height="2" fill="currentColor"/><rect x="4" y="4" width="2" height="2" fill="currentColor"/><rect x="2" y="6" width="2" height="2" fill="currentColor"/></svg></button>
         <div class="next" id="menuNext"></div>
       </div>
     </div>
@@ -597,6 +630,17 @@ html{background:var(--screen)}
       </div>
     </div>
 
+    <div class="ov dim" id="dailyOv" hidden>
+      <div class="card daily">
+        <div class="sheet-h">
+          <button class="back" id="dailyOk" aria-label="Back"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="4" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="2" width="2" height="2" fill="currentColor"/><rect x="2" y="4" width="2" height="2" fill="currentColor"/><rect x="4" y="6" width="2" height="2" fill="currentColor"/></svg></button>
+          <h2>Daily</h2><span></span>
+        </div>
+        <ul class="chal" id="dailyList"></ul>
+        <p class="label" id="dailyReset"></p>
+      </div>
+    </div>
+
     <div class="ov dim" id="pauseOv" hidden>
       <div class="card">
         <h2>PAUSE</h2>
@@ -611,6 +655,7 @@ html{background:var(--screen)}
         <p class="score" id="ovScore">15 : 12</p>
         <p class="ca-res" id="ovCamp" hidden></p>
         <p class="coins coinwin" id="ovCoins" hidden><span class="coin" aria-hidden="true"></span><span class="n">+10</span><small id="ovBonus"></small></p>
+        <p class="ov-daily" id="ovDaily" hidden></p>
         <dl id="ovStats"></dl>
         <div class="next" id="ovNext"></div>
         <button class="btn" id="againBtn">Again</button>
@@ -627,6 +672,7 @@ html{background:var(--screen)}
 <script src="js/ai.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/shop.js"></script>
+<script src="js/daily.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/skillgames.js"></script>
 <script src="js/campaign.js"></script>

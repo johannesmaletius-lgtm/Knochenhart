@@ -82,13 +82,13 @@ function addCoins(n) { coins += n; store.set('coins', coins); updCoins(); }
 function showCoinWin(win) {
   const el = $('#ovCoins'); el.hidden = !win;
   if (win) {
-    // first win of the day pays double
+    // pay by opponent strength (daily.js winPay); first win of the day pays SKILLS.earn.dailyMul
     const bonus = store.get('bonusDay', 0) !== today();
     if (bonus) store.set('bonusDay', today());
-    const n = Math.round((bonus ? SKILLS.earn.daily : SKILLS.earn.win) * sgCoinMul());
+    const r = winPay(bonus), n = r.n;
     addCoins(n);
     el.querySelector('.n').textContent = '+' + n;
-    $('#ovBonus').textContent = bonus ? 'Daily bonus' : '';
+    $('#ovBonus').textContent = [r.lbl, bonus ? 'daily ×' + SKILLS.earn.dailyMul : ''].filter(Boolean).join(' · ');
     setTimeout(() => { tone(1320, 0.06, 'square', 0.04); tone(1760, 0.1, 'square', 0.04, 0, 0.07); if (bonus) tone(2093, 0.14, 'square', 0.04, 0, 0.16); }, 450);
   }
 }

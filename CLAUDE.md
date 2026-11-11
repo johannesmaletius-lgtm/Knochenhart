@@ -13,6 +13,7 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 | `js/ai.js` | opponent brain `AI`/`PLANS`, opponent serve, opponent offense (pass, set, attack), our net block vs. it (`mateGraze`, `mateStuff`) |
 | `js/ui.js` | menu demo, game lifecycle (`startGame`, `gameOver`, pause), input (`onSwipe`, `onTap`, pointer/keys), menu button wiring |
 | `js/shop.js` | coins, `SKINS`, skull portraits `skinIcon`, unlock progress, shop screen, confetti |
+| `js/daily.js` | coins by opponent strength (`earnWin`: Easy/Normal/Hard or opponent OVR + underdog bonus, daily x2; `winPay` for the result card) and daily challenges (`dailyPick`/`dailyState`/`dailyAdd`/`dailyReached`, store `knochenhart.daily`, menu row `#dailyBtn`, sheet `#dailyOv`, in-match popup `dailyTick`, paid in `dailyMatch`); numbers `SKILLS.earn`/`SKILLS.daily`; pure part also a Node module |
 | `js/profile.js` | player id `PID` + name (`knochenhart.pid/name`), local leaderboard (`lbAdd`/`leaderboardAdd`, `knochenhart.board`), P5 peer profiles (`profClean`/`profWire`/`meetNew`), skill screen `#skillOv` (levels, OVR, radar, badge perks); pure helpers also a Node module |
 | `js/skillgames.js` | P6 Skill Games: pure budget/spend/check/auto spread (`sgBudget`, `sgUp`/`sgDown`, `sgCheck`, `sgAuto`, `sgEnter`/`sgLeave`; Node module), SP flow (`#sgBtn`, `SG`), MP spend round (`mpGoReq`, `sgMp*`, msgs `sgo`/`sgp`/`sgr`); numbers `SKILLS.sg` |
 | `js/campaign.js` | P7 campaign: pure ladder (`caStatus`/`caWin`/`caReward`/`caNext`, `caProfile` OVR+focus, `caDiff` AI level + `D()` base, `caLoad`/`caSave` `knochenhart.camp`; Node module), SP flow (`#caBtn`, `#campOv`, `CA`, `caStart`/`caOver`/`caEnd`); numbers `SKILLS.camp` |
@@ -24,7 +25,7 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 | `lib/trystero.min.js`, `fonts/`, `icons/`, `manifest.webmanifest` | WebRTC lib (loaded on demand by `loadPeer()`), static assets |
 
 ## How the scripts fit together
-- Classic `<script src>` tags (no ES modules), all `'use strict'`, loaded in this order: engine, skills, hybrid, ai, ui, shop, profile, skillgames, campaign, mp, social, render, main. They share one global scope: top-level `const`/`let`/`function`
+- Classic `<script src>` tags (no ES modules), all `'use strict'`, loaded in this order: engine, skills, hybrid, ai, ui, shop, daily, profile, skillgames, campaign, mp, social, render, main. They share one global scope: top-level `const`/`let`/`function`
   of one file are visible in all others.
 - Load-time code may only use the same or earlier files; calls inside functions are fine.
 - New top-level names must not clash with existing ones (or with browser globals like `name`, `top`, `screen`).
@@ -42,7 +43,7 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 
 ## Testing
 - Serve the repo root with any static server (`python3 -m http.server`); Playwright is available. Console: `window.__kh` (`G`, `MP`, `SG`, `CA`, `prof()`, `slotProf`, `caForceWin(i)`, ...).
-- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/probabilities.test.js` (all skill rolls, 10k each), `node tests/hybrid.test.js` (P4 rules), `node tests/social.test.js` (P5 profile cleaning, board dedupe, emote limit), `node tests/skillgames.test.js` (P6), `node tests/campaign.test.js` (P7), `node tests/sim-progress.js` (days to 99, also with campaign bonus), `node tests/balance.js` (P8 rally/match sim 60/80/99, fault/recycle rates, balance table in its header). Exit code != 0 = fail.
+- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/probabilities.test.js` (all skill rolls, 10k each), `node tests/hybrid.test.js` (P4 rules), `node tests/social.test.js` (P5 profile cleaning, board dedupe, emote limit), `node tests/skillgames.test.js` (P6), `node tests/campaign.test.js` (P7), `node tests/daily.test.js` (coins by strength, daily challenges), `node tests/sim-progress.js` (days to 99, also with campaign bonus; includes `plan.chal` challenge coins), `node tests/balance.js` (P8 rally/match sim 60/80/99, fault/recycle rates, balance table in its header). Exit code != 0 = fail.
 - MP test: two tabs with `?bc` in one browser context (create, `#mpHy`, join with the code, Start). They share localStorage (same `pid`): give the 2nd page
   its own in-memory `localStorage` via an init script to test profiles/board. A script bot can call `hostInput(slot, k, dx, dy, ht)` on the host (P8: a competent bot wins Classic + Hybrid vs. the computer).
 - P5 profiles: join sends `{t:'prof'}` (`profWire`), host cleans it (`profClean`: skills 60..99, known perks, name) into `MP.slots[i].prof` and resyncs;

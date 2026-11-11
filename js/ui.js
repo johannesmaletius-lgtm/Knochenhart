@@ -25,7 +25,7 @@ function demoBump() {
 function startGame() {
   audioInit();
   G.mode = 'play'; G.paused = false; G.score = [0, 0]; G.server = 1; G.meter = 0; G.combo = 0; G.fire = false; G.streak = 0; G.aceRun = 0; G.lastAim = null;
-  G.hist = { L: 0, R: 0, LOB: 0 }; G.stats = newStats(); AI.start(); G.pops.length = 0; G.ev.length = 0; G.fade = 1;
+  G.hist = { L: 0, R: 0, LOB: 0 }; G.stats = newStats(); dailyStart(); AI.start(); G.pops.length = 0; G.ev.length = 0; G.fade = 1;
   showOnly(null);
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
   setHint('');
@@ -47,6 +47,7 @@ function gameOver() {
   const rows = [['Perfect', s.perfect], ['Rally', s.maxRally], ['Aces', s.aces]];
   $('#ovStats').innerHTML = rows.map(r => '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>').join('');
   showCoinWin(win);
+  dailyMatch(win);
   sgEnd();
   caOver(win);
   updOverMeta();
@@ -62,11 +63,11 @@ function togglePause(force) {
 }
 function showOnly(id) {
   if (id === 'over' && !MP.net) $('#againBtn').hidden = false;
-  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop', 'skillOv', 'campOv']) $('#' + k).hidden = k !== id;
+  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop', 'skillOv', 'campOv', 'dailyOv']) $('#' + k).hidden = k !== id;
   $('#pauseBtn').hidden = G.mode !== 'play' && G.mode !== 'mp';
   if (typeof emoteUI === 'function') emoteUI();
-  if (id === 'menu') { updRecord(); updCoins(); updMenuMeta(); }
-  if (id !== 'over') $('#ovCoins').hidden = $('#ovCamp').hidden = true;
+  if (id === 'menu') { updRecord(); updCoins(); updMenuMeta(); dailyMenu(); }
+  if (id !== 'over') $('#ovCoins').hidden = $('#ovCamp').hidden = $('#ovDaily').hidden = true;
 }
 function updRecord() {
   const rec = store.get('rec', null);
@@ -74,6 +75,7 @@ function updRecord() {
   const w = r ? r[0] : 0, l = r ? r[1] : 0;
   $('#stW').textContent = w; $('#stL').textContent = l;
   $('#stR').textContent = w + l ? Math.round(w / (w + l) * 100) + '%' : '–';
+  if (typeof earnWin === 'function') $('#stPay').textContent = '+' + earnWin({ lv: G.level }).n; // coins a win pays here (daily.js loads later)
 }
 
 /* ---------------- input ---------------- */

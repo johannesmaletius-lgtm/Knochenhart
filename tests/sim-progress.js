@@ -13,9 +13,10 @@ function run(winRate, camp) {
   let coins = 0, m = 0, k = 0;
   for (let day = 0; day < 365; day++) {
     let bonus = true;
+    coins += SKILLS.plan.chal; // daily challenges (expected coins per day)
     for (let i = 0; i < perDay; i++, m++) {
       if (rnd() < winRate) {
-        coins += bonus ? E.daily : E.win; bonus = false;
+        coins += bonus ? E.win * E.dailyMul : E.win; bonus = false;
         if (camp && k < st.length && S.ovr(p) >= st[k].ovr - SKILLS.plan.campEdge) coins += st[k++].c;
         else if (camp && k) coins += Math.round(st[k - 1].c * SKILLS.camp.repeat);
       } else coins += E.loss;
@@ -40,7 +41,7 @@ const E = SKILLS.earn, P = SKILLS.plan;
 console.log('cost per level 60..98:', Array.from({ length: SKILLS.max - SKILLS.min }, (_, i) => S.levelCost(SKILLS.min + i)).join(' '));
 console.log('one skill 60->99:', S.costTo(SKILLS.min, SKILLS.max), 'coins, all six:', S.totalCost(), 'coins');
 console.log('income/day at plan (' + P.matchesPerDay + ' matches, ' + P.winRate * 100 + '% wins):',
-  (P.matchesPerDay * (P.winRate * E.win + (1 - P.winRate) * E.loss) + (E.daily - E.win)).toFixed(0), 'coins (approx.)');
+  (P.matchesPerDay * (P.winRate * E.win + (1 - P.winRate) * E.loss) + E.win * (E.dailyMul - 1) + P.chal).toFixed(0), 'coins (approx.)');
 for (const w of [0.3, 0.4, 0.5, 0.6, 0.7]) {
   const s = stats(w, 2000);
   console.log('win rate ' + (w * 100).toFixed(0).padStart(2) + '%: days to 99 mean ' + s.mean.toFixed(2) + '  (p10 ' + s.p10.toFixed(2) + ', p90 ' + s.p90.toFixed(2) + ')');
