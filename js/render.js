@@ -177,17 +177,18 @@ function drawHUD() {
   }
 }
 /* scoreboard: HTML on top of the canvas, touched only when something changes */
-const BD = { el: $('#board'), sc: [$('#sc0'), $('#sc1')], last: [-1, -1], srv: [$('#srvL'), $('#srvR')], mt: $('#meterBar'), wall: $('#wallBar'), chip: $('#sbChip'), key: '', mkey: '', wkey: '', ckey: '', skin: '', mp: null };
+const BD = { el: $('#board'), sc: [$('#sc0'), $('#sc1')], last: [-1, -1], srv: [$('#srvL'), $('#srvR')], mt: $('#meterBar'), wall: $('#wallBar'), chip: $('#sbChip'), key: '', mkey: '', wkey: '', ckey: '', skin: '', mp: null, opp: '' };
 function updBoard() {
   const on = G.mode === 'play' || G.mode === 'mp';
   if (BD.el.hidden === on) BD.el.hidden = !on;
   if (!on) { BD.last = [-1, -1]; return; }
   const mpv = G.mode === 'mp' && MP.view;
   const SC = mpv ? mpv.score : G.score, SV = mpv ? mpv.server : G.server, MT = mpv ? mpv.meter : G.meter, FI = mpv ? mpv.fire : G.fire;
-  if (BD.skin !== mySkin || BD.mp !== !!mpv) {
-    BD.skin = mySkin; BD.mp = !!mpv;
-    $('#sbImgL').src = skinIcon(SKIN[mySkin]); $('#sbImgR').src = skinIcon(null, true);
-    $('#sbNameL').textContent = mpv ? 'US' : 'YOU'; $('#sbNameR').textContent = mpv ? 'THEM' : ['EASY', 'CPU', 'HARD'][G.level] || 'CPU';
+  const oppSk = !mpv && CA.on ? caStages()[CA.i].skin : ''; // P7 campaign: the stage skin on the right
+  if (BD.skin !== mySkin || BD.mp !== !!mpv || BD.opp !== oppSk) {
+    BD.skin = mySkin; BD.mp = !!mpv; BD.opp = oppSk;
+    $('#sbImgL').src = skinIcon(SKIN[mySkin]); $('#sbImgR').src = oppSk ? skinIcon(SKIN[oppSk]) : skinIcon(null, true);
+    $('#sbNameL').textContent = mpv ? 'US' : 'YOU'; $('#sbNameR').textContent = mpv ? 'THEM' : oppSk ? SKIN[oppSk].n : ['EASY', 'CPU', 'HARD'][G.level] || 'CPU';
   }
   for (let i = 0; i < 2; i++) {
     if (SC[i] === BD.last[i]) continue;

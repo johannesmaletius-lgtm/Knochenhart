@@ -14,8 +14,8 @@ const SKILLS = {
   cost: { base: 0.75, grow: 1.8, pow: 2 },
   // coins per match (shop.js pays these); daily = first win of the day instead of win
   earn: { win: 10, loss: 0, daily: 20 },
-  // progression target: normal play
-  plan: { matchesPerDay: 20, winRate: 0.5, days: 3 },
+  // progression target: normal play; campaign (P7): stage cleared once OVR >= stage OVR - campEdge, still >= campMin days
+  plan: { matchesPerDay: 20, winRate: 0.5, days: 3, campEdge: 4, campMin: 2.5 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
   // tiers: raw err < perfect = perfect (pure timing); else effective err (1 - quality) < net.okay = good, else weak
@@ -49,6 +49,19 @@ const SKILLS = {
   // the computer's auto spread (rest raises the lowest skill); MP: wait = s to spend, the phone auto-spends the rest grace s
   // before the end, the host waits grace s longer, then auto-spends for anyone missing; coinMul = coin reward x (1 = as normal)
   sg: { share: 0.5, aiMix: 0.35, wait: 45, grace: 1.5, coinMul: 1 },
+  // P7 campaign (js/campaign.js): stages = shop skins (SKINS ids) with rising OVR; focus = skill kept `lead` levels above the rest;
+  // c = bonus coins on the first win (on top of the normal match coins), later wins pay round(c x repeat). Opponent AI: level
+  // (G.level arrays) 0 below lv[0] OVR, 1 below lv[1], else 2; D() base 60 -> 99 = d. Bonus pool ~10% of totalCost(): with it
+  // tests/sim-progress.js (stage cleared once OVR >= ovr - plan.campEdge, worst-case replays) stays >= plan.campMin days
+  camp: {
+    stages: [
+      { skin: 'knochen', ovr: 60, c: 1 }, { skin: 'neon', ovr: 64, focus: 'recv', c: 1 }, { skin: 'nacht', ovr: 68, focus: 'dig', c: 2 },
+      { skin: 'eis', ovr: 72, focus: 'block', c: 2 }, { skin: 'lava', ovr: 76, focus: 'spike', c: 3 }, { skin: 'pirat', ovr: 80, focus: 'lob', c: 3 },
+      { skin: 'teufel', ovr: 85, focus: 'serve', c: 4 }, { skin: 'kuerbis', ovr: 90, focus: 'dig', c: 4 }, { skin: 'geist', ovr: 95, focus: 'lob', c: 5 },
+      { skin: 'koenig', ovr: 99, c: 7 }
+    ],
+    lead: 12, repeat: 0.1, lv: [72, 86], d: [0.1, 0.55]
+  },
   // skill badge at 90: pick one perk in the same area; v = effect value for the engine:
   // hotHand: fireball bar length x v; heavyArm: + v spike quality; feather: lob dig chance x (1 - v); sneaky: lobs feed
   // the AI read x (1 - v); platform: receive timing err x (1 - v); calm: failed late receives x v; catReflex: dive reach x v;

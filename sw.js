@@ -1,7 +1,7 @@
 // Offline cache. The page itself is loaded from the network first (so an update shows up at once)
 // and only falls back to the cache offline; fonts, icons and libraries are served from the cache.
-const CACHE = 'volleyskull-premium-11';
-const ASSETS = ["./", "index.html", "js/engine.js", "js/skills.js", "js/hybrid.js", "js/ai.js", "js/ui.js", "js/shop.js", "js/profile.js", "js/skillgames.js", "js/mp.js", "js/social.js", "js/render.js", "js/main.js", "manifest.webmanifest", "icons/favicon-32.png", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "fonts/silkscreen-400-latin.woff2", "fonts/silkscreen-700-latin.woff2", "fonts/jersey10-latin.woff2", "lib/trystero.min.js"];
+const CACHE = 'volleyskull-premium-12';
+const ASSETS = ["./", "index.html", "js/engine.js", "js/skills.js", "js/hybrid.js", "js/ai.js", "js/ui.js", "js/shop.js", "js/profile.js", "js/skillgames.js", "js/campaign.js", "js/mp.js", "js/social.js", "js/render.js", "js/main.js", "manifest.webmanifest", "icons/favicon-32.png", "icons/apple-touch-icon.png", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "fonts/silkscreen-400-latin.woff2", "fonts/silkscreen-700-latin.woff2", "fonts/jersey10-latin.woff2", "lib/trystero.min.js"];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });

@@ -390,7 +390,7 @@ function runEv() {
   for (let i = 0; i < G.ev.length; i++) { const e = G.ev[i]; if (G.t >= e.t) { G.ev.splice(i, 1); i--; e.fn(); } }
 }
 function D() {
-  const base = [0.1, 0.33, 0.5][G.level] || 0.33;
+  const base = CA.on ? CA.d : [0.1, 0.33, 0.5][G.level] || 0.33; // P7 campaign: base from the stage OVR
   const prog = (G.score[0] + G.score[1]) / 28, lead = (G.score[0] - G.score[1]) / 14;
   return clamp(base + prog * 0.4 + lead * 0.35, 0, 1);
 }
@@ -474,7 +474,8 @@ function startRally() {
 const fireOn = () => unlocked(PROFILE, 'fireball');
 const meterMax = () => fireMax(PROFILE, BAL.meterMax);
 // opponent skills follow the difficulty (SKILLS.ai)
-const oppProf = () => SG.on && SG.opp ? SG.opp : aiProfile(D()); // P6 Skill Games: the computer's budget profile
+// P6 Skill Games: the computer's budget profile; P7 campaign: the stage profile (caProfile)
+const oppProf = () => SG.on && SG.opp ? SG.opp : CA.on && CA.opp ? CA.opp : aiProfile(D());
 function addMeter(n) {
   if (G.mode !== 'play' || G.fire || !fireOn()) return;
   G.meter = clamp(G.meter + n, 0, meterMax());

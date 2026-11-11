@@ -3,6 +3,7 @@
 /* ---------------- menu demo ---------------- */
 function menuScene() {
   sgClose(); sgEnd(); SG.again = null; // P6: a Skill Games profile never outlives its match
+  caEnd(); CA.again = -1; $('#againBtn').textContent = 'Again'; // P7: campaign difficulty back to yours
   me.skin = mySkin; mate.skin = oA.skin = oB.skin = null; mate.glow = oB.glow = false;
   G.mode = 'menu'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 0; G.fadeV = 0;
   resetCourt();
@@ -34,9 +35,11 @@ function gameOver() {
   G.mode = 'over';
   const win = G.score[0] > G.score[1];
   SFX.match(win);
-  const rec = store.get('rec', { 0: [0, 0], 1: [0, 0], 2: [0, 0] });
-  rec[G.level] = rec[G.level] || [0, 0]; rec[G.level][win ? 0 : 1]++;
-  store.set('rec', rec);
+  if (!CA.on) { // the menu record is per difficulty; campaign matches only count as stage progress
+    const rec = store.get('rec', { 0: [0, 0], 1: [0, 0], 2: [0, 0] });
+    rec[G.level] = rec[G.level] || [0, 0]; rec[G.level][win ? 0 : 1]++;
+    store.set('rec', rec);
+  }
   $('#ovTitle').textContent = win ? 'Victory!' : 'Defeat';
   $('#ovTitle').className = win ? 'win' : 'lose';
   $('#ovScore').textContent = G.score[0] + ' : ' + G.score[1];
@@ -45,6 +48,7 @@ function gameOver() {
   $('#ovStats').innerHTML = rows.map(r => '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>').join('');
   showCoinWin(win);
   sgEnd();
+  caOver(win);
   updOverMeta();
   if (win) { setPose(me, 'cheer', 0); setBase(me, 'cheer'); G.hype = 4; } else { setBase(me, 'sad'); setPose(me, 'sad', 0); }
   showOnly('over');
@@ -58,11 +62,11 @@ function togglePause(force) {
 }
 function showOnly(id) {
   if (id === 'over' && !MP.net) $('#againBtn').hidden = false;
-  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop', 'skillOv']) $('#' + k).hidden = k !== id;
+  for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop', 'skillOv', 'campOv']) $('#' + k).hidden = k !== id;
   $('#pauseBtn').hidden = G.mode !== 'play' && G.mode !== 'mp';
   if (typeof emoteUI === 'function') emoteUI();
   if (id === 'menu') { updRecord(); updCoins(); updMenuMeta(); }
-  if (id !== 'over') $('#ovCoins').hidden = true;
+  if (id !== 'over') $('#ovCoins').hidden = $('#ovCamp').hidden = true;
 }
 function updRecord() {
   const rec = store.get('rec', null);
@@ -169,7 +173,7 @@ $('#howBtn').addEventListener('click', () => openHow('menu'));
 $('#howOk').addEventListener('click', () => { if ($('#howOk').dataset.next === 'play') startGame(); else showOnly('menu'); });
 $('#resumeBtn').addEventListener('click', () => togglePause(false));
 $('#quitBtn').addEventListener('click', () => { G.paused = false; $('#pauseOv').hidden = true; if (MP.net) mpLeave(); else menuScene(); });
-$('#againBtn').addEventListener('click', () => { if (MP.net) mpGoReq(); else if (SG.again) sgOpenSP(true); else startGame(); });
+$('#againBtn').addEventListener('click', () => { if (MP.net) mpGoReq(); else if (SG.again) sgOpenSP(true); else if (CA.again >= 0) caStart(CA.again); else startGame(); });
 $('#menuBtn').addEventListener('click', () => { if (MP.net) mpLeave(); else menuScene(); });
 $('#pauseBtn').addEventListener('click', () => togglePause());
 function updSoundIcon() { $('#waves').style.display = muted ? 'none' : ''; $('#mute').style.display = muted ? '' : 'none'; $('#soundBtn').setAttribute('aria-label', muted ? 'Unmute' : 'Mute'); }
