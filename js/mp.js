@@ -101,7 +101,7 @@ function netJoin(code, h) {
 }
 
 /* ---------- lobby ---------- */
-function mpMsg(s) { $('#mpMsg').textContent = s; }
+function mpMsg(s) { $('#mpMsg').textContent = s; waitFx('#mpMsg', /^Connecting/.test(s)); }
 function mpOpen() { mpCardHide(); showOnly('mpOv'); $('#mpStart').hidden = false; $('#mpLobby').hidden = true; mpMsg(''); }
 function mpNewCode() { let s = ''; for (let i = 0; i < 4; i++) s += MPCODE[(Math.random() * MPCODE.length) | 0]; return s; }
 async function mpCreate() {
@@ -183,7 +183,9 @@ function mpLobbyDraw() {
   const hb = $('#mpHy'); hb.textContent = 'Mode: ' + (MP.hy ? 'Hybrid' : 'Classic'); hb.disabled = !MP.host || G.mode === 'mp'; hb.setAttribute('aria-pressed', String(MP.hy));
   const sb = $('#mpSg'); sb.textContent = 'Skill Games: ' + (MP.sg ? 'On' : 'Off'); sb.disabled = !MP.host || G.mode === 'mp' || !!MP.sgOpen; sb.setAttribute('aria-pressed', String(!!MP.sg));
   $('#mpHyInfo').textContent = [MP.hy ? 'Hybrid: both roles, rotate on side-out, set by lane' : '', MP.sg ? 'Skill Games: all start at 60, spend ' + sgBudget() + ' coins for this match' : ''].filter(Boolean).join(' · ');
-  if (!/copied|http/.test($('#mpWait').textContent) || !MP.host) $('#mpWait').textContent = MP.host ? '' : 'Waiting for start';
+  const alone = MP.slots.filter(Boolean).length < 2, waiting = G.mode !== 'mp' && (!MP.host || alone);
+  if (!/copied|http/.test($('#mpWait').textContent) || !MP.host) $('#mpWait').textContent = MP.host ? (alone ? 'Waiting for players…' : '') : 'Waiting for the host to start…';
+  waitFx('#mpWait', waiting);
 }
 function inviteURL() {
   const base = /github\.io$/.test(location.hostname) || location.hostname === 'localhost' ? location.origin + location.pathname : 'https://johannesmaletius-lgtm.github.io/Knochenhart/';

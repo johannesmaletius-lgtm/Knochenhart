@@ -183,3 +183,29 @@ $('#soundBtn').addEventListener('click', () => { muted = !muted; store.set('mute
 updSoundIcon();
 setLevel(G.level);
 
+/* ---------------- waiting screens: your skull keeps a ball up + rotating tips ---------------- */
+const WAIT_TIPS = ['Hit where the block is not.', 'Spike off the block, the daily challenges love it.', 'Hard wins pay ×1.6 coins.',
+  'Full skull bar: fireball!', 'Block up high? Lob over it.', 'First win of the day pays double.', 'Beat a stronger skull: underdog bonus.',
+  'Short ball? Swipe ↑ and dive.', 'Red X: the ball goes out. Let it go.'];
+const WAIT = { tick: 0, i: Math.floor(Math.random() * WAIT_TIPS.length) };
+// show / hide the animation right before the element anchor (one per anchor, made on first use)
+function waitFx(anchor, on) {
+  const a = typeof anchor === 'string' ? $(anchor) : anchor; if (!a) return;
+  let fx = a.previousElementSibling;
+  if (!fx || !fx.classList.contains('waitfx')) {
+    if (!on) return;
+    fx = document.createElement('div'); fx.className = 'waitfx'; fx.hidden = true; fx.setAttribute('aria-hidden', 'true');
+    fx.innerHTML = '<div class="wstage"><i class="wball"></i><img class="px wsk" alt=""><i class="wsh"></i></div><p class="wtip"></p>';
+    a.before(fx);
+  }
+  if (on && fx.hidden) { fx.querySelector('.wsk').src = skinIcon(SKIN[mySkin] || SKINS[0]); waitTip(fx); }
+  fx.hidden = !on;
+  const any = document.querySelector('.waitfx:not([hidden])');
+  if (any && !WAIT.tick) WAIT.tick = setInterval(() => document.querySelectorAll('.waitfx:not([hidden])').forEach(waitTip), 3600);
+  if (!any && WAIT.tick) { clearInterval(WAIT.tick); WAIT.tick = 0; }
+}
+function waitTip(fx) {
+  const t = fx.querySelector('.wtip');
+  t.textContent = WAIT_TIPS[WAIT.i++ % WAIT_TIPS.length];
+  t.classList.remove('in'); void t.offsetWidth; t.classList.add('in');
+}
