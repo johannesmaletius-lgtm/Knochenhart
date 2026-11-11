@@ -40,6 +40,12 @@ ok(P.meetNew(seen, P.profClean(w), 'me') === false, 'same player again (lobby re
 const c2 = P.profClean(Object.assign({}, w, { sk: Object.assign({}, sk, { lob: 80 }) }));
 ok(P.meetNew(seen, c2, 'me') === true, 'changed profile stored again');
 ok(P.meetNew(seen, P.profClean({ id: 'me', name: 'Fake' }), 'me') === false, 'own id never stored from a peer');
+// P8: a ?ovr= debug profile is sent marked (only then), plays, but never goes on a board
+const dw = JSON.parse(JSON.stringify(P.profWire(Object.assign({}, card, { id: 'dbg1', dbg: true, sk: { spike: 99, lob: 99, recv: 99, dig: 99, block: 99, serve: 99 } }))));
+const dc = P.profClean(dw);
+ok(dw.dbg === true && !('dbg' in w) && dc.dbg === true && !('dbg' in c), 'debug flag only on debug profiles, survives cleaning');
+ok(dc.ovr === 99 && P.meetNew(seen, dc, 'me') === false, 'debug profile (OVR 99) not stored on the board');
+ok(P.profClean(Object.assign({}, w, { dbg: 'yes' })).dbg === undefined, 'dbg must be exactly true');
 let L = [];
 for (const p of [c, c2, c, empty]) L = P.lbAdd(L, Object.assign({ t: 1 }, p), SKILLS.board.max, SKILLS.board.nameMax);
 ok(L.length === 2 && L.filter(x => x.id === 'ab12cd34').length === 1, 'board: one entry per player id');

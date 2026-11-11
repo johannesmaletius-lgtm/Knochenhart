@@ -38,13 +38,15 @@ function profClean(raw, nameMax) {
   for (const id of SKILLS.ids) { const v = Math.round(+sk[id]); p.sk[id] = v >= SKILLS.min ? Math.min(SKILLS.max, v) : SKILLS.min; }
   for (const id of SKILLS.ids) if (typeof bd[id] === 'string') pickPerk(p, id, bd[id]);
   const skin = typeof raw.skin === 'string' && /^[A-Za-z0-9_-]{1,16}$/.test(raw.skin) ? raw.skin : '';
-  return { id: raw.id, name: nameClean(raw.name, nameMax || SKILLS.board.nameMax), ovr: ovr(p), sk: p.sk, badge: p.badge, skin };
+  const out = { id: raw.id, name: nameClean(raw.name, nameMax || SKILLS.board.nameMax), ovr: ovr(p), sk: p.sk, badge: p.badge, skin };
+  if (raw.dbg === true) out.dbg = true; // debug profile (?ovr=): plays, but never goes on a board
+  return out;
 }
-// my card on the wire: no timestamp, the receiver recomputes the OVR from the skills
-const profWire = c => ({ id: c.id, name: c.name, sk: Object.assign({}, c.sk), badge: Object.assign({}, c.badge), skin: c.skin });
-// met players go into the board only when new or changed (seen: Map id -> last key), never my own id
+// my card on the wire: no timestamp, the receiver recomputes the OVR from the skills; dbg only when set
+const profWire = c => Object.assign({ id: c.id, name: c.name, sk: Object.assign({}, c.sk), badge: Object.assign({}, c.badge), skin: c.skin }, c.dbg ? { dbg: true } : {});
+// met players go into the board only when new or changed (seen: Map id -> last key), never my own id or a debug profile
 function meetNew(seen, p, selfId) {
-  if (!p || !p.id || p.id === selfId) return false;
+  if (!p || !p.id || p.id === selfId || p.dbg) return false;
   const k = JSON.stringify([p.name, p.sk, p.badge, p.skin]);
   if (seen.get(p.id) === k) return false;
   seen.set(p.id, k); return true;
@@ -55,7 +57,8 @@ if (typeof module !== 'undefined' && typeof document === 'undefined') module.exp
 /* ---------------- browser: own id + name, stored board ---------------- */
 const PID = typeof store !== 'undefined' ? store.get('pid', null) || (() => { const id = Math.random().toString(36).slice(2, 10); store.set('pid', id); return id; })() : '';
 let myName = typeof store !== 'undefined' ? nameClean(store.get('name', ''), SKILLS.board.nameMax) : 'Player';
-const myCard = () => ({ id: PID, name: myName, ovr: ovr(PROFILE), sk: Object.assign({}, PROFILE.sk), badge: Object.assign({}, PROFILE.badge), skin: mySkin, t: Date.now() });
+// dbg: a ?ovr= debug profile (tmp) is sent marked, peers never put it on their board (P8)
+const myCard = () => ({ id: PID, name: myName, ovr: ovr(PROFILE), sk: Object.assign({}, PROFILE.sk), badge: Object.assign({}, PROFILE.badge), skin: mySkin, t: Date.now(), dbg: !!PROFILE.tmp });
 // store a player (own card now, MP peers in P5): { id, name, sk, badge, skin } (ovr computed from sk when missing)
 function leaderboardAdd(p) {
   const e = Object.assign({ t: Date.now() }, p);

@@ -476,6 +476,8 @@ const meterMax = () => fireMax(PROFILE, BAL.meterMax);
 // opponent skills follow the difficulty (SKILLS.ai)
 // P6 Skill Games: the computer's budget profile; P7 campaign: the stage profile (caProfile)
 const oppProf = () => SG.on && SG.opp ? SG.opp : CA.on && CA.opp ? CA.opp : aiProfile(D());
+// P8: their spike / serve fault chance: campaign / Skill Games opponents by their profile (SKILLS.ai.err), else the level table lv
+const oppErr = (kind, lv) => SG.on && SG.opp || CA.on && CA.opp ? aiErr(oppProf(), kind) : lv[G.level] || lv[1];
 function addMeter(n) {
   if (G.mode !== 'play' || G.fire || !fireOn()) return;
   G.meter = clamp(G.meter + n, 0, meterMax());

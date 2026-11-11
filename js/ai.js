@@ -96,7 +96,7 @@ function oppServeHit() {
   setPose(oA, G.oppJump ? 'spikeM' : 'floatServeM', 0.3, 30); SFX.serve();
   const lane = pickLane();
   const backToBase = () => after(0.35, () => { oA.tx = pick([-2.4, 0, 2.4]); oA.tz = LIB_Z; oA.sx = oA.sz = 6; setBase(oA, 'ready'); });
-  const err = [0.1, 0.07, 0.045][G.level] || 0.07, r = Math.random();
+  const err = oppErr('serve', [0.1, 0.07, 0.045]), r = Math.random();
   if (r < err * 0.5) {
     // into the net
     G.phase = 'served';
@@ -210,7 +210,7 @@ function oppAttack(O, d) {
   setPose(oA, 'spikeM', 0.14, 40); setBase(oA, 'followM'); SFX.spike(); shake(2); G.stop = 0.04;
   sparks(ball.x, ball.y, ball.z, 5, [C.bone, C.bad]);
   const T = lerp(BAL.oppSpikeT[0], BAL.oppSpikeT[1], d) * (1 - AI.speed());
-  const err = [0.09, 0.06, 0.04][G.level] || 0.06, r = Math.random();
+  const err = oppErr('spike', [0.09, 0.06, 0.04]), r = Math.random();
   if (r < err * 0.45) { intoNet(-1, LX[al] * 0.5, () => point(0, 'NET')); after(0.6, () => react(oA, 'headHands', 1, 12)); G.phase = 'over'; return; }
   if (r < err) { outBall(Math.random() < 0.6 ? me.lane : al, T * 1.2, lerp(BAL.markDelay[0], BAL.markDelay[1], d)); return; }
   const md = lerp(BAL.markDelay[0], BAL.markDelay[1], d), tac = O.fake ? 'aFake' : al === me.lane ? 'aNear' : 'aFar';

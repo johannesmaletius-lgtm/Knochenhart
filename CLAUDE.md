@@ -8,7 +8,7 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 |---|---|
 | `index.html` | markup + CSS (menus, shop, skills, scoreboard, MP lobby, overlays), loads the scripts below, registers `sw.js` |
 | `js/engine.js` | helpers (`$`, `clamp`, `lerp`, `rand`), `store`, pixel font + `text()`, drawing primitives, camera `CAM`/`proj`, world constants (`LX`, `DZ`, ...), `POSES`, figures (`me`, `mate`, `oA`, `oB`, `FIGS`), `ball`, particles/popups, sound `SFX`, game state `G`, hints, balance `BAL`, rally setup, our defense/attack/serve (skill hooks: timing tiers, faults, dive, lob aim, float, fireball lock, `hitPop` EARLY/LATE), `point()` |
-| `js/skills.js` | `SKILLS` table (skills 60..99, OVR, costs, income, timing/net-fault/recycle curves, unlocks, perks, dig/dive/mate block, AI profile), helpers (`ovr`, `levelCost`, `unlocked`, `perk`), pure P3 decisions (`timingErr`, `hitTier`, `hitFault`, `blockRoll`, `stuffChance`, `recycleP`, `lateSaveP`, `diveReach`, `fireMax`, `aiProfile`), `PROFILE` (`knochenhart.skills`), `?ovr=NN`, `RNG` (`?seed=N`); also a Node module |
+| `js/skills.js` | `SKILLS` table (skills 60..99, OVR, costs, income, timing/net-fault/recycle curves, unlocks, perks, dig/dive/mate block, AI profile), helpers (`ovr`, `levelCost`, `unlocked`, `perk`), pure P3 decisions (`timingErr`, `hitTier`, `hitFault`, `blockRoll`, `stuffChance`, `recycleP`, `lateSaveP`, `diveReach`, `fireMax`, `aiProfile`, `aiErr`), MP `blockQ`, `PROFILE` (`knochenhart.skills`), `?ovr=NN`, `RNG` (`?seed=N`); also a Node module |
 | `js/hybrid.js` | P4 Hybrid MP rules, pure (`hyRotate`, `hySlot`/`hyFig`/`hyCtl`, `hyPlan`, `hyTouch`, `hySetLane`, `hyLaneResult`, `hyAttackDir`, `hyLobLane`, bot mates); numbers in `SKILLS.hy`; also a Node module |
 | `js/ai.js` | opponent brain `AI`/`PLANS`, opponent serve, opponent offense (pass, set, attack), our net block vs. it (`mateGraze`, `mateStuff`) |
 | `js/ui.js` | menu demo, game lifecycle (`startGame`, `gameOver`, pause), input (`onSwipe`, `onTap`, pointer/keys), menu button wiring |
@@ -35,26 +35,26 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 - One phase = one commit; afterwards a short summary (max. 5 lines).
 - All numbers (curves, costs, thresholds, probabilities) live in **one** table (`SKILLS`/`BAL`), never scattered in code.
 - Check every probability with a headless Node script (10k rolls) against the target values, not by playing.
-- Debug URL params: `?ovr=99` = all skills 99 for this page load (not saved), `?seed=1` = deterministic `RNG` for skill rolls; `?bc` = multiplayer over BroadcastChannel (same browser), `?lag=ms`, `?relay=`.
+- Debug URL params: `?ovr=99` = all skills 99 for this page load (not saved; MP peers get it marked `dbg`: shown "DBG", never on a board), `?seed=1` = deterministic `RNG` for skill rolls; `?bc` = multiplayer over BroadcastChannel (same browser), `?lag=ms`, `?relay=`.
 - Saving: use the existing `store.get/set` (keys are stored as `knochenhart.*`).
 - Offline/PWA must keep working: on every change to cached files bump `CACHE` in `sw.js`; new files go into `ASSETS`.
 - No behaviour changes in refactors; keep the UI language and style as is.
 
 ## Testing
 - Serve the repo root with any static server (`python3 -m http.server`); Playwright is available. Console: `window.__kh` (`G`, `MP`, `SG`, `CA`, `prof()`, `slotProf`, `caForceWin(i)`, ...).
-- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/probabilities.test.js` (all skill rolls, 10k each), `node tests/hybrid.test.js` (P4 rules), `node tests/social.test.js` (P5 profile cleaning, board dedupe, emote limit), `node tests/skillgames.test.js` (P6), `node tests/campaign.test.js` (P7), `node tests/sim-progress.js` (days to 99, also with campaign bonus). Exit code != 0 = fail.
-- MP test: two tabs with `?bc` in one browser context (create, `#mpHy`, join with the code, Start). They share localStorage
-  (same `pid`): give the 2nd page its own in-memory `localStorage` via an init script to test profiles/board.
-- P5 profiles: join sends `{t:'prof'}` (`profWire`), host cleans it (`profClean`: skills 60..99, known perks, name) into
-  `MP.slots[i].prof` and resyncs; clients clean the lobby list again. Emotes: `{t:'emo'}` -> host limit per slot -> fx `emo`.
+- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/probabilities.test.js` (all skill rolls, 10k each), `node tests/hybrid.test.js` (P4 rules), `node tests/social.test.js` (P5 profile cleaning, board dedupe, emote limit), `node tests/skillgames.test.js` (P6), `node tests/campaign.test.js` (P7), `node tests/sim-progress.js` (days to 99, also with campaign bonus), `node tests/balance.js` (P8 rally/match sim 60/80/99, fault/recycle rates, balance table in its header). Exit code != 0 = fail.
+- MP test: two tabs with `?bc` in one browser context (create, `#mpHy`, join with the code, Start). They share localStorage (same `pid`): give the 2nd page
+  its own in-memory `localStorage` via an init script to test profiles/board. A script bot can call `hostInput(slot, k, dx, dy, ht)` on the host (P8: a competent bot wins Classic + Hybrid vs. the computer).
+- P5 profiles: join sends `{t:'prof'}` (`profWire`), host cleans it (`profClean`: skills 60..99, known perks, name) into `MP.slots[i].prof` and resyncs;
+  clients clean the lobby list again. Emotes: `{t:'emo'}` -> host limit per slot -> fx `emo`.
 - Classic MP also uses the skills since P5 (spike/lob tiers + net faults, recycle); EARLY/LATE pops stay Hybrid-only. Hybrid (host decides, `MP.st.hy`): `MP.rot` = rotation
   (side-out rotates the team winning the serve, applied at next `mpRally`), `st.sw[t]` = front player dug -> back sets, front
   attacks (`hitIx`); `MP.fig` = my position, `MP.role` = my controls. Skills per slot: `slotProf(i)` reads `MP.slots[i].prof`
-  (filled on join; default `SKILLS.hy.defLv` 60, bots `aiProfile`): spike/lob tiers + net faults, recycle vs. stuff. EARLY/LATE via fx `hp`.
+  (filled on join; default `SKILLS.hy.defLv` 60, bots `aiProfile`): spike/lob tiers + net faults, recycle vs. stuff (+ `blockQ` by jump tier); Serve/Receive/Dig skills do not act in MP yet. EARLY/LATE via fx `hp`.
 - Hybrid decisions: lanes are team-local 0 left / 1 middle / 2 right ("hinten" = right lane, back set over the setter);
   tap = middle; straight up = dump; hitter may change lane until `laneLock` s before the hit, then one lane off = free ball
   ("Danke-Ball"), two off = floor. Aimed lob ↖/↗ needs no Lob 75 in Hybrid. Double touch is a guard (`mpContact`), the
   dig -> set -> attack plan avoids it; the block counts as the blocking team's touch. Bot setters set the hitter's lane.
 - P6 Skill Games: temp profile (`tmp`+`sg`, all 60, budget = `share` x `totalCost()`) edited on `#skillOv` (`pfSG` mode). SP swaps `PROFILE`
   for the match (`sgEnter`), `gameOver`/`menuScene` swap back; computer = `SG.opp`. MP: host `sgCheck`s into `MP.st.sgp` (wins in `slotProf`), never `prof`/board. Coins as normal (`coinMul` 1).
-- P7 Campaign: real `PROFILE`; `caStart` sets `oA/oB.skin`, `CA.opp` (`oppProf`), `G.level` (unsaved, `caEnd` restores) + `CA.d` (`D()`). Win: normal coins + stage bonus (full once), next stage, Again = Next; no menu record.
+- P7 Campaign: real `PROFILE`; `caStart` sets `oA/oB.skin`, `CA.opp` (`oppProf`), `G.level` (unsaved, `caEnd` restores) + `CA.d` (`D()`); their spike/serve faults `oppErr` = `aiErr(CA.opp)` (also SG, else the level table). Win: normal coins + stage bonus (full once), next stage, Again = Next; no menu record.

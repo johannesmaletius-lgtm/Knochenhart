@@ -174,7 +174,7 @@ function mpLobbyDraw() {
     const s = MP.slots[i], b = $('#slot' + i);
     // P5: name + OVR per slot (profile from the join), computer players by difficulty
     b.querySelector('b').textContent = !s ? 'CPU' : s.prof ? s.prof.name : s.id === MP.myId ? 'YOU' : 'P' + s.n;
-    b.querySelector('em').textContent = 'OVR ' + (!s ? ovr(aiProfile(mpDiff())) : s.prof ? s.prof.ovr : '–');
+    b.querySelector('em').textContent = 'OVR ' + (!s ? ovr(aiProfile(mpDiff())) : s.prof ? s.prof.ovr + (s.prof.dbg ? ' DBG' : '') : '–');
     b.querySelector('b').style.color = s && s.sk && SKIN[s.sk] && i !== MP.mySlot ? SKIN[s.sk].bone : '';
     b.setAttribute('aria-pressed', String(i === MP.mySlot));
     b.classList.toggle('taken', !!s && i !== MP.mySlot);
@@ -801,7 +801,7 @@ function mpAttack(a, dir, ht, aim) {
     return;
   }
   if (blocked) {
-    const bq = A.bq, m = { perfect: [0.4, 0.6, 0.15], good: [1, 1, 0], weak: [1.6, 1.5, -0.15] }[bq];
+    const m = SKILLS.blockQ[A.bq]; // block jump tier: tool / touch / stuff bonus
     const r = Math.random(), tool = BAL.tool[q] * m[0], touch = BAL.touch * m[1];
     if (r < tool) mpBlockOut(A, wx); else if (r < tool + touch) mpTouch(A, wx); else mpStuff(A, wx, m[2]);
     return;

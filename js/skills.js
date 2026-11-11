@@ -18,8 +18,9 @@ const SKILLS = {
   plan: { matchesPerDay: 20, winRate: 0.5, days: 3, campEdge: 4, campMin: 2.5 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
+  // P8 (tests/balance.js): 99 a bit stricter than P3 (0.55 / 0.4): very bad timing at 99 = weak, ~14 % net faults (60: 30 %)
   // tiers: raw err < perfect = perfect (pure timing); else effective err (1 - quality) < net.okay = good, else weak
-  timing: { pen: [1, 0.55], floor: [0, 0.4], perfect: 0.15 },
+  timing: { pen: [1, 0.65], floor: [0, 0.3], perfect: 0.15 },
   // net fault: 0 at timing "okay" or better (err <= okay), max at very bad (err >= 1), linear between
   net: { okay: 0.35, max: 0.3 },
   // P3 singleplayer effects. dig: scatter of our digs by Receive/Dig skill (60 -> 99)
@@ -29,9 +30,14 @@ const SKILLS = {
   // our net blocker vs. their spike: stuff chance by your Block skill (60 -> 99), x split once Split block is unlocked
   mateBlock: { stuff: [0.03, 0.09], split: 1.5 },
   // opponent skills = base + rise * D() (D = level + score pressure, 0..1); 66..77 keeps the old block/recycle feel
-  ai: { base: 66, rise: 11 },
+  // campaign / Skill Games opponents (explicit profile): spike / serve error chance (net + long) by its Spike / Serve skill;
+  // normal SP keeps the old G.level table (ai.js). Falls from above the old level-0 rate (60: easy first stage) to below level 2 (99)
+  ai: { base: 66, rise: 11, err: { spike: [[60, 0.11], [72, 0.075], [86, 0.05], [99, 0.03]], serve: [[60, 0.12], [72, 0.085], [86, 0.055], [99, 0.035]] } },
   // block recycle: chance the attacking team still saves a blocked ball, by the blocker's Block skill
   recycle: [[60, 0.7], [70, 0.45], [80, 0.25], [90, 0.1], [99, 0.03]],
+  // MP block jump tier -> [tool x, touch x, + stuff chance] on a blocked spike (mp.js mpAttack / mpStuff); good = the recycle curve
+  // as is; P8: a perfect jump stuffs more (+0.4, was +0.15) so a Block 60 player gets ~ the pre-P5 block points (tests/balance.js)
+  blockQ: { perfect: [0.3, 0.5, 0.4], good: [1, 1, 0], weak: [1.6, 1.5, -0.15] },
   // threshold unlocks: feature -> [skill, level]
   unlock: { lobAim: ['lob', 75], splitBlock: ['block', 75], float: ['serve', 75], dive: ['dig', 70], fireball: ['spike', 85] },
   unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball' },
@@ -204,6 +210,9 @@ function aiProfile(d) {
   p.tmp = true; return p;
 }
 
+// campaign / Skill Games opponent fault chance (kind 'spike' | 'serve') from its profile
+const aiErr = (p, kind) => curve(SKILLS.ai.err[kind], p.sk[kind]);
+
 /* ---------------- browser: own profile, ?ovr=NN debug override ---------------- */
 let PROFILE = null;
 if (typeof store !== 'undefined') {
@@ -222,4 +231,4 @@ function skillUp(id) {
 }
 
 if (typeof module !== 'undefined') module.exports = { SKILLS, curve, recycleChance, timingQ, netFault, levelCost, costTo, totalCost, skillsNew, ovr, unlocked, hasBadge, perk, hasPerk, pickPerk, trySkillUp, skillsLoad, skillsSave,
-  mulberry32, timingErr, effErr, hitTier, hitFault, blockRoll, stuffChance, recycleP, defSkill, lateSaveP, digWild, diveReach, diveSave, fireMax, aiProfile };
+  mulberry32, timingErr, effErr, hitTier, hitFault, blockRoll, stuffChance, recycleP, defSkill, lateSaveP, digWild, diveReach, diveSave, fireMax, aiProfile, aiErr };

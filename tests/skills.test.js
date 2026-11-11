@@ -51,7 +51,8 @@ near(rolls(S.netFault(1)), 0.3, 0.015, '10k rolls net fault');
 // timing scaling
 ok(S.timingQ(60, 0) === 1 && S.timingQ(99, 0) === 1, 'perfect timing = full quality');
 ok(S.timingQ(60, 1) < 0.05, 'skill 60: very bad timing is punished hard');
-ok(S.timingQ(99, 1) >= 0.4 && S.timingQ(99, 0.6) > S.timingQ(60, 0.6), 'skill 99: bad timing still decent');
+// P8: decent but not free (tests/balance.js: timing still counts at 99)
+ok(S.timingQ(99, 1) >= 0.3 && S.timingQ(99, 1) < 0.4 && S.timingQ(99, 0.6) > S.timingQ(60, 0.6), 'skill 99: bad timing still decent, not free');
 
 // unlocks
 const u = S.skillsNew();
