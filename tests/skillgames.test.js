@@ -75,5 +75,15 @@ ok(JSON.stringify(real) === realSnap, 'real profile unchanged');
 ok(JSON.stringify(mem) === snap && mem.coins === 123, 'saved skills and coins unchanged');
 ok(G.sgLeave(SG, PROFILE) === real, 'leaving twice is harmless');
 
+// presets: reset to 60, targets reached in order, whole budget used, preset perks, host check accepts them
+for (const pr of SKILLS.sg.presets) {
+  const x = G.sgNew(); G.sgUp(x, 'lob', B); x.badge.lob = 'feather';
+  G.sgPreset(x, B, pr.id);
+  ok(G.sgSpent(x) <= B && B - G.sgSpent(x) < Math.max(...SKILLS.ids.map(id => levelCost(x.sk[id]) || Infinity)), 'preset ' + pr.id + ': budget used, never over (' + G.sgSpent(x) + ')');
+  ok(pr.t.every(([id, to]) => x.sk[id] === to), 'preset ' + pr.id + ': targets reached ' + JSON.stringify(x.sk));
+  ok(Object.entries(pr.perk || {}).every(([id, k]) => x.badge[id] === k) && !x.badge.lob, 'preset ' + pr.id + ': preset perks only');
+  ok(!!G.sgCheck(G.sgWire(x), B), 'preset ' + pr.id + ': passes the host check');
+}
+ok(G.sgPreset(G.sgNew(), B, 'nope') === null, 'unknown preset refused');
 console.log((fails ? 'FAIL' : 'OK') + ' skillgames: ' + (n - fails) + '/' + n);
 process.exit(fails ? 1 : 0);

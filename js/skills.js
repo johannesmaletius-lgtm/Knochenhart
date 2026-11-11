@@ -77,7 +77,16 @@ const SKILLS = {
   // P6 Skill Games (js/skillgames.js): budget = round(share x coins for all skills 60 -> 99); aiMix = share of random picks in
   // the computer's auto spread (rest raises the lowest skill); MP: wait = s to spend, the phone auto-spends the rest grace s
   // before the end, the host waits grace s longer, then auto-spends for anyone missing; coinMul = coin reward x (1 = as normal)
-  sg: { share: 0.3, aiMix: 0.35, wait: 45, grace: 1.5, coinMul: 1 },
+  // presets (buttons on the spend screen, sgPreset): reset to 60, raise each [skill, target] in order, spread the rest evenly
+  // (lowest first); perk = badge picked for a skill that reaches 90. At budget 173: Attacker spike 99 / serve 80 / lob 75 / rest 69,
+  // Blocker block 99 / dig 80 / recv 75 / rest 69, Defender dig + recv 90 / rest ~71, All-round all ~79
+  sg: { share: 0.3, aiMix: 0.35, wait: 45, grace: 1.5, coinMul: 1,
+    presets: [
+      { id: 'att', n: 'Attacker', t: [['spike', 99], ['serve', 80], ['lob', 75]], perk: { spike: 'hotHand' } },
+      { id: 'blk', n: 'Blocker', t: [['block', 99], ['dig', 80], ['recv', 75]], perk: { block: 'longArms' } },
+      { id: 'def', n: 'Defender', t: [['dig', 90], ['recv', 90]], perk: { dig: 'catReflex', recv: 'platform' } },
+      { id: 'all', n: 'All-round', t: [] }
+    ] },
   // P7 campaign (js/campaign.js): stages = shop skins (SKINS ids) with rising OVR; focus = skill kept `lead` levels above the rest;
   // c = bonus coins on the first win (on top of the normal match coins), later wins pay round(c x repeat). Opponent AI: level
   // (G.level arrays) 0 below lv[0] OVR, 1 below lv[1], else 2; D() base 60 -> 99 = d. Bonus pool ~6% of totalCost(): with it

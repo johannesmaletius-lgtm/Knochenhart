@@ -33,7 +33,7 @@ Münzen sind dieselben wie im Shop. **Kosten pro Level fest nach Zehnerstufe:** 
 - Lob links/rechts (kurzer Ball) als Alternative zum Schlag.
 - **Early/Late-Anzeige** bei jedem Treffer. Keine Vibration.
 
-**Modi:** Normal (eigener OVR) · Skill Games (extra Modus: alle starten mit 60er-Char, bekommen **30 % der Münzen für Max 99 (173)**, verteilen sie vor dem Match, dann Match) · Singleplayer-Kampagne (auch hier skillen; Gegner = die einzelnen Skins mit eigenem OVR, aufsteigend).
+**Modi:** Normal (eigener OVR) · Skill Games (extra Modus: alle starten mit 60er-Char, bekommen **30 % der Münzen für Max 99 (173)**, Vorlagen Angreifer/Blocker/Verteidiger/Allrounder als Startpunkt, verteilen sie vor dem Match, dann Match) · Singleplayer-Kampagne (auch hier skillen; Gegner = die einzelnen Skins mit eigenem OVR, aufsteigend).
 **Social (lokal, kein Backend):** Rangliste lokal (alle bisher getroffenen Spieler + man selbst), Skill-Chart (Radar) mit allen Skills; tritt jemand der Lobby bei, sieht man seine Skills/OVR. Emotes über Schnellmenü in den oberen Ecken.
 
 ## Phasen

@@ -312,7 +312,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .plus.minus{min-width:30px;padding:5px 0}
 .pf-sg{display:flex;flex-direction:column;gap:6px}
 .pf-sg .row{display:grid;grid-template-columns:1fr 2fr;gap:8px}
-.pf-sg .btn{padding:11px 8px}
+.pf-sg .btn{min-width:0;padding:11px 8px}
+.pf-sg .pre{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pf-sg .pre .btn{padding:8px 2px;font-size:11px;letter-spacing:0}
 #mpOv .mp-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
 #mpOv .mp-opts .btn{min-width:0;font-size:11px;letter-spacing:.04em;padding:11px 4px}
 .pf-name{display:flex;align-items:center;gap:8px}
@@ -623,6 +625,7 @@ html{background:var(--screen)}
         </div>
         <div class="pf-sg" id="pfSg" hidden>
           <p class="pf-hint" id="pfSgMsg" aria-live="polite"></p>
+          <div class="pre" id="pfPre" role="group" aria-label="Presets"></div>
           <div class="row"><button class="btn ghost" id="pfAuto">Auto</button><button class="btn" id="pfGo">Start</button></div>
         </div>
       </div>
