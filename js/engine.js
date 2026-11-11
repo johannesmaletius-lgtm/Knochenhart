@@ -424,7 +424,8 @@ const BAL = {
   badRecv: { perfect: 0.2, good: 0.1, weak: 0.04 }, badRecvLv: [1.2, 0.8, 0.5],
   oppServeT: [1.2, 0.85], oppSpikeT: [0.75, 0.48], oppSetT: [0.88, 0.66], markDelay: [0.06, 0.16],
   tip: [0.14, 0.12], diveOk: [0.8, 0.45], stuff: [0.45, 0.25], reboundT: [0.75, 0.5],
-  meterMax: 8
+  meterMax: 8,
+  blockGraze: 0.05 // P3: base chance an attack grazes the block (Block-Anschlag)
 };
 function resetCourt() {
   G.ev.length = 0; G.incoming = null; G.attack = null; G.serve = null; G.oppAtk = null; G.rally = 0;

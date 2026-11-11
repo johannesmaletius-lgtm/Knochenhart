@@ -45,4 +45,4 @@ function boot(data) {
 try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ level: G.level, mode: G.mode, score: G.score, server: G.server, meter: G.meter, fire: G.fire, stats: G.stats })); } catch (e) {}
 const hot = window.claude && window.claude.hot;
 if (hot && hot.ready) hot.ready(boot); else boot(hot && hot.data ? hot.data : {});
-window.__kh = { MP, AI, FIGS, G, me, mate, oB, oA, ball, startRally, BAL, CAM, LX, startGame, onSwipe, onTap, update, render };
+window.__kh = { SKILLS, PROFILE, MP, AI, FIGS, G, me, mate, oB, oA, ball, startRally, BAL, CAM, LX, startGame, onSwipe, onTap, update, render };

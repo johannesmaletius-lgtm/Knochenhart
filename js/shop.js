@@ -1,7 +1,7 @@
 'use strict';
 // shop: coins, skins, skull portraits, unlock progress, confetti
 /* ---------------- coins, skins, shop ---------------- */
-// bone color, headband, optional accessory; bought with coins (10 per win)
+// bone color, headband, optional accessory; bought with coins (SKILLS.earn per win, also spent on skills)
 const SKINS = [
   { id: 'knochen', n: 'Bone', p: 0, bone: '#dcdcd2', band: '#f2c25e', d: 'The classic. Clean bones, gold band.' },
   { id: 'neon', n: 'Neon', p: 30, bone: '#8dffa8', band: '#ff5ad1', d: 'Glows under the gym lights.' },
@@ -85,8 +85,9 @@ function showCoinWin(win) {
     // first win of the day pays double
     const bonus = store.get('bonusDay', 0) !== today();
     if (bonus) store.set('bonusDay', today());
-    addCoins(bonus ? 20 : 10);
-    el.querySelector('.n').textContent = bonus ? '+20' : '+10';
+    const n = bonus ? SKILLS.earn.daily : SKILLS.earn.win;
+    addCoins(n);
+    el.querySelector('.n').textContent = '+' + n;
     $('#ovBonus').textContent = bonus ? 'Daily bonus' : '';
     setTimeout(() => { tone(1320, 0.06, 'square', 0.04); tone(1760, 0.1, 'square', 0.04, 0, 0.07); if (bonus) tone(2093, 0.14, 'square', 0.04, 0, 0.16); }, 450);
   }
