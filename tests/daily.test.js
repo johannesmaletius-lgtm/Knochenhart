@@ -21,6 +21,7 @@ ok(eq.under === 0 && down.under === 0 && down.n === eq.n, 'no underdog bonus vs.
 ok(up.n > eq.n && Math.abs(up.under - 10 * E.under) < 1e-9, 'underdog bonus per OVR point');
 ok(D.earnWin({ opp: 99, me: 60 }).under === E.underMax, 'underdog bonus capped');
 ok(D.earnWin({}).n === E.win, 'multiplayer: base win');
+ok(D.earnLoss(E.lossMin) === E.loss && D.earnLoss(E.lossMin - 1) === 0 && D.earnLoss(15, 0.5) === Math.round(E.loss * 0.5), 'loss pays from lossMin points on');
 ok(D.earnWin({ lv: 1, mul: 0.5 }).n === Math.round(E.win * 0.5), 'extra factor (Skill Games coinMul)');
 
 // picks: n different ids from the pool, stable per day, not always the same set

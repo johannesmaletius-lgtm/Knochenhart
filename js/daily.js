@@ -16,6 +16,8 @@ function earnWin(o) {
   const n = Math.max(1, Math.round(E.win * m * (1 + under) * (o.daily ? E.dailyMul : 1) * (o.mul != null ? o.mul : 1)));
   return { n, m, under };
 }
+// coins for a lost match: SKILLS.earn.loss once you scored at least lossMin points (pts = your points), x mul
+const earnLoss = (pts, mul = 1) => pts >= SKILLS.earn.lossMin ? Math.round(SKILLS.earn.loss * mul) : 0;
 const dayKey = (d = new Date()) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 // the n challenges of a day: same for everybody on that date (seeded by the day key), all different
 function dailyPick(day) {
@@ -106,4 +108,4 @@ if (typeof document !== 'undefined') {
   $('#dailyBtn').addEventListener('click', () => { audioInit(); SFX.tick(); dailyOpen(); });
   $('#dailyOk').addEventListener('click', () => { SFX.tick(); showOnly('menu'); });
 }
-if (typeof module !== 'undefined' && typeof document === 'undefined') module.exports = { earnWin, dayKey, dailyPick, dailyDef, dailyState, dailyAdd, dailyReached };
+if (typeof module !== 'undefined' && typeof document === 'undefined') module.exports = { earnWin, earnLoss, dayKey, dailyPick, dailyDef, dailyState, dailyAdd, dailyReached };

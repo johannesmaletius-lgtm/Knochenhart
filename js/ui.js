@@ -46,7 +46,7 @@ function gameOver() {
   const s = G.stats;
   const rows = [['Perfect', s.perfect], ['Rally', s.maxRally], ['Aces', s.aces]];
   $('#ovStats').innerHTML = rows.map(r => '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>').join('');
-  showCoinWin(win);
+  showCoinWin(win, G.score[0]);
   dailyMatch(win);
   sgEnd();
   caOver(win);

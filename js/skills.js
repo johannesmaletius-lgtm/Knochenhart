@@ -9,13 +9,14 @@ const SKILLS = {
   min: 60, max: 99,
   // OVR = weighted mean of all skills
   weight: { spike: 1, lob: 1, recv: 1, dig: 1, block: 1, serve: 1 },
-  // coins to raise a skill from L to L+1: round(base + grow * x^pow), x = (L - min) / (max - 1 - min)
-  // tuned with tests/sim-progress.js: all six skills 60 -> 99 in ~3 days of plan (below), daily challenges included
-  cost: { base: 0.75, grow: 2.6, pow: 2 },
+  // coins to raise a skill from L to L+1, fixed per tier of `step` levels: 60-69 = 1, 70-79 = 2, 80-89 = 3, 90-98 = 4
+  // (one skill 60 -> 99 = 96, all six = 576). Costs are fixed; tests/sim-progress.js checks the income against plan.days
+  cost: { step: 10, tier: [1, 2, 3, 4] },
   // coins per won match (daily.js earnWin): win x strength of the opponent. Normal singleplayer: lv[G.level] (Easy / Normal /
   // Hard); explicit opponent profile (campaign, Skill Games): ovr[0] at OVR 60 -> ovr[1] at 99, plus under per OVR point the
   // opponent is above you (max underMax). First win of the day x dailyMul. Multiplayer: x1. loss = coins for a lost match
-  earn: { win: 10, loss: 0, dailyMul: 2, lv: [0.6, 1, 1.6], ovr: [0.6, 1.8], under: 0.03, underMax: 0.5 },
+  // if you scored at least lossMin points (no coins for giving up a match; x Skill Games coinMul, no daily bonus)
+  earn: { win: 10, loss: 3, lossMin: 5, dailyMul: 2, lv: [0.6, 1, 1.6], ovr: [0.6, 1.8], under: 0.03, underMax: 0.5 },
   // daily challenges (daily.js): n picked per day from pool (seeded by the date), progress over all singleplayer matches of
   // the day (campaign + Skill Games count, multiplayer not). k = match stat (G.stats), sum over matches or max (best single
   // match); g = goal; c = coins once the goal is reached. Expected ~20 coins/day are in plan.chal (tests/sim-progress.js)
@@ -37,7 +38,7 @@ const SKILLS = {
     hardOvr: 86 // campaign / Skill Games: a win vs. this OVR or more counts as Hard
   },
   // progression target: normal play (chal = expected daily challenge coins per day); campaign (P7): stage cleared once OVR >= stage OVR - campEdge, still >= campMin days
-  plan: { matchesPerDay: 20, winRate: 0.5, days: 3, campEdge: 4, campMin: 2.5, chal: 20 },
+  plan: { matchesPerDay: 20, winRate: 0.5, days: 3.5, campEdge: 4, campMin: 2.5, chal: 20 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
   // P8 (tests/balance.js): 99 a bit stricter than P3 (0.55 / 0.4): very bad timing at 99 = weak, ~14 % net faults (60: 30 %)
@@ -76,10 +77,10 @@ const SKILLS = {
   // P6 Skill Games (js/skillgames.js): budget = round(share x coins for all skills 60 -> 99); aiMix = share of random picks in
   // the computer's auto spread (rest raises the lowest skill); MP: wait = s to spend, the phone auto-spends the rest grace s
   // before the end, the host waits grace s longer, then auto-spends for anyone missing; coinMul = coin reward x (1 = as normal)
-  sg: { share: 0.5, aiMix: 0.35, wait: 45, grace: 1.5, coinMul: 1 },
+  sg: { share: 0.3, aiMix: 0.35, wait: 45, grace: 1.5, coinMul: 1 },
   // P7 campaign (js/campaign.js): stages = shop skins (SKINS ids) with rising OVR; focus = skill kept `lead` levels above the rest;
   // c = bonus coins on the first win (on top of the normal match coins), later wins pay round(c x repeat). Opponent AI: level
-  // (G.level arrays) 0 below lv[0] OVR, 1 below lv[1], else 2; D() base 60 -> 99 = d. Bonus pool ~10% of totalCost(): with it
+  // (G.level arrays) 0 below lv[0] OVR, 1 below lv[1], else 2; D() base 60 -> 99 = d. Bonus pool ~6% of totalCost(): with it
   // tests/sim-progress.js (stage cleared once OVR >= ovr - plan.campEdge, worst-case replays) stays >= plan.campMin days
   camp: {
     stages: [
@@ -132,8 +133,8 @@ function netFault(err) {
 /* ---------------- costs ---------------- */
 function levelCost(L) {
   if (L < SKILLS.min || L >= SKILLS.max) return 0;
-  const c = SKILLS.cost, x = (L - SKILLS.min) / (SKILLS.max - 1 - SKILLS.min);
-  return Math.max(1, Math.round(c.base + c.grow * Math.pow(x, c.pow)));
+  const t = SKILLS.cost.tier;
+  return t[Math.min(t.length - 1, Math.floor((L - SKILLS.min) / SKILLS.cost.step))];
 }
 function costTo(from, to) { let s = 0; for (let L = from; L < to; L++) s += levelCost(L); return s; }
 const totalCost = () => costTo(SKILLS.min, SKILLS.max) * SKILLS.ids.length;

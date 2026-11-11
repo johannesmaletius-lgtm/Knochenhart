@@ -24,6 +24,8 @@ ok(S.ovr(p) === Math.round((60 * 4 + 99 + 81) / 6), 'OVR = mean');
 ok(S.levelCost(59) === 0 && S.levelCost(99) === 0, 'no cost outside 60..98');
 let mono = true; for (let L = 61; L < 99; L++) if (S.levelCost(L) < S.levelCost(L - 1) || S.levelCost(L) < 1) mono = false;
 ok(mono, 'cost per level >= 1 and rising');
+ok([60, 69, 70, 79, 80, 89, 90, 98].map(S.levelCost).join() === '1,1,2,2,3,3,4,4', 'tier prices 1/2/3/4 per level');
+ok(S.costTo(60, 99) === 96 && S.totalCost() === 576, 'one skill 96, all six 576');
 ok(S.costTo(60, 99) * 6 === S.totalCost(), 'totalCost = 6 skills');
 const E = SKILLS.earn, P = SKILLS.plan;
 const perDay = P.matchesPerDay * (P.winRate * E.win + (1 - P.winRate) * E.loss) + E.win * (E.dailyMul - 1) + P.chal;
