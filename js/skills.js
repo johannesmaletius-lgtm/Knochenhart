@@ -37,6 +37,11 @@ const SKILLS = {
   unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball' },
   // local leaderboard (profile.js): stored entries, player name length
   board: { max: 50, nameMax: 12 },
+  // P4 Hybrid multiplayer (js/hybrid.js, mp.js): setTilt = set swipe |dx|/|dy| split (straight up = dump, diagonal up-left = middle);
+  // laneLock = s before the hit the hitter's approach lane is checked against the set lane; computer mates by difficulty (0 -> 1):
+  // botFollow = hitter runs into the set lane, botSetOk = setter sets the hitter's lane (else a neighbour lane), botReact = s;
+  // lobFar = less dig chance for an aimed lob two lanes away; dankeT = flight of a free ball (s); setSpd = run speed of a back setter
+  hy: { setTilt: 0.4, laneLock: 0.45, botFollow: [0.86, 0.97], botSetOk: [0.88, 0.97], botReact: [0.1, 0.24], lobFar: 0.2, dankeT: 1.3, setSpd: 9, defLv: 60 },
   // skill badge at 90: pick one perk in the same area; v = effect value for the engine:
   // hotHand: fireball bar length x v; heavyArm: + v spike quality; feather: lob dig chance x (1 - v); sneaky: lobs feed
   // the AI read x (1 - v); platform: receive timing err x (1 - v); calm: failed late receives x v; catReflex: dive reach x v;

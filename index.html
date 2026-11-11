@@ -445,6 +445,9 @@ html{background:var(--screen)}
         <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Multiplayer, front: block left, right, wide, drop back. Tap to jump when the ring closes</dd>
         <dt>Tap</dt><dd>Front, setting: tap on the ring. <kbd>←</kbd> <kbd>→</kbd> quick set, <kbd>↑</kbd> dump over the net</dd>
         <dt><kbd>↓</kbd></dt><dd>Front: grab a dump or lob. Tap when your hitter gets blocked to cover, or when their dig floats over the net to smash it</dd>
+        <dt>Hybrid</dt><dd>Lobby option. Everyone plays back and front: you rotate when your team wins the serve back. Nobody may touch the ball twice in a row</dd>
+        <dt><kbd>←</kbd> <kbd>↖</kbd> <kbd>→</kbd></dt><dd>Hybrid, setting: the swipe picks the lane: left, middle, right. <kbd>↑</kbd> dump. Front digs, then the back player sets and the front attacks</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Hybrid, hitting: run into the set lane before your approach. One lane off: only a free ball over, two off: the ball drops. <kbd>↖</kbd> <kbd>↗</kbd> short lob left or right</dd>
       </dl>
       <p>Hit where the block is not. EARLY / LATE shows your timing; higher skills forgive bad timing. Spike 85: full skull bar, fireball. Full wall bar (front): your next block is a sure point.</p>
       <p>Every win earns 10 coins for the shop.</p>
@@ -515,6 +518,8 @@ html{background:var(--screen)}
           <button class="slot" id="slot3" aria-pressed="false"><i>Front</i><b>CPU</b></button>
         </div>
         <button class="btn ghost" id="mpShare">Share link</button>
+        <button class="btn ghost" id="mpHy" aria-pressed="false">Mode: Classic</button>
+        <p class="rec" id="mpHyInfo" style="margin:0"></p>
         <button class="btn" id="mpGo">Start</button>
         <button class="btn ghost" id="mpLeave">Leave</button>
         <p class="rec" id="mpWait"></p>
@@ -546,6 +551,7 @@ html{background:var(--screen)}
 <!-- game code: classic scripts in fixed order, sharing one global scope (see CLAUDE.md) -->
 <script src="js/engine.js"></script>
 <script src="js/skills.js"></script>
+<script src="js/hybrid.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/shop.js"></script>

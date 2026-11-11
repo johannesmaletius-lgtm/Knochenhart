@@ -136,7 +136,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 addEventListener('keydown', e => {
   const k = e.key;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(k) && (G.mode === 'play' || G.mode === 'mp') && document.activeElement === document.body) e.preventDefault();
-  if (G.mode === 'mp') { if (e.repeat) return; if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; } if (G.paused) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
+  if (G.mode === 'mp') { if (e.repeat) return; if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; } if (G.paused) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], ...(MP.hy ? { q: [-0.8, -1], e: [0.8, -1] } : {}) }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
   if (e.repeat) return;
   if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; }
   if (G.mode !== 'play' || G.paused) return;

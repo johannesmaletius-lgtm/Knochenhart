@@ -6,7 +6,8 @@
 const sgn = t => t === 0 ? 1 : -1;
 const TEAMF = [[me, mate], [oA, oB]];
 const tfig = (t, r) => TEAMF[t][r];
-const slotOf = (t, r) => t * 2 + r;
+// player slot of position r (0 back, 1 front); Hybrid rotates the players (MP.rot), the classic mode keeps [0, 0]
+const slotOf = (t, r) => hySlot(t, r, MP.rot);
 const MIRR = { jump: 1, spike: 1, follow: 1, lob: 1, hold: 1, toss: 1, floatServe: 1, fist: 1, pointFwd: 1 };
 const PZ = (f, n) => f.front && MIRR[n] ? n + 'M' : n;
 const lane2x = (t, l) => sgn(t) * LX[l];
@@ -14,7 +15,7 @@ const MPCODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MP = {
   net: null, host: false, code: '', slots: [null, null, null, null], myId: '', mySlot: -1, team: 0, role: 0,
   st: null, view: null, level: 1, snapT: 0, off: 0, offOk: false, rtt: 0.12, pingT: 0, lastBall: null, pred: { lane: 1, until: 0 },
-  hintAtk: null
+  hintAtk: null, hy: false, rot: [0, 0], sw: [false, false], fig: 0
 };
 
 /* ---------- transport: WebRTC via Trystero (signalling over several public Nostr relays), BroadcastChannel for same-device tests (?bc) ---------- */
@@ -107,7 +108,7 @@ async function mpCreate() {
   try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
   if (MP.net) { try { MP.net.close(); } catch (e) {} MP.net = null; }
   const code = mpNewCode();
-  MP.host = true; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
+  MP.host = true; MP.hy = false; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
   MP.net = netCreate(code, {
     open() { mpLobbyShow(); },
     conn(id) {
@@ -118,7 +119,7 @@ async function mpCreate() {
       let n = 1; while (used.includes(n)) n++;
       MP.slots[free] = { id, n };
       mpLobbySync();
-      if (G.mode === 'mp') { MP.net.send(id, { t: 'start', level: MP.level }); if (MP.lastBall) MP.net.send(id, { t: 'fx', e: MP.lastBall }); }
+      if (G.mode === 'mp') { MP.net.send(id, { t: 'start', level: MP.level, hy: MP.hy }); if (MP.lastBall) MP.net.send(id, { t: 'fx', e: MP.lastBall }); }
     },
     msg(id, d) { mpHostMsg(id, d); },
     gone(id) { const i = MP.slots.findIndex(s => s && s.id === id); if (i >= 0) { MP.slots[i] = null; mpLobbySync(); } },
@@ -161,7 +162,7 @@ function mpLeave() {
 }
 function mpLobbySync() {
   if (!MP.host) return;
-  MP.net.all({ t: 'lobby', slots: MP.slots, code: MP.code, level: MP.level, live: G.mode === 'mp' });
+  MP.net.all({ t: 'lobby', slots: MP.slots, code: MP.code, level: MP.level, live: G.mode === 'mp', hy: MP.hy });
   mpLobbyDraw();
 }
 function mpLobbyShow() { mpMsg(''); showOnly('mpOv'); $('#mpStart').hidden = true; $('#mpLobby').hidden = false; mpLobbyDraw(); }
@@ -176,6 +177,8 @@ function mpLobbyDraw() {
     b.classList.toggle('taken', !!s && i !== MP.mySlot);
   }
   $('#mpGo').hidden = !MP.host;
+  const hb = $('#mpHy'); hb.textContent = 'Mode: ' + (MP.hy ? 'Hybrid' : 'Classic'); hb.disabled = !MP.host || G.mode === 'mp'; hb.setAttribute('aria-pressed', String(MP.hy));
+  $('#mpHyInfo').textContent = MP.hy ? 'Hybrid: both roles, rotate on side-out, set by lane' : '';
   if (!/copied|http/.test($('#mpWait').textContent) || !MP.host) $('#mpWait').textContent = MP.host ? '' : 'Waiting for start';
 }
 function inviteURL() {
@@ -200,9 +203,9 @@ function mpHostMsg(id, d) {
   else if (d.t === 'in' && i >= 0 && G.mode === 'mp') hostInput(i, d.k, d.dx, d.dy, d.ht);
 }
 function mpClientMsg(d) {
-  if (d.t === 'lobby') { MP.slots = d.slots; MP.code = d.code; MP.level = d.level; if (G.mode !== 'mp') mpLobbyShow(); else mpRoles(); }
+  if (d.t === 'lobby') { MP.slots = d.slots; MP.code = d.code; MP.level = d.level; MP.hy = !!d.hy; if (G.mode !== 'mp') mpLobbyShow(); else mpRoles(); }
   else if (d.t === 'full') { mpMsg('Room full'); MP.net.close(); MP.net = null; }
-  else if (d.t === 'start') { MP.level = d.level; mpEnter(); }
+  else if (d.t === 'start') { MP.level = d.level; MP.hy = !!d.hy; mpEnter(); }
   else if (d.t === 's') mpSnap(d);
   else if (d.t === 'fx') applyFx(d.e);
   else if (d.t === 'q') { const r = (performance.now() - d.c) / 1000; MP.rtt = MP.rtt * 0.7 + r * 0.3; }
@@ -210,27 +213,34 @@ function mpClientMsg(d) {
 }
 
 /* ---------- entering a match (all phones) ---------- */
+// MP.fig = position I play (0 back, 1 front, rotates in Hybrid); MP.role = my controls (Hybrid: swapped while the front player attacks)
+function mpRoleCalc() {
+  MP.fig = MP.mySlot >= 0 ? hyFig(MP.mySlot, MP.rot) : 0;
+  MP.role = MP.mySlot >= 0 ? hyCtl(MP.mySlot, MP.rot, MP.sw) : 0;
+}
 function mpRoles() {
   MP.mySlot = MP.slots.findIndex(s => s && s.id === MP.myId);
-  MP.team = MP.mySlot >= 0 ? MP.mySlot >> 1 : 0; MP.role = MP.mySlot >= 0 ? MP.mySlot & 1 : 0;
+  MP.team = MP.mySlot >= 0 ? MP.mySlot >> 1 : 0; mpRoleCalc();
   FLIP = MP.team === 1;
-  for (let i = 0; i < 4; i++) { const f = tfig(i >> 1, i & 1), sl = MP.slots[i]; f.band = i === MP.mySlot; f.skin = sl && sl.sk && SKIN[sl.sk] ? sl.sk : null; }
+  for (let i = 0; i < 4; i++) { const f = tfig(i >> 1, hyFig(i, MP.rot)), sl = MP.slots[i]; f.band = i === MP.mySlot; f.skin = sl && sl.sk && SKIN[sl.sk] ? sl.sk : null; }
 }
 function mpEnter() {
   G.mode = 'mp'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 1; G.fadeV = -4; G.hype = 0;
-  oA.spring = true; mpRoles();
-  MP.view = { score: [0, 0], server: 0, meter: 0, fire: false, ring: null, inc: null, blk: null, ph: '' };
+  oA.spring = true; MP.rot = [0, 0]; MP.sw = [false, false]; mpRoles();
+  MP.view = { hy: MP.hy,  score: [0, 0], server: 0, meter: 0, fire: false, ring: null, inc: null, blk: null, ph: '' };
   showOnly(null); setHint('');
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
 }
 function mpBegin() {
   if (!MP.host) return;
   MP.level = G.level;
-  MP.net.all({ t: 'start', level: MP.level });
+  MP.net.all({ t: 'start', level: MP.level, hy: MP.hy });
   mpEnter();
   MP.st = { score: [0, 0], server: Math.random() < 0.5 ? 0 : 1, meter: [0, 0], fire: [false, false], phase: 'idle', inc: null, atk: null, srv: null,
     hist: [{ L: 0, R: 0, LOB: 0 }, { L: 0, R: 0, LOB: 0 }], lane: [1, 1], arrive: [-9, -9], dash: [false, false], rally: 0,
-    wall: [0, 0], stats: [0, 1, 2, 3].map(() => ({ p: 0, b: 0, d: 0, s: 0, f: 0 })) };
+    wall: [0, 0], stats: [0, 1, 2, 3].map(() => ({ p: 0, b: 0, d: 0, s: 0, f: 0 })),
+    hy: MP.hy, rot: [0, 0], sw: [false, false], tch: null, side: null };
+  MP.rot = MP.st.rot; MP.sw = MP.st.sw;
   for (const f of FIGS) f.seq = null;
   mpRally();
 }
@@ -262,6 +272,7 @@ function applyFx(e) {
     case 'fade': G.fadeV = e.v; break;
     case 'res': if (MP.team === e.w) SFX.win(); else SFX.lose(); break;
     case 'sweat': sweat(); break;
+    case 'hp': hitPop(e.dt, e.q, e.w); break;
     case 'hold': ball.mode = 'held'; ball.holder = FIGS[e.f]; ball.idx = e.i; ball.fire = false; ball.trail.length = 0; break;
     case 'ball':
       ball.p0 = e.p0; ball.v = e.v; ball.t0 = e.t0; ball.T = e.T; ball.mode = 'flight'; ball.holder = null;
@@ -280,11 +291,40 @@ function msparks(n, c) { fx({ k: 'sparks', x: ball.x, y: ball.y, z: ball.z, n, c
 const human = i => !!MP.slots[i];
 const grace = i => MP.slots[i] && MP.slots[i].id !== MP.myId ? 0.2 : 0;
 const mpDiff = () => [0.2, 0.45, 0.7][MP.level] != null ? [0.2, 0.45, 0.7][MP.level] : 0.45;
+/* ---------- Hybrid helpers (rules: js/hybrid.js, numbers: SKILLS.hy) ---------- */
+const HY = () => !!(MP.st && MP.st.hy);
+// position (0 back, 1 front) that attacks in team t's possession: the front player after it dug the ball itself (Hybrid)
+const hitIx = t => MP.st && MP.st.sw && MP.st.sw[t] ? 1 : 0;
+// skills per player slot: P5 fills MP.slots[i].prof ({ sk, badge }); players default to SKILLS.hy.defLv, computer mates by difficulty
+const HYDEF = skillsNew(SKILLS.hy.defLv);
+function slotProf(i) { const s = MP.slots[i]; return s ? (s.prof && s.prof.sk ? s.prof : HYDEF) : aiProfile(mpDiff()); }
+// EARLY / LATE on every hit, on every phone (Hybrid only; the classic mode stays as it was)
+function mpHitPop(dt, q, w) {
+  if (!HY() || (q === 'perfect' && !w)) return;
+  fx({ k: 'hp', dt: dt == null ? (Math.random() < 0.5 ? -1 : 1) : dt, q, w });
+}
+// one contact of slot (team t): a second touch in a row by the same player is a fault, point for the other team
+function mpContact(t, slot) {
+  const st = MP.st; if (!HY()) return true;
+  const r = hyTouch(st.tch, t, slot); st.tch = r.last;
+  if (!r.fault) return true;
+  st.phase = 'dead'; fx({ k: 'burst', c: 'bad' }); S('err');
+  mlaunch({ x: ball.x + rand(-0.5, 0.5), y: 0, z: ball.z + rand(-0.5, 0.5) }, 0.45, { spin: -6 });
+  after(0.6, () => mpPoint(1 - t, 'DOUBLE!'));
+  return false;
+}
+// Hybrid: the attack of team t is over (ball went across): positions are back to normal
+function hyOver(t) { const st = MP.st; if (st && st.sw) st.sw[t] = false; }
 function laneOfX(t, wx) { const lx = sgn(t) * wx; return lx < -0.95 ? 0 : lx > 0.95 ? 2 : 1; }
 function goBack(t) { const b = tfig(t, 0); b.tx = lane2x(t, MP.st.lane[t]); b.tz = sgn(t) * DZ; b.sz = 6; setBase(b, 'ready'); }
 function mpRally() {
   const st = MP.st; if (!st || G.mode !== 'mp') return;
   G.ev.length = 0; st.inc = st.atk = st.srv = null; st.rally = 0; st.dash = [false, false];
+  if (st.hy) {
+    // Hybrid: side-out -> the team that won the serve rotates (back <-> front), every phone redraws who is where
+    st.sw[0] = st.sw[1] = false; st.tch = null;
+    if (st.side != null) { const w = st.side; st.side = null; st.rot = MP.rot = hyRotate(st.rot, 1 - w, w); mpRoles(); after(0.5, () => fx({ k: 'pop', s: 'ROTATE', team: w })); }
+  }
   for (let t = 0; t < 2; t++) {
     const b = tfig(t, 0), f = tfig(t, 1), s = sgn(t);
     st.lane[t] = 1; place(b, 0, s * DZ); snapPose(b, 'ready'); b.sx = 15; b.sz = 7;
@@ -321,6 +361,7 @@ function mpServeHit(t, h, ht) {
   const adt = Math.abs(dt), q = auto ? 'weak' : adt < win[0] ? 'perfect' : adt < win[1] ? 'good' : 'weak';
   if (!st.ace || st.ace.t !== t) st.ace = { t, n: 0 };
   if (q === 'perfect') { mpMeter(t, 1); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); }
+  mpContact(t, slotOf(t, 0)); mpHitPop(auto ? 1 : dt, q);
   const b = tfig(t, 0), r = 1 - t;
   setPose(b, PZ(b, b.air ? 'spike' : 'floatServe'), b.air ? 0.15 : 0.3, 40); setBase(b, PZ(b, 'follow')); S('serve'); fx({ k: 'shake', v: q === 'perfect' ? 2 : 1 });
   msparks(q === 'perfect' ? 8 : 3);
@@ -374,7 +415,7 @@ function mpIncoming(d, type, lane, T, md, q, extra) {
   const st = MP.st, s = sgn(d);
   const lz = type === 'tip' ? 3.0 : type === 'block' ? 3.3 : DZ + 0.1;
   const inc = st.inc = { d, type, lane, x: s * LX[lane] * (type === 'tip' ? 0.85 : 1), z: s * lz, tArr: G.t + T, tMark: G.t + md, done: false, q, ai: null };
-  st.phase = 'defend'; st.dash[d] = false; MP.snapT = 0;
+  st.phase = 'defend'; st.dash[d] = false; MP.snapT = 0; hyOver(d);
   const b = tfig(d, 0), sl = slotOf(d, 0);
   if (!b.air && !b.lock && type !== 'block' && type !== 'out') { jump(b, 1.5); setPose(b, 'ready', 0.2, 20); }
   if (human(sl)) { after(T + grace(sl), mpResolve); return inc; }
@@ -403,7 +444,7 @@ function mpIncoming(d, type, lane, T, md, q, extra) {
   return inc;
 }
 function mpLane(t, dl, ht, abs) {
-  const st = MP.st, b = tfig(t, 0);
+  const st = MP.st, b = tfig(t, hitIx(t));
   const nl = clamp(st.lane[t] + dl, 0, 2); if (nl === st.lane[t]) return;
   st.lane[t] = nl; b.tx = lane2x(t, nl); b.sx = 15; b.moveDir = Math.sign(dl) * sgn(t);
   st.arrive[t] = (ht == null ? G.t : ht) + 0.12 * Math.abs(dl);
@@ -460,7 +501,14 @@ function mpResolve() {
   after(0.45, () => mpPoint(1 - d, inc.type === 'block' ? 'BLOCKED!' : inc.type === 'tip' ? 'TIP!' : inc.type === 'serve' ? 'ACE!' : 'POINT!'));
 }
 function mpDig(d, inc, late, digger) {
-  const st = MP.st, s = sgn(d), b = tfig(d, 0), set = tfig(d, 1);
+  const st = MP.st, s = sgn(d), dg = digger === tfig(d, 0) ? 0 : 1;
+  if (!mpContact(d, slotOf(d, dg))) return;
+  // Hybrid: the digger attacks, the other one sets (blocker digs -> back sets, blocker attacks); classic: back attacks, front sets
+  const pl = st.hy ? hyPlan(dg) : { set: 1, hit: 0 };
+  st.sw[d] = pl.hit === 1;
+  if (pl.hit === 1) st.lane[d] = laneOfX(d, digger.x);
+  const b = tfig(d, pl.hit), set = tfig(d, pl.set);
+  if (late) mpHitPop(1, 'weak');
   const off = inc.x - digger.x;
   if (inc.type === 'serve' && st.ace) st.ace.n = 0;
   let kind;
@@ -471,29 +519,31 @@ function mpDig(d, inc, late, digger) {
   else if (Math.abs(off) > 0.42) kind = 'reach';
   else kind = inc.type === 'spike' || inc.type === 'fire' ? 'low' : 'clean';
   const dur = defAnim(digger, kind, kind === 'reach' ? Math.sign(off) : (b.moveDir || 1));
-  stat(slotOf(d, digger === b ? 0 : 1), 'd');
-  if (digger !== b) mpWall(d, 1);
+  stat(slotOf(d, dg), 'd');
+  if (dg === 1) mpWall(d, 1);
   if (inc.type === 'tip' && digger === b) st.lane[d] = inc.lane;
   S('dig'); fx({ k: 'dust', x: ball.x, z: ball.z, n: 6 }); msparks(kind === 'dive' || kind === 'pancake' ? 7 : 4, ['bone']); fx({ k: 'vib', ms: 12, team: d });
   st.rally++; if (st.rally >= 4) { fx({ k: 'hype', v: 0.5 + st.rally * 0.05 }); if (st.rally % 2 === 0) S('crowd'); }
   if (st.rally >= 6) fx({ k: 'sweat' });
-  if (kind === 'dive' && digger === b && inc.type !== 'block' && Math.random() < 0.16) { mpOverpass(d); return; }
+  if (kind === 'dive' && dg === 0 && inc.type !== 'block' && Math.random() < 0.16) { mpOverpass(d); return; }
   const wild = kind === 'dive' || kind === 'pancake' ? 1 : kind === 'reach' || kind === 'reflex' ? 0.45 : 0.12;
   const lx = clamp(MSET.x + rand(-1.3, 1.3) * wild, -2.6, 3.2), lz = clamp(MSET.z + rand(-0.2, 1.2) * wild, 0.5, 2.2);
   mlaunch({ x: s * lx, y: 2.55 + rand(0, 0.7) * wild, z: s * (lz + 0.12) }, 1.0, { spin: 4 });
   // the digger might be the setter (deep block); then the setter just plays it back
-  set.tx = s * lx; set.tz = s * lz; set.sx = set.sz = 6;
+  set.tx = s * lx; set.tz = s * lz; set.sx = set.sz = pl.set === 0 ? SKILLS.hy.setSpd : 6;
   after(0.6, () => setPose(set, 'setReady', 0.5));
   st.phase = 'pass';
   after(Math.max(0.4, Math.min(0.72, dur)), () => { b.lock = false; b.tx = lane2x(d, st.lane[d]); b.sx = 15; b.tz = s * APZ; b.sz = 7; setBase(b, 'ready'); });
   // the setter: tap when the ring closes for a clean set, swipe up to dump it over the net
-  const tset = G.t + 1.0, ssl = slotOf(d, 1);
+  const tset = G.t + 1.0, ssl = slotOf(d, pl.set);
   st.setq = { t: d, ts: tset };
   MP.snapT = 0;
-  if (human(ssl)) at(tset + 0.18 + grace(ssl), () => mpSetGo(d, 'weak', 'high'));
+  if (human(ssl)) at(tset + 0.18 + grace(ssl), () => mpSetGo(d, 'weak', 'high', 1));
   else {
     const dif = mpDiff(), r = Math.random();
-    at(tset, () => mpSetGo(d, Math.random() < 0.3 + 0.5 * dif ? 'perfect' : 'good', r < 0.06 + 0.08 * dif ? 'dump' : r < 0.3 + 0.1 * dif ? 'quick' : 'high'));
+    // Hybrid computer setter: no quick set; it sets the lane its hitter stands in (sometimes the next one)
+    at(tset, () => mpSetGo(d, Math.random() < 0.3 + 0.5 * dif ? 'perfect' : 'good', r < 0.06 + 0.08 * dif ? 'dump' : r < 0.3 + 0.1 * dif && !st.hy ? 'quick' : 'high',
+      st.hy ? hyBotSetLane(Math.random, dif, st.lane[d]) : null));
   }
 }
 function mpOverpass(d) {
@@ -515,35 +565,42 @@ function mpSmash(t, ht, q0) {
   if (!q) { const dt = (ht == null ? G.t : ht) - ov.tc; if (dt < -0.3) { S('err'); return; } q = Math.abs(dt) < 0.08 ? 'perfect' : Math.abs(dt) < 0.18 ? 'good' : 'weak'; }
   st.ovp = null;
   const f = tfig(t, 1), d = ov.d;
+  if (!mpContact(t, slotOf(t, 1))) return;
+  mpHitPop(q0 ? null : (ht == null ? G.t : ht) - ov.tc, q);
   setPose(f, PZ(f, 'spike'), 0.2, 40); setBase(f, 'ready'); S('spike'); fx({ k: 'shake', v: q === 'perfect' ? 4 : 2 }); msparks(q === 'perfect' ? 9 : 5, ['bone', 'bad']);
   if (q === 'perfect') fx({ k: 'burst', c: 'accent', big: true });
   const lane = (Math.random() * 3) | 0, T = { perfect: 0.5, good: 0.6, weak: 0.75 }[q], md = { perfect: 0.04, good: 0.07, weak: 0.12 }[q];
   mlaunch({ x: lane2x(d, lane), y: 0.85, z: sgn(d) * (DZ + 0.1) }, T, { spin: 22 });
   mpIncoming(d, 'spike', lane, T, md, q).by = slotOf(t, 1);
 }
-function mpSetGo(d, q, mode) {
+// lane: Hybrid set lane (team-local 0..2), null = the hitter's lane (classic)
+function mpSetGo(d, q, mode, lane, dt) {
   const st = MP.st; if (!st || !st.setq || st.setq.t !== d) return;
   st.setq = null;
-  if (q === 'perfect') stat(slotOf(d, 1), 's');
-  if (mode === 'dump') mpDump(d); else mpSet(d, q, mode === 'quick');
+  const ss = slotOf(d, 1 - hitIx(d));
+  if (!mpContact(d, ss)) return;
+  mpHitPop(dt, q);
+  if (q === 'perfect') stat(ss, 's');
+  if (mode === 'dump') mpDump(d); else mpSet(d, q, mode === 'quick', st.hy && lane != null ? lane : null);
 }
-function mpSetInput(t, ht, mode) {
+function mpSetInput(t, ht, mode, lane) {
   const st = MP.st, sq = st.setq; if (!sq || sq.t !== t) return;
   const dt = ht - sq.ts;
   if (dt < -0.35) { S('err'); return; }
   const adt = Math.abs(dt), q = adt < 0.08 ? 'perfect' : adt < 0.18 ? 'good' : 'weak';
-  mpSetGo(t, q, mode);
+  mpSetGo(t, q, mode, lane, dt);
 }
 // setter dump: a soft push over the net while everyone expects a set
 function mpDump(d) {
-  const st = MP.st, o = 1 - d, set = tfig(d, 1), so = sgn(o);
+  const st = MP.st, o = 1 - d, sp = 1 - hitIx(d), set = tfig(d, sp), so = sgn(o);
+  hyOver(d);
   jump(set, 3.2); setPose(set, PZ(set, 'lob'), 0.35, 30); setBase(set, 'ready'); S('lob');
   const lane = (Math.random() * 3) | 0, T = 0.8;
   mlaunch({ x: so * LX[lane] * 0.85, y: 0.4, z: so * 1.6 }, T, { spin: 2 });
-  st.rally++; stat(slotOf(d, 1), 'f');
+  st.rally++; stat(slotOf(d, sp), 'f');
   const D0 = st.dump = { o, save: false };
   const inc = mpIncoming(o, 'tip', lane, T, 0.1, 'good');
-  inc.z = so * 1.7; inc.by = slotOf(d, 1);
+  inc.z = so * 1.7; inc.by = slotOf(d, sp);
   inc.blkSave = () => D0.save;
   // the other team's front player can drop back and grab it (swipe down)
   const bsl = slotOf(o, 1);
@@ -558,24 +615,38 @@ function mpDumpSave(t) {
   if (inc && inc.d === t) { blk.tx = inc.x; blk.tz = inc.z - sgn(t) * 0.3; blk.sx = blk.sz = 9; }
   S('step');
 }
-function mpSet(a, sq, quick) {
+function mpSet(a, sq, quick, lane) {
   const st = MP.st; if (!st || G.mode !== 'mp') return;
-  const o = 1 - a, s = sgn(a), b = tfig(a, 0), set = tfig(a, 1), blk = tfig(o, 1), def = tfig(o, 0), dif = mpDiff();
+  const hx = hitIx(a), o = 1 - a, s = sgn(a), b = tfig(a, hx), set = tfig(a, 1 - hx), blk = tfig(o, 1), def = tfig(o, 0), dif = mpDiff();
   sq = sq || 'good';
   setPose(set, 'set', 0.3); S('set');
   // quick set: low and fast, the block has almost no time to read it
   if (quick) { S('set'); msparks(4, ['bone']); }
   if (sq === 'perfect') { jump(set, 2.0); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); msparks(5, ['accent', 'fire1']); }
   else if (sq === 'weak') fx({ k: 'burst', c: 'bad' });
-  const Cp = { x: s * (LX[st.lane[a]] + 0.12), y: CY, z: s * CZ };
+  const sl = lane != null ? lane : st.lane[a];
+  const Cp = { x: s * (LX[sl] + 0.12), y: CY, z: s * CZ };
   const TS = quick ? 0.62 : 0.9;
   mlaunch(Cp, TS, { spin: quick ? 8 : 3 });
   const tc = G.t + TS;
   // a clean set gives the hitter a wider timing window
-  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null, win: { perfect: 1.4, good: 1, weak: 0.8 }[sq] * (quick ? 0.85 : 1), tb: tc - 0.3, bj: false, bq: null, quick: !!quick };
+  const A = st.atk = { a, tc, C: Cp, hit: false, block: null, lockT: tc - 0.2, defRead: null, win: { perfect: 1.4, good: 1, weak: 0.8 }[sq] * (quick ? 0.85 : 1), tb: tc - 0.3, bj: false, bq: null, quick: !!quick,
+    sl, hs: slotOf(a, hx), miss: null };
   st.phase = 'attack'; MP.snapT = 0;
   blk.tx = clamp(Cp.x, -2.8, 2.8); blk.tz = sgn(o) * 0.5; blk.sx = blk.sz = 7; setBase(blk, 'blockReady'); setPose(blk, 'blockReady');
-  const bsl = slotOf(o, 1), asl = slotOf(a, 0), dsl = slotOf(o, 0);
+  const bsl = slotOf(o, 1), asl = A.hs, dsl = slotOf(o, 0);
+  if (st.hy) {
+    // Hybrid lanes: the hitter has to run into the set lane; checked when the approach starts (SKILLS.hy.laneLock before the hit)
+    if (!human(asl) && st.lane[a] !== sl) after(rand(SKILLS.hy.botReact[0], SKILLS.hy.botReact[1]), () => {
+      if (st.atk === A && hyBotFollow(Math.random, dif)) mpLane(a, sl - st.lane[a], G.t, true);
+    });
+    at(tc - SKILLS.hy.laneLock, () => {
+      if (st.atk !== A || A.hit) return;
+      const res = hyLaneResult(sl, st.lane[a]); if (res === 'hit') return;
+      A.miss = res; A.hit = true; MP.snapT = 0;
+      at(tc, () => mpMissLane(A));
+    });
+  }
   if (!human(bsl)) {
     // computer blocker: leans on what this hitter likes, sometimes shows one side and switches
     const h = st.hist[a], tot = h.L + h.R + h.LOB + 1;
@@ -596,7 +667,7 @@ function mpSet(a, sq, quick) {
     if (goal !== st.lane[o]) mpLane(o, goal - st.lane[o], G.t);
   });
   at(tc - 0.8, () => { b.tz = s * 3.3; b.sz = Math.max(3, Math.abs(b.z - s * 3.3) / 0.4); b.lock = false; setBase(b, 'stand'); });
-  at(tc - 0.43, () => { jump(b, 4.25); setPose(b, PZ(b, 'jump'), 0, 18); setBase(b, PZ(b, 'jump')); b.tz = s * 2.9; b.sz = 1.2; });
+  at(tc - 0.43, () => { if (A.miss) return; jump(b, 4.25); setPose(b, PZ(b, 'jump'), 0, 18); setBase(b, PZ(b, 'jump')); b.tz = s * 2.9; b.sz = 1.2; });
   // blocker jump: the front player taps when the ring closes; the computer has its own timing
   if (human(bsl)) at(A.tb + 0.2, () => { if (st.atk === A && A.block != null && A.block !== 'D') mpBlockJump(A, null, 'weak'); });
   else at(A.tb + rand(-0.06, 0.06), () => {
@@ -641,6 +712,7 @@ function mpBlockJump(A, ht, q0) {
   let q = q0;
   if (!q) { const dt = (ht == null ? G.t : ht) - A.tb; q = dt < -0.3 ? 'miss' : Math.abs(dt) < 0.07 ? 'perfect' : Math.abs(dt) < 0.16 ? 'good' : 'weak'; }
   A.bj = true; A.bq = q; MP.snapT = 0;
+  if (q !== 'miss') mpHitPop(q0 ? null : (ht == null ? G.t : ht) - A.tb, q);
   const blk = tfig(1 - A.a, 1);
   blk.seq = null; blk.lock = false;
   const p = A.block === 'W' ? 'blockW' : A.block < 0 ? 'blockL' : 'blockR';
@@ -652,31 +724,63 @@ function mpBlockJump(A, ht, q0) {
 function mpLateHit(A) {
   const st = MP.st; if (!st || st.atk !== A || A.hit) return;
   A.hit = true; st.phase = 'over';
-  const a = A.a, o = 1 - a, b = tfig(a, 0);
-  fx({ k: 'burst', c: 'bad' }); S('err');
+  const a = A.a, o = 1 - a, b = tfig(a, hitIx(a));
+  hyOver(a); if (!mpContact(a, A.hs)) return;
+  fx({ k: 'burst', c: 'bad' }); S('err'); mpHitPop(1, 'weak');
   setPose(b, PZ(b, 'lob'), 0.25); setBase(b, PZ(b, 'follow'));
   b.onLand = () => goBack(a);
   const lane = (Math.random() * 3) | 0;
   mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, 1.3, { spin: 3 });
   mpIncoming(o, 'free', lane, 1.3, 0.15, 'weak');
 }
-function mpAttack(a, dir, ht) {
+// Hybrid: the hitter approached in the wrong lane. Next lane: it can only bump the ball over (free ball, "Danke-Ball");
+// two lanes off: the set drops to the floor, point for the other team
+function mpMissLane(A) {
+  const st = MP.st; if (!st || st.atk !== A || st.phase !== 'attack') return;
+  const a = A.a, o = 1 - a, s = sgn(a), b = tfig(a, hitIx(a));
+  hyOver(a); st.phase = 'over'; MP.snapT = 0;
+  const side = A.C.x < b.x ? -1 : 1;
+  if (A.miss === 'floor') {
+    st.phase = 'dead';
+    fx({ k: 'pop', s: 'WRONG LANE', team: o });
+    mlaunch({ x: A.C.x + rand(-0.3, 0.3), y: 0, z: s * (CZ + rand(-0.3, 0.3)) }, 0.42, { spin: -4 });
+    after(0.42, () => { S('bounce'); fx({ k: 'dust', x: ball.x, z: ball.z, n: 5 }); });
+    after(0.3, () => defAnim(b, 'lunge', side));
+    after(0.9, () => mpPoint(o, 'WRONG LANE'));
+    return;
+  }
+  if (!mpContact(a, A.hs)) return;
+  defAnim(b, 'reach', side); S('dig'); msparks(4, ['bone']); mpHitPop(1, 'weak', 'FREE BALL');
+  st.rally++;
+  const lane = (Math.random() * 3) | 0, T = SKILLS.hy.dankeT;
+  mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, T, { spin: 3 });
+  after(0.5, () => { b.lock = false; goBack(a); });
+  mpIncoming(o, 'free', lane, T, 0.15, 'weak');
+}
+function mpAttack(a, dir, ht, aim) {
   const st = MP.st, A = st.atk; if (!A || A.a !== a || A.hit) return;
   const dt = ht - A.tc;
   if (dt < -0.3) { fx({ k: 'burst', c: 'bad' }); S('err'); return; }
   if (dt > 0.2) return;
   A.hit = true;
-  const wn = A.win || 1, adt = Math.abs(dt), q = adt < 0.075 * wn ? 'perfect' : adt < 0.17 * wn ? 'good' : 'weak';
+  const wn = A.win || 1, adt = Math.abs(dt);
+  let q = adt < 0.075 * wn ? 'perfect' : adt < 0.17 * wn ? 'good' : 'weak';
+  // Hybrid: timing through the hitter's Spike / Lob skill (P3 curves), net faults by the skill curve
+  const hk = st.hy && human(A.hs) ? { p: slotProf(A.hs), err: timingErr(adt, [0.075 * wn, 0.17 * wn, BAL.atkWin[2]]) } : null;
+  if (hk) { hk.sk = hk.p.sk[dir === 'LOB' ? 'lob' : 'spike']; hk.bonus = dir === 'LOB' ? 0 : perkV(hk.p, 'spike', 'heavyArm', 0); q = hitTier(hk.sk, hk.err, hk.bonus); }
+  const b = tfig(a, hitIx(a));
+  hyOver(a); if (!mpContact(a, A.hs)) return;
+  mpHitPop(dt, q);
   const h = st.hist[a]; for (const k in h) h[k] *= 0.8; h[dir] += 1;
   if (q === 'perfect') { mpMeter(a, 1); fx({ k: 'burst', c: 'accent', big: true }); S('perfect', 1); } else if (q === 'good') fx({ k: 'burst', c: 'bone' });
-  const b = tfig(a, 0), o = 1 - a, s = sgn(a);
+  const o = 1 - a, s = sgn(a);
   setPose(b, PZ(b, dir === 'LOB' ? 'lob' : 'spike'), 0.14, 40); setBase(b, PZ(b, 'follow'));
   b.onLand = () => { setBase(b, 'ready'); setPose(b, 'ready'); if (!st.inc || st.inc.d !== a) goBack(a); else { b.tz = s * 3.3; b.sz = 4; } };
   st.phase = 'over';
   st.rally++;
   const wx = dir === 'L' ? -s : s;
   if (st.fire[a] && dir !== 'LOB' && q !== 'weak') { mpFire(A, wx); return; }
-  if (dir === 'LOB') { mpLob(A, q); return; }
+  if (dir === 'LOB') { mpLob(A, q, st.hy ? aim || 0 : 0); return; }
   const blk = tfig(o, 1);
   const inLine = A.block === 'W' || A.block === wx;
   const blocked = inLine && A.bj && A.bq !== 'miss';
@@ -695,10 +799,11 @@ function mpAttack(a, dir, ht) {
   // the ball got past the block: the blocker shrugs
   if (A.bj || inLine) after(0.15, () => setPose(blk, 'shrug', 0.5, 16));
   // weak human hits and computer hitters sometimes miss: into the net or long
-  const errP = human(slotOf(a, 0)) ? (q === 'weak' ? 0.22 : 0) : ([0.09, 0.06, 0.04][MP.level] || 0.06);
-  if (Math.random() < errP) {
+  const errP = human(A.hs) ? (q === 'weak' ? 0.22 : 0) : ([0.09, 0.06, 0.04][MP.level] || 0.06);
+  const flt = hk ? hitFault(hk.sk, hk.err, hk.bonus, q === 'weak' ? BAL.spikeOut : 0, Math.random) : null;
+  if (hk ? flt : Math.random() < errP) {
     S('spike'); fx({ k: 'shake', v: 1 });
-    if (Math.random() < 0.5) { mpIntoNet(a, A.C.x + wx * 0.6, () => mpPoint(o, 'NET')); after(0.7, () => react(b, 'headHands', 1, 12)); }
+    if (hk ? flt === 'net' : Math.random() < 0.5) { mpIntoNet(a, A.C.x + wx * 0.6, () => mpPoint(o, 'NET')); after(0.7, () => react(b, 'headHands', 1, 12)); }
     else mpOutBall(o, Math.random() < 0.6 ? st.lane[o] : (Math.random() * 3) | 0, 0.85, 0.08, null);
     return;
   }
@@ -706,7 +811,7 @@ function mpAttack(a, dir, ht) {
   const tx = clamp(A.C.x + wx * rand(2.0, 2.8), -4.1, 4.1), lane = laneOfX(o, tx);
   const T = { perfect: 0.58, good: 0.68, weak: 0.8 }[q], md = { perfect: 0.14, good: 0.08, weak: 0.03 }[q] - (A.block === 'D' ? 0.03 : 0);
   mlaunch({ x: lane2x(o, lane), y: 0.85, z: sgn(o) * (DZ + 0.1) }, T, { spin: 22 });
-  mpIncoming(o, 'spike', lane, T, Math.max(0, md), q, (A.block === 'D' ? 0.15 : 0) + (A.defRead === lane ? 0.2 : 0)).by = slotOf(a, 0);
+  mpIncoming(o, 'spike', lane, T, Math.max(0, md), q, (A.block === 'D' ? 0.15 : 0) + (A.defRead === lane ? 0.2 : 0)).by = A.hs;
 }
 function mpFire(A, wx) {
   const st = MP.st, a = A.a, o = 1 - a;
@@ -718,10 +823,11 @@ function mpFire(A, wx) {
   mpIncoming(o, 'fire', lane, 0.42, 0.3, 'perfect');
   after(0.2, () => setPose(tfig(o, 1), 'sad', 1.2));
 }
-function mpLob(A, q) {
+// aim (Hybrid): -1 / 1 = short lob to the hitter's left / right (P3 Lob aim), 0 = random lane
+function mpLob(A, q, aim) {
   const st = MP.st, a = A.a, o = 1 - a, so = sgn(o);
   S('lob');
-  const lane = (Math.random() * 3) | 0, T = 1.05;
+  const lane = aim ? hyLobLane(aim, Math.random) : (Math.random() * 3) | 0, T = 1.05;
   if (A.block === 'D') {
     // the blocker dropped back for exactly this
     const blk = tfig(o, 1), lx = LX[lane] * 0.85;
@@ -733,8 +839,8 @@ function mpLob(A, q) {
     return;
   }
   mlaunch({ x: so * LX[lane] * 0.85, y: 0.45, z: so * 3.0 }, T, { spin: 3 });
-  const inc = mpIncoming(o, 'tip', lane, T, A.block === 'W' ? 0.4 : A.block != null ? 0.22 : 0.15, q);
-  inc.by = slotOf(a, 0);
+  const inc = mpIncoming(o, 'tip', lane, T, A.block === 'W' ? 0.4 : A.block != null ? 0.22 : 0.15, q, aim && Math.abs(lane - st.lane[o]) === 2 ? -SKILLS.hy.lobFar : 0);
+  inc.by = A.hs;
   const D0 = st.dump = { o, save: false, until: G.t + 0.5 };
   inc.blkSave = () => D0.save;
   if (!human(slotOf(o, 1)) && Math.random() < 0.12 + 0.2 * mpDiff()) after(rand(0.2, 0.4), () => mpDumpSave(o));
@@ -742,6 +848,7 @@ function mpLob(A, q) {
 }
 function mpHands(A, wx, cb) {
   const blk = tfig(1 - A.a, 1);
+  mpContact(1 - A.a, slotOf(1 - A.a, 1));
   mlaunch({ x: blk.x + wx * 0.35, y: blk.y + 2.3, z: sgn(1 - A.a) * 0.2 }, 0.1, { spin: 20 });
   S('spike');
   after(0.1, cb);
@@ -752,7 +859,7 @@ function mpBlockOut(A, wx) {
     const o = 1 - A.a, blk = tfig(o, 1); seq(blk, [['blockOw', 0.35, 30], ['ready', 0.25, 12]]);
     mlaunch({ x: wx * rand(5.6, 6.8), y: 0, z: sgn(o) * rand(5, 9) }, 0.8, { spin: 25 });
     after(0.45, () => defAnim(tfig(o, 0), 'lunge', wx));
-    after(0.95, () => { stat(slotOf(A.a, 0), 'p'); mpPoint(A.a, 'BLOCK OUT!'); });
+    after(0.95, () => { stat(A.hs, 'p'); mpPoint(A.a, 'BLOCK OUT!'); });
   });
 }
 function mpTouch(A, wx) {
@@ -770,7 +877,9 @@ function mpStuff(A, wx, bonus) {
     const st = MP.st, a = A.a, sa = sgn(a), blk = tfig(1 - a, 1);
     S('block'); fx({ k: 'shake', v: 4 }); fx({ k: 'net', v: 1 }); fx({ k: 'vib', ms: 30 }); msparks(8, ['bone', 'bad']);
     seq(blk, [['slam', 0.16, 42], ['blockW', 0.12, 20]]);
-    if (Math.random() < lerp(BAL.stuff[0], BAL.stuff[0] + BAL.stuff[1], mpDiff()) + (bonus || 0)) {
+    // Hybrid: the attacking team recycles a stuffed ball by the blocker's Block skill (SKILLS.recycle)
+    const pStuff = st.hy ? 1 - recycleP(slotProf(slotOf(1 - a, 1))) : lerp(BAL.stuff[0], BAL.stuff[0] + BAL.stuff[1], mpDiff());
+    if (Math.random() < pStuff + (bonus || 0)) {
       // monster block: the blocker flexes on the way down
       fx({ k: 'burst', c: 'bad', big: true }); fx({ k: 'flash', v: 0.25 }); msparks(10, ['bone', 'bad', 'accent']);
       blk.onLand = () => { seq(blk, [['flex', 0.7, 14]]); fx({ k: 'dust', x: blk.x, z: blk.z, n: 6 }); };
@@ -799,6 +908,7 @@ function mpCover(t, ht) {
   const st = MP.st, cov = st.cover; if (!cov || cov.t !== t || cov.ok) return;
   if (Math.abs(ht - cov.tc) > 0.17) { S('err'); return; }
   cov.ok = true; st.cover = null;
+  mpHitPop(ht - cov.tc, Math.abs(ht - cov.tc) < 0.07 ? 'perfect' : 'good');
   const set = tfig(t, 1), inc = st.inc;
   if (inc && inc.d === t) { set.tx = inc.x; set.tz = inc.z - sgn(t) * 0.4; set.sx = set.sz = 10; }
   setPose(set, 'reflex', 0.3, 30); S('step'); fx({ k: 'burst', c: 'accent' });
@@ -814,6 +924,7 @@ function mpPoint(w, txt) {
   if (!st.fire[l]) st.meter[l] = Math.max(0, st.meter[l] - 3);
   celebrate(tfig(w, 0), true, long); after(0.12, () => celebrate(tfig(w, 1), true, long));
   celebrate(tfig(l, 0), false, long); react(tfig(l, 1), pick(['sad', 'headHands']), 1.1, 10);
+  if (st.hy && w !== st.server) st.side = w;
   st.server = w;
   const [x, y] = st.score;
   if ((x >= 15 || y >= 15) && Math.abs(x - y) >= 2) { after(1.8, mpOver); return; }
@@ -834,7 +945,7 @@ function mpOverShow(sc, stats) {
   $('#ovTitle').className = win ? 'win' : 'lose';
   $('#ovScore').textContent = mine + ' : ' + theirs;
   const my = stats && MP.mySlot >= 0 ? stats[MP.mySlot] : null;
-  const rows = !my ? [] : MP.role === 1 ? [['Block points', my.b], ['Saves', my.d], ['Perfect sets', my.s], ['Dumps', my.f]] : [['Points', my.p], ['Digs', my.d]];
+  const rows = !my ? [] : MP.hy ? [['Points', my.p], ['Digs', my.d], ['Block points', my.b], ['Perfect sets', my.s]] : MP.role === 1 ? [['Block points', my.b], ['Saves', my.d], ['Perfect sets', my.s], ['Dumps', my.f]] : [['Points', my.p], ['Digs', my.d]];
   $('#ovStats').innerHTML = rows.map(r => '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>').join('');
   showCoinWin(win && MP.mySlot >= 0);
   updOverMeta();
@@ -850,13 +961,20 @@ function hostInput(slot, k, dx, dy, ht) {
   const st = MP.st; if (!st) return;
   if (k === 'pause') { mpSetPause(!!dx); return; }
   if (st.paused) return;
-  const t = slot >> 1, r = slot & 1, ph = st.phase, ax = Math.abs(dx || 0), ay = Math.abs(dy || 0);
+  // r = controls of this slot: classic = lobby position; Hybrid = rotated position, swapped while the front player attacks
+  const t = slot >> 1, r = hyCtl(slot, MP.rot, st.sw), ph = st.phase, ax = Math.abs(dx || 0), ay = Math.abs(dy || 0);
   ht = ht == null ? G.t : Math.min(ht, G.t);
   if (r === 0) {
     if (ph === 'serveReady' && st.server === t) { mpToss(t); return; }
     if (ph === 'serveToss' && st.srv && st.srv.t === t) { mpServeHit(t, k === 'tap' ? 0 : ax > ay * 0.5 ? Math.sign(dx) : 0, ht); return; }
     if (k !== 'swipe') return;
     if (ph === 'attack' && st.atk && st.atk.a === t && !st.atk.hit) {
+      if (st.hy) {
+        // Hybrid: sideways before the approach = run into another lane; then spike left / right, up = lob (diagonal = aimed lob)
+        if (ht < st.atk.tc - SKILLS.hy.laneLock && ax >= ay * 0.8) { mpLane(t, dx < 0 ? -1 : 1, ht); return; }
+        const h = hyAttackDir(dx, dy, BAL.lobTilt);
+        mpAttack(t, h.dir, ht, h.aim); return;
+      }
       const dir = dy < 0 && ay > ax * 1.1 ? 'LOB' : dx < 0 ? 'L' : dx > 0 ? 'R' : pick(['L', 'R']);
       mpAttack(t, dir, ht); return;
     }
@@ -866,7 +984,11 @@ function hostInput(slot, k, dx, dy, ht) {
     else if (dy < 0 && ph === 'defend') mpDash(t, ht);
   } else {
     // setter: tap on the ring = set, swipe up = dump over the net
-    if (st.setq && st.setq.t === t) { mpSetInput(t, ht, k !== 'swipe' ? 'high' : dy < 0 && ay > ax * 1.1 ? 'dump' : ax > ay ? 'quick' : 'high'); return; }
+    if (st.setq && st.setq.t === t) {
+      // Hybrid: the swipe picks the lane of the set (left = left, diagonal up-left = middle, right = right / back set), straight up = dump
+      if (st.hy) { const l = hySetLane(k, dx, dy); mpSetInput(t, ht, l === 'dump' ? 'dump' : 'high', l === 'dump' ? 1 : l); return; }
+      mpSetInput(t, ht, k !== 'swipe' ? 'high' : dy < 0 && ay > ax * 1.1 ? 'dump' : ax > ay ? 'quick' : 'high'); return;
+    }
     // the other team dumped or lobbed: swipe down to turn and grab it
     if (st.dump && st.dump.o === t && k === 'swipe' && dy > 0 && ay > ax) { mpDumpSave(t); return; }
     // own hitter got blocked: tap on the ring to cover the rebound
@@ -889,7 +1011,7 @@ function mpSwipe(dx, dy) {
   if (MP.role === 0 && v && ax >= ay * 0.8 && !v.ring && v.ph !== 'serveReady' && v.ph !== 'point' && v.ph !== 'dead') {
     lane = true;
     if (!MP.host) {
-      const b = tfig(MP.team, 0), nl = clamp(MP.pred.lane + (dx < 0 ? -1 : 1), 0, 2);
+      const b = tfig(MP.team, MP.sw[MP.team] ? 1 : 0), nl = clamp(MP.pred.lane + (dx < 0 ? -1 : 1), 0, 2);
       if (nl !== MP.pred.lane) { MP.pred.lane = nl; MP.pred.until = performance.now() + 450; b.tx = lane2x(MP.team, nl); SFX.step(); }
     }
   }
@@ -924,7 +1046,8 @@ function mpSnapOut() {
   const Q = st.setq;
   const CV = st.cover, OV = st.ovp;
   return { t: 's', ov: OV ? [OV.t, OV.tc] : 0, T: G.t, ph: st.phase, pz: st.paused ? 1 : 0, sq: Q ? [Q.t, Q.ts] : 0, w: st.wall, cv: CV ? [CV.t, CV.tc] : 0, sc: st.score, sv: st.server, m: st.meter, fi: st.fire, ln: st.lane, f,
-    a: A ? [A.a, A.tc, A.hit ? 1 : 0, A.block, A.C.x, A.tb, A.bj ? 1 : 0] : 0, i: I ? [I.x, I.z, I.tMark, I.d, I.type === 'out' ? 1 : 0] : 0, v: V ? [V.t, V.tp, V.hit ? 1 : 0] : 0 };
+    a: A ? [A.a, A.tc, A.hit ? 1 : 0, A.block, A.C.x, A.tb, A.bj ? 1 : 0] : 0, i: I ? [I.x, I.z, I.tMark, I.d, I.type === 'out' ? 1 : 0] : 0, v: V ? [V.t, V.tp, V.hit ? 1 : 0] : 0,
+    ...(st.hy ? { hy: 1, ro: st.rot, sw: st.sw } : {}) };
 }
 function mpSnap(d) {
   const now = performance.now() / 1000;
@@ -943,6 +1066,11 @@ function mpSnap(d) {
 // what this phone draws: my team's score first, ring only for me, marker, block on the net
 function mpViewFrom(d) {
   const v = MP.view; if (!v) return;
+  if (d.hy) {
+    // Hybrid: positions rotate (redraw skins / my figure), controls swap while the front player attacks
+    if (!MP.host) { if (d.ro[0] !== MP.rot[0] || d.ro[1] !== MP.rot[1]) { MP.rot = d.ro.slice(); mpRoles(); } MP.sw = [!!d.sw[0], !!d.sw[1]]; }
+    mpRoleCalc();
+  }
   const T = MP.team;
   v.score = [d.sc[T], d.sc[1 - T]]; v.server = d.sv === T ? 0 : 1; v.meter = d.m[T]; v.fire = d.fi[T]; v.ph = d.ph;
   v.ring = null;
@@ -961,10 +1089,10 @@ function mpViewFrom(d) {
   const atkKey = d.a ? d.a[1] : null;
   if (atkKey !== MP.hintAtk) {
     MP.hintAtk = atkKey;
-    if (d.a && !d.a[2]) setHint(MP.role === 1 && d.a[0] !== T ? 'block' : MP.role === 0 && d.a[0] === T ? 'attack' : '');
+    if (d.a && !d.a[2]) setHint(MP.role === 1 && d.a[0] !== T ? 'block' : MP.role === 0 && d.a[0] === T ? (d.hy ? 'hyatk' : 'attack') : '');
   }
   const sqKey = d.sq ? d.sq[1] : null;
-  if (sqKey !== MP.hintSet) { MP.hintSet = sqKey; if (d.sq && MP.role === 1 && d.sq[0] === T) setHint('set'); }
+  if (sqKey !== MP.hintSet) { MP.hintSet = sqKey; if (d.sq && MP.role === 1 && d.sq[0] === T) setHint(d.hy ? 'hyset' : 'set'); }
 }
 function mpUpdate(dt) {
   if (G.fadeV) { G.fade = clamp(G.fade + G.fadeV * dt, 0, 1); if (G.fade <= 0 || G.fade >= 1) G.fadeV = 0; }
@@ -986,7 +1114,7 @@ function mpUpdate(dt) {
     const k = Math.min(1, dt * 16);
     for (let i = 0; i < 4; i++) {
       const f = FIGS[i]; if (f.nx == null) continue;
-      const own = MP.role === 0 && MP.mySlot >= 0 && f === tfig(MP.team, 0) && performance.now() < MP.pred.until;
+      const own = MP.role === 0 && MP.mySlot >= 0 && f === tfig(MP.team, MP.sw[MP.team] ? 1 : 0) && performance.now() < MP.pred.until;
       const px = f.x, wasAir = f.y > 0.03;
       f.x += ((own ? f.tx : f.nx) - f.x) * (own ? Math.min(1, dt * 22) : k);
       f.z += (f.nz - f.z) * k; f.y += (f.ny - f.y) * Math.min(1, dt * 24);
@@ -1017,5 +1145,6 @@ $('#mpBack').addEventListener('click', () => { if (MP.net) { MP.net.close(); MP.
 $('#mpLeave').addEventListener('click', mpLeave);
 $('#mpGo').addEventListener('click', mpBegin);
 $('#mpShare').addEventListener('click', mpShare);
+$('#mpHy').addEventListener('click', () => { if (!MP.host || G.mode === 'mp') return; MP.hy = !MP.hy; mpLobbySync(); });
 for (let i = 0; i < 4; i++) $('#slot' + i).addEventListener('click', () => mpPickSlot(i));
 

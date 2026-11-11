@@ -53,7 +53,8 @@ const G5 = {
   "'":'..#..|..#..|.....|.....|.....|.....|.....', '·':'.....|.....|.....|..#..|.....|.....|.....',
   '←':'.....|..#..|.#...|#####|.#...|..#..|.....', '→':'.....|..#..|...#.|#####|...#.|..#..|.....',
   '↑':'..#..|.###.|#.#.#|..#..|..#..|..#..|.....', '↓':'.....|..#..|..#..|..#..|#.#.#|.###.|..#..',
-  '↙':'.....|....#|#..#.|#.#..|##...|####.|.....', '↘':'.....|#....|.#..#|..#.#|...##|.####|.....'
+  '↙':'.....|....#|#..#.|#.#..|##...|####.|.....', '↘':'.....|#....|.#..#|..#.#|...##|.####|.....',
+  '↖':'.....|####.|##...|#.#..|#..#.|....#|.....', '↗':'.....|.####|...##|..#.#|.#..#|#....|.....'
 };
 const FONT = {};
 for (const k in G5) FONT[k] = G5[k].split('|');
@@ -396,7 +397,7 @@ function D() {
 function shake(n) { if (!reduceMotion) G.shake = Math.max(G.shake, n); }
 function slowmo(s) { G.slow = Math.max(G.slow, s); }
 // gesture hints: icons only, shown the first few times, then never again
-const HINTS = { serve: 'TAP', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← → ↑ ↓ TAP', set: 'TAP ← → ↑' };
+const HINTS = { serve: 'TAP', toss: '← ↑ →', defend: '← →', tip: '↑', attack: '↙ ↘ ↑', block: '← → ↑ ↓ TAP', set: 'TAP ← → ↑', hyset: '← ↖ →', hyatk: '← → ↖ ↑ ↗' };
 const hintSeen = store.get('hints', {});
 let hint = '', hintT = 0;
 function setHint(key) {

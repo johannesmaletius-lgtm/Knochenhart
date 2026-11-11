@@ -206,7 +206,7 @@ function updBoard() {
     for (let i = 0; i < MM; i++) BD.mt.children[i].className = i < MT ? 'on' : '';
     BD.mt.classList.toggle('fire', !!FI);
   }
-  const wl = mpv && MP.role === 1 && mpv.wall != null ? mpv.wall : -1, wk = String(wl);
+  const wl = mpv && MP.fig === 1 && mpv.wall != null ? mpv.wall : -1, wk = String(wl);
   if (wk !== BD.wkey) {
     BD.wkey = wk; BD.wall.hidden = wl < 0;
     if (wl >= 0) {
@@ -255,7 +255,7 @@ function drawPops() {
   }
 }
 function drawFireHead() {
-  const mpm = G.mode === 'mp', who = mpm ? (MP.mySlot >= 0 ? tfig(MP.team, MP.role) : null) : me;
+  const mpm = G.mode === 'mp', who = mpm ? (MP.mySlot >= 0 ? tfig(MP.team, MP.fig) : null) : me;
   if (!(mpm ? MP.view && MP.view.fire : G.fire && G.mode === 'play') || !who || !who._head) return;
   const h = who._head;
   for (let i = 0; i < 6; i++) {
