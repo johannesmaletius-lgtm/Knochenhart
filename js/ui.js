@@ -148,6 +148,7 @@ addEventListener('keydown', e => {
   if (G.mode === 'mp') { if (e.repeat) return; if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; } if (G.paused) return; audioInit(); const mm = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1], ...(MP.hy ? { q: [-0.8, -1], e: [0.8, -1] } : {}) }[k]; if (mm) onSwipe(mm[0], mm[1]); else if (k === ' ' || k === 'Enter') onTap(); return; }
   if (e.repeat) return;
   if (k === 'p' || k === 'P' || k === 'Escape') { togglePause(); return; }
+  if (G.mode === 'menu' && !$('#menu').hidden && menuKey(k)) { e.preventDefault(); return; }
   if (G.mode !== 'play' || G.paused) return;
   audioInit();
   const m = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], A: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], D: [1, 0.2],
@@ -208,4 +209,23 @@ function waitTip(fx) {
   const t = fx.querySelector('.wtip');
   t.textContent = WAIT_TIPS[WAIT.i++ % WAIT_TIPS.length];
   t.classList.remove('in'); void t.offsetWidth; t.classList.add('in');
+}
+
+/* ---------------- main menu list: row infos + arrow keys ---------------- */
+// right-hand infos of the menu rows (campaign stage, Skill Games budget, your OVR)
+function menuInfo() {
+  const c = caProg(), n = caStages().length, beat = c.w.filter(x => x > 0).length;
+  $('#mCa').textContent = beat >= n ? 'all ' + n + ' beaten' : 'stage ' + (caNext(c) + 1) + '/' + n;
+  $('#mSg').textContent = 'budget ' + sgBudget();
+  $('#mOvr').textContent = 'OVR ' + ovr(PROFILE);
+}
+// ↑ ↓ move between the rows, ← → change the difficulty, Enter / Space press (native)
+function menuKey(k) {
+  const rows = [...document.querySelectorAll('#menu .mrow')], i = rows.indexOf(document.activeElement);
+  if (k === 'ArrowDown' || k === 'ArrowUp') {
+    const d = k === 'ArrowDown' ? 1 : -1;
+    rows[i < 0 ? 0 : (i + d + rows.length) % rows.length].focus(); SFX.tick(); return true;
+  }
+  if (k === 'ArrowLeft' || k === 'ArrowRight') { const l = clamp(G.level + (k === 'ArrowRight' ? 1 : -1), 0, 2); if (l !== G.level) { SFX.tick(); setLevel(l); } return true; }
+  return false;
 }

@@ -105,6 +105,7 @@ function updOverMeta() { $('#ovNext').innerHTML = nextHTML(); }
 function updMenuMeta() {
   const nx = nextHTML(), daily = store.get('bonusDay', 0) !== today();
   $('#menuNext').innerHTML = nx;
+  menuInfo();
   $('#menuDaily').hidden = !daily;
   $('#shopBadge').hidden = !SKINS.some(k => !owned.has(k.id) && coins >= k.p);
 }
@@ -142,7 +143,7 @@ $('#shopAct').addEventListener('click', () => {
   }
   mySkin = k.id; store.set('skin', mySkin); shopDraw();
 });
-for (const id of ['#shopBtn', '#menuCoins']) $(id).addEventListener('click', () => { audioInit(); shopOpen(); });
+$('#shopBtn').addEventListener('click', () => { audioInit(); shopOpen(); });
 $('#shopOk').addEventListener('click', () => { me.skin = mySkin; SFX.tick(); showOnly('menu'); });
 updCoins();
 

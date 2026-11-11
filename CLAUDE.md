@@ -40,6 +40,8 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 - Saving: use the existing `store.get/set` (keys are stored as `knochenhart.*`).
 - Offline/PWA must keep working: on every change to cached files bump `CACHE` in `sw.js`; new files go into `ASSETS`.
 - No behaviour changes in refactors; keep the UI language and style as is.
+- UI style ("style C", end of the main stylesheet in `index.html`): one pixel font (Departure Mono, `fonts/`, OFL), flat colors from `:root`,
+  hard edges and offset shadows (`box-shadow` without blur), small radii. No gradients, glow, blur or shine animations. Main menu = list of `.mrow` buttons (↑ ↓ keys, `menuKey`/`menuInfo` in `ui.js`).
 
 ## Testing
 - Serve the repo root with any static server (`python3 -m http.server`); Playwright is available. Console: `window.__kh` (`G`, `MP`, `SG`, `CA`, `prof()`, `slotProf`, `caForceWin(i)`, ...).

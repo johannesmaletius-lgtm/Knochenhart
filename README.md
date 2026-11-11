@@ -10,4 +10,4 @@ Aufs Handy holen:
 
 Danach startet es im Vollbild und läuft auch offline.
 
-Schriften: Jacquard 24, Tiny5 und Jersey 10, SIL Open Font License 1.1.
+Schrift: Departure Mono (Helena Zhang), SIL Open Font License 1.1.
