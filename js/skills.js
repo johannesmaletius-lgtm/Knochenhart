@@ -45,6 +45,10 @@ const SKILLS = {
   // botFollow = hitter runs into the set lane, botSetOk = setter sets the hitter's lane (else a neighbour lane), botReact = s;
   // lobFar = less dig chance for an aimed lob two lanes away; dankeT = flight of a free ball (s); setSpd = run speed of a back setter
   hy: { setTilt: 0.4, laneLock: 0.45, botFollow: [0.86, 0.97], botSetOk: [0.88, 0.97], botReact: [0.1, 0.24], lobFar: 0.2, dankeT: 1.3, setSpd: 9, defLv: 60 },
+  // P6 Skill Games (js/skillgames.js): budget = round(share x coins for all skills 60 -> 99); aiMix = share of random picks in
+  // the computer's auto spread (rest raises the lowest skill); MP: wait = s to spend, the phone auto-spends the rest grace s
+  // before the end, the host waits grace s longer, then auto-spends for anyone missing; coinMul = coin reward x (1 = as normal)
+  sg: { share: 0.5, aiMix: 0.35, wait: 45, grace: 1.5, coinMul: 1 },
   // skill badge at 90: pick one perk in the same area; v = effect value for the engine:
   // hotHand: fireball bar length x v; heavyArm: + v spike quality; feather: lob dig chance x (1 - v); sneaky: lobs feed
   // the AI read x (1 - v); platform: receive timing err x (1 - v); calm: failed late receives x v; catReflex: dive reach x v;

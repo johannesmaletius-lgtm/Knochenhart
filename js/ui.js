@@ -2,6 +2,7 @@
 // ui: menu demo, game lifecycle, input, UI wiring
 /* ---------------- menu demo ---------------- */
 function menuScene() {
+  sgClose(); sgEnd(); SG.again = null; // P6: a Skill Games profile never outlives its match
   me.skin = mySkin; mate.skin = oA.skin = oB.skin = null; mate.glow = oB.glow = false;
   G.mode = 'menu'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 0; G.fadeV = 0;
   resetCourt();
@@ -43,6 +44,7 @@ function gameOver() {
   const rows = [['Perfect', s.perfect], ['Rally', s.maxRally], ['Aces', s.aces]];
   $('#ovStats').innerHTML = rows.map(r => '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>').join('');
   showCoinWin(win);
+  sgEnd();
   updOverMeta();
   if (win) { setPose(me, 'cheer', 0); setBase(me, 'cheer'); G.hype = 4; } else { setBase(me, 'sad'); setPose(me, 'sad', 0); }
   showOnly('over');
@@ -167,7 +169,7 @@ $('#howBtn').addEventListener('click', () => openHow('menu'));
 $('#howOk').addEventListener('click', () => { if ($('#howOk').dataset.next === 'play') startGame(); else showOnly('menu'); });
 $('#resumeBtn').addEventListener('click', () => togglePause(false));
 $('#quitBtn').addEventListener('click', () => { G.paused = false; $('#pauseOv').hidden = true; if (MP.net) mpLeave(); else menuScene(); });
-$('#againBtn').addEventListener('click', () => { if (MP.net) mpBegin(); else startGame(); });
+$('#againBtn').addEventListener('click', () => { if (MP.net) mpGoReq(); else if (SG.again) sgOpenSP(true); else startGame(); });
 $('#menuBtn').addEventListener('click', () => { if (MP.net) mpLeave(); else menuScene(); });
 $('#pauseBtn').addEventListener('click', () => togglePause());
 function updSoundIcon() { $('#waves').style.display = muted ? 'none' : ''; $('#mute').style.display = muted ? '' : 'none'; $('#soundBtn').setAttribute('aria-label', muted ? 'Unmute' : 'Mute'); }

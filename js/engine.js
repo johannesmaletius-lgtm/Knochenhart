@@ -474,7 +474,7 @@ function startRally() {
 const fireOn = () => unlocked(PROFILE, 'fireball');
 const meterMax = () => fireMax(PROFILE, BAL.meterMax);
 // opponent skills follow the difficulty (SKILLS.ai)
-const oppProf = () => aiProfile(D());
+const oppProf = () => SG.on && SG.opp ? SG.opp : aiProfile(D()); // P6 Skill Games: the computer's budget profile
 function addMeter(n) {
   if (G.mode !== 'play' || G.fire || !fireOn()) return;
   G.meter = clamp(G.meter + n, 0, meterMax());

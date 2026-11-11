@@ -71,7 +71,14 @@ function profileSync() { if (!PROFILE.tmp) leaderboardAdd(myCard()); }
 
 /* ---------------- skill screen ---------------- */
 let pfTab = 'sk';
-function profileOpen() { pfTab = 'sk'; showOnly('skillOv'); profileSync(); profileDraw(); $('#pfList').scrollTop = 0; }
+// P6 Skill Games (js/skillgames.js): the same screen edits a temporary profile against a budget, never saved.
+// pfSG = { p, budget, go, msg, onGo, onBack, locked } or null (own profile)
+let pfSG = null;
+const pfP = () => pfSG ? pfSG.p : PROFILE;
+function profileOpen() { pfSG = null; pfTab = 'sk'; showOnly('skillOv'); profileSync(); profileDraw(); $('#pfList').scrollTop = 0; }
+function pfSgOpen(cfg) { pfSG = cfg; pfTab = 'sk'; showOnly('skillOv'); pfSgMsg(cfg.msg); profileDraw(); $('#pfList').scrollTop = 0; $('#pfGo').focus({ preventScroll: true }); }
+function pfSgClose() { pfSG = null; }
+function pfSgMsg(s) { $('#pfSgMsg').textContent = s || ''; }
 // radar: 6 axes, level 60 sits on a small inner ring so the shape never collapses
 function radarSVG(sk) {
   const ids = SKILLS.ids, W = 168, H = 132, cx = W / 2, cy = H / 2 + 2, R = 46, in0 = 0.16;
@@ -89,15 +96,18 @@ function radarSVG(sk) {
   return s + '</svg>';
 }
 function skillRowHTML(id) {
-  const lv = PROFILE.sk[id], c = levelCost(lv), f = (lv - SKILLS.min) / (SKILLS.max - SKILLS.min);
+  const P = pfP(), lv = P.sk[id], c = levelCost(lv), f = (lv - SKILLS.min) / (SKILLS.max - SKILLS.min), lock = pfSG && pfSG.locked ? ' disabled' : '';
   let tags = '';
   for (const [k, [s, at]] of Object.entries(SKILLS.unlock)) if (s === id) tags += '<span class="tag' + (lv >= at ? ' on' : '') + '">' + SKILLS.unlockNames[k] + (lv >= at ? '' : ' ' + at) + '</span>';
   tags += '<span class="tag' + (lv >= SKILLS.badgeAt ? ' on gold' : '') + '">Badge' + (lv >= SKILLS.badgeAt ? '' : ' ' + SKILLS.badgeAt) + '</span>';
   let perks = '';
-  if (hasBadge(PROFILE, id)) perks = '<div class="perks" role="group" aria-label="' + SKILLS.names[id] + ' badge">' + SKILLS.perks[id].map(k =>
-    '<button class="perk" data-sk="' + id + '" data-perk="' + k.id + '" aria-pressed="' + (PROFILE.badge[id] === k.id) + '"><b>' + k.n + '</b><small>' + k.d + '</small></button>').join('') + '</div>';
-  const btn = c ? '<button class="plus" data-up="' + id + '"' + (coins < c ? ' disabled' : '') + ' aria-label="Raise ' + SKILLS.names[id] + ' for ' + c + ' coins">+<span class="coin"></span>' + c + '</button>'
+  if (hasBadge(P, id)) perks = '<div class="perks" role="group" aria-label="' + SKILLS.names[id] + ' badge">' + SKILLS.perks[id].map(k =>
+    '<button class="perk" data-sk="' + id + '" data-perk="' + k.id + '" aria-pressed="' + (P.badge[id] === k.id) + '"' + lock + '><b>' + k.n + '</b><small>' + k.d + '</small></button>').join('') + '</div>';
+  // Skill Games: the budget pays, levels can go back down
+  const have = pfSG ? pfSG.budget - sgSpent(P) : coins;
+  let btn = c ? '<button class="plus" data-up="' + id + '"' + (have < c || lock ? ' disabled' : '') + ' aria-label="Raise ' + SKILLS.names[id] + ' for ' + c + ' coins">+<span class="coin"></span>' + c + '</button>'
     : '<span class="plus max">Max</span>';
+  if (pfSG) btn = '<button class="plus minus" data-dn="' + id + '"' + (lv <= SKILLS.min || lock ? ' disabled' : '') + ' aria-label="Lower ' + SKILLS.names[id] + '">&minus;</button>' + btn;
   return '<div class="sk"><div class="sk-top"><b>' + SKILLS.names[id] + '</b><span class="lv">' + lv + '</span>' + btn + '</div>'
     + '<span class="bar"><i style="width:' + (f * 100).toFixed(1) + '%"></i></span><div class="tags">' + tags + '</div>' + perks + '</div>';
 }
@@ -110,15 +120,20 @@ function boardHTML() {
   }).join('');
 }
 function profileDraw() {
-  $('#pfCoins').textContent = coins;
+  const P = pfP(), sg = !!pfSG;
+  if (sg) pfTab = 'sk';
+  $('#pfCoins').textContent = sg ? pfSG.budget - sgSpent(P) : coins;
+  $('#pfTitle').textContent = sg ? 'Skill Games' : 'Skills';
+  $('#pfSeg').hidden = sg; $('#pfSg').hidden = !sg;
+  if (sg) { $('#pfGo').textContent = pfSG.locked ? 'Waiting' : pfSG.go; $('#pfGo').disabled = $('#pfAuto').disabled = !!pfSG.locked; }
   $('#pfSeg').dataset.lv = pfTab === 'sk' ? 0 : 1;
   $('#pfTabSk').setAttribute('aria-pressed', pfTab === 'sk'); $('#pfTabLb').setAttribute('aria-pressed', pfTab === 'lb');
   $('#pfList').hidden = pfTab !== 'sk'; $('#pfLb').hidden = pfTab !== 'lb';
-  $('#pfOvr').textContent = ovr(PROFILE);
-  $('#pfRank').textContent = '#' + lbRank(leaderboard(), PID) + ' local';
-  $('#pfTmp').hidden = !PROFILE.tmp;
+  $('#pfOvr').textContent = ovr(P);
+  $('#pfRank').textContent = sg ? 'Budget ' + pfSG.budget : '#' + lbRank(leaderboard(), PID) + ' local';
+  $('#pfTmp').hidden = !P.tmp; $('#pfTmp').textContent = sg ? 'This match only' : 'Debug';
   if (pfTab === 'sk') {
-    $('#pfRadar').innerHTML = radarSVG(PROFILE.sk);
+    $('#pfRadar').innerHTML = radarSVG(P.sk);
     const list = $('#pfList'), sc = list.scrollTop;
     list.innerHTML = SKILLS.ids.map(skillRowHTML).join('');
     list.scrollTop = sc;
@@ -129,11 +144,20 @@ function profileDraw() {
 }
 function profileWire() {
   $('#skillBtn').addEventListener('click', () => { audioInit(); profileOpen(); });
-  $('#pfOk').addEventListener('click', () => { SFX.tick(); showOnly('menu'); });
+  $('#pfOk').addEventListener('click', () => { if (pfSG) { pfSG.onBack(); return; } SFX.tick(); showOnly('menu'); });
   $('#pfTabSk').addEventListener('click', () => { pfTab = 'sk'; SFX.tick(); profileDraw(); });
   $('#pfTabLb').addEventListener('click', () => { pfTab = 'lb'; SFX.tick(); profileDraw(); });
   $('#pfList').addEventListener('click', e => {
-    const up = e.target.closest('.plus[data-up]'), pk = e.target.closest('.perk');
+    const up = e.target.closest('.plus[data-up]'), pk = e.target.closest('.perk'), dn = e.target.closest('.plus[data-dn]');
+    if (pfSG) {
+      // Skill Games: temporary profile, budget instead of coins, nothing is saved
+      const P = pfSG.p; if (pfSG.locked) return;
+      if (up) { const id = up.dataset.up; if (!sgUp(P, id, pfSG.budget)) return; const lv = P.sk[id]; if (lv === SKILLS.badgeAt || Object.values(SKILLS.unlock).some(([s, at]) => s === id && at === lv)) SFX.win(); else SFX.tick(); }
+      else if (dn) { if (!sgDown(P, dn.dataset.dn)) return; SFX.tick(); }
+      else if (pk) { if (!pickPerk(P, pk.dataset.sk, pk.dataset.perk)) return; SFX.tick(); }
+      else return;
+      profileDraw(); return;
+    }
     if (up) {
       const id = up.dataset.up;
       if (!skillUp(id)) return;

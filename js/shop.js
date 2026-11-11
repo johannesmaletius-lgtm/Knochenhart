@@ -85,7 +85,7 @@ function showCoinWin(win) {
     // first win of the day pays double
     const bonus = store.get('bonusDay', 0) !== today();
     if (bonus) store.set('bonusDay', today());
-    const n = bonus ? SKILLS.earn.daily : SKILLS.earn.win;
+    const n = Math.round((bonus ? SKILLS.earn.daily : SKILLS.earn.win) * sgCoinMul());
     addCoins(n);
     el.querySelector('.n').textContent = '+' + n;
     $('#ovBonus').textContent = bonus ? 'Daily bonus' : '';

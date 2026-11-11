@@ -14,6 +14,7 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 | `js/ui.js` | menu demo, game lifecycle (`startGame`, `gameOver`, pause), input (`onSwipe`, `onTap`, pointer/keys), menu button wiring |
 | `js/shop.js` | coins, `SKINS`, skull portraits `skinIcon`, unlock progress, shop screen, confetti |
 | `js/profile.js` | player id `PID` + name (`knochenhart.pid/name`), local leaderboard (`lbAdd`/`leaderboardAdd`, `knochenhart.board`), P5 peer profiles (`profClean`/`profWire`/`meetNew`), skill screen `#skillOv` (levels, OVR, radar, badge perks); pure helpers also a Node module |
+| `js/skillgames.js` | P6 Skill Games: pure budget/spend/check/auto spread (`sgBudget`, `sgUp`/`sgDown`, `sgCheck`, `sgAuto`, `sgEnter`/`sgLeave`; Node module), SP flow (`#sgBtn`, `SG`), MP spend round (`mpGoReq`, `sgMp*`, msgs `sgo`/`sgp`/`sgr`); numbers `SKILLS.sg` |
 | `js/social.js` | P5: MP profiles (`mpProfIn`/`mpProfSlots`, lobby card `#mpCard`), met players -> board (`playerMet`), emotes (`#emoBtn`/`#emoMenu`, `emoteGate`, `drawEmotes`); numbers `SKILLS.social` |
 | `js/mp.js` | multiplayer: `MP` state, transport (Trystero/WebRTC, BroadcastChannel with `?bc`), lobby (+ Hybrid toggle `#mpHy`), host match rules (`mp*`, Hybrid hooks `st.hy`), input relay, snapshot sync, MP UI wiring |
 | `js/render.js` | canvas rendering (`render()`, figures, net, ball, HUD), HTML scoreboard `BD`/`updBoard`, dither fade, main loop (`update`, `frame`) |
@@ -24,10 +25,9 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 
 ## How the scripts fit together
 - Classic `<script src>` tags (no ES modules), all `'use strict'`, loaded in this order:
-  engine, skills, hybrid, ai, ui, shop, profile, mp, social, render, main. They share one global scope: top-level `const`/`let`/`function`
+  engine, skills, hybrid, ai, ui, shop, profile, skillgames, mp, social, render, main. They share one global scope: top-level `const`/`let`/`function`
   of one file are visible in all others.
-- Code that runs at load time may only use things from the same or earlier files
-  (functions from later files are not defined yet). Calls inside functions are fine.
+- Load-time code may only use the same or earlier files; calls inside functions are fine.
 - New top-level names must not clash with existing ones (or with browser globals like `name`, `top`, `screen`).
 - New file: add a `<script>` tag in `index.html` in the right order **and** add it to `ASSETS` in `sw.js`.
 
@@ -42,10 +42,8 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
 - No behaviour changes in refactors; keep the UI language and style as is.
 
 ## Testing
-- Serve the repo root with any static server (e.g. `python3 -m http.server`) and open `index.html`.
-- Debug handle in the console: `window.__kh` (`G`, `MP`, `AI`, `ball`, `startGame`, `onSwipe`, `onTap`, ...).
-- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/probabilities.test.js` (all skill rolls, 10k each), `node tests/hybrid.test.js` (P4 rules), `node tests/social.test.js` (P5 profile cleaning, board dedupe, emote limit), `node tests/sim-progress.js` (days until all skills 99). Exit code != 0 = fail.
-- Playwright is available in the dev container for browser smoke tests.
+- Serve the repo root with any static server (`python3 -m http.server`); Playwright is available. Console: `window.__kh` (`G`, `MP`, `SG`, `prof()`, `slotProf`, ...).
+- Node checks live in `tests/` (no npm deps): `node tests/skills.test.js`, `node tests/profile.test.js`, `node tests/probabilities.test.js` (all skill rolls, 10k each), `node tests/hybrid.test.js` (P4 rules), `node tests/social.test.js` (P5 profile cleaning, board dedupe, emote limit), `node tests/skillgames.test.js` (P6), `node tests/sim-progress.js` (days until all skills 99). Exit code != 0 = fail.
 - MP test: two tabs with `?bc` in one browser context (create, `#mpHy`, join with the code, Start). They share localStorage
   (same `pid`): give the 2nd page its own in-memory `localStorage` via an init script to test profiles/board.
 - P5 profiles: join sends `{t:'prof'}` (`profWire`), host cleans it (`profClean`: skills 60..99, known perks, name) into
@@ -58,3 +56,5 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
   tap = middle; straight up = dump; hitter may change lane until `laneLock` s before the hit, then one lane off = free ball
   ("Danke-Ball"), two off = floor. Aimed lob ↖/↗ needs no Lob 75 in Hybrid. Double touch is a guard (`mpContact`), the
   dig -> set -> attack plan avoids it; the block counts as the blocking team's touch. Bot setters set the hitter's lane.
+- P6 Skill Games: temp profile (`tmp`+`sg`, all 60, budget = `share` x `totalCost()`) edited on `#skillOv` (`pfSG` mode). SP swaps `PROFILE`
+  for the match (`sgEnter`), `gameOver`/`menuScene` swap back; computer = `SG.opp`. MP: host `sgCheck`s into `MP.st.sgp` (wins in `slotProf`), never `prof`/board. Coins as normal (`coinMul` 1).

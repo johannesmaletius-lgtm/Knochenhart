@@ -266,6 +266,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .perk[aria-pressed="true"]{background:linear-gradient(180deg,rgba(255,233,168,.22),rgba(242,194,94,.08));box-shadow:inset 0 0 0 2px var(--gold)}
 .perk[aria-pressed="true"] b{color:var(--gold-hi)}
 #pfLb{display:flex;flex-direction:column;gap:8px;min-height:0}
+.plus.minus{min-width:30px;padding:5px 0}
+.pf-sg{display:flex;flex-direction:column;gap:6px}
+.pf-sg .row{display:grid;grid-template-columns:1fr 2fr;gap:8px}
+.pf-sg .btn{padding:11px 8px}
+#mpOv .mp-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
+#mpOv .mp-opts .btn{min-width:0;font-size:10px;letter-spacing:.04em;padding:11px 4px}
 .pf-name{display:flex;align-items:center;gap:8px}
 .pf-name input{flex:1;min-width:0;font-family:var(--font-display);font-size:14px;letter-spacing:.12em;text-transform:uppercase;
   background:rgba(0,0,0,.45);color:var(--bone);border:0;border-radius:var(--r-sm);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);padding:9px 10px;-webkit-user-select:text;user-select:text}
@@ -435,6 +441,7 @@ html{background:var(--screen)}
           <div class="r"><b id="stR">–</b><i>Win rate</i></div>
         </div>
         <button class="btn big" id="playBtn"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M2 1L7 4L2 7Z" fill="currentColor"/></svg>Play</button>
+        <button class="btn ghost" id="sgBtn">Skill Games</button>
         <div class="tiles">
           <button class="tile" id="mpBtn"><span class="ic a"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="1" y="1" width="2" height="2" fill="currentColor"/><rect x="5" y="1" width="2" height="2" fill="currentColor"/><rect x="0" y="4" width="4" height="3" fill="currentColor"/><rect x="4" y="4" width="4" height="3" fill="currentColor"/></svg></span>Online</button>
           <button class="tile" id="shopBtn"><span class="ic b"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="2" y="0" width="4" height="1" fill="currentColor"/><rect x="1" y="1" width="1" height="2" fill="currentColor"/><rect x="6" y="1" width="1" height="2" fill="currentColor"/><rect x="0" y="3" width="8" height="5" fill="currentColor"/></svg></span>Shop<span class="badge" id="shopBadge" hidden></span></button>
@@ -462,6 +469,7 @@ html{background:var(--screen)}
         <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Multiplayer, front: block left, right, wide, drop back. Tap to jump when the ring closes</dd>
         <dt>Tap</dt><dd>Front, setting: tap on the ring. <kbd>←</kbd> <kbd>→</kbd> quick set, <kbd>↑</kbd> dump over the net</dd>
         <dt><kbd>↓</kbd></dt><dd>Front: grab a dump or lob. Tap when your hitter gets blocked to cover, or when their dig floats over the net to smash it</dd>
+        <dt>Skill Games</dt><dd>Menu button or lobby option: everyone starts at 60 and spends half the coins of a maxed player before the match. Only for that match, your own skills stay as they are</dd>
         <dt>Hybrid</dt><dd>Lobby option. Everyone plays back and front: you rotate when your team wins the serve back. Nobody may touch the ball twice in a row</dd>
         <dt><kbd>←</kbd> <kbd>↖</kbd> <kbd>→</kbd></dt><dd>Hybrid, setting: the swipe picks the lane: left, middle, right. <kbd>↑</kbd> dump. Front digs, then the back player sets and the front attacks</dd>
         <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Hybrid, hitting: run into the set lane before your approach. One lane off: only a free ball over, two off: the ball drops. <kbd>↖</kbd> <kbd>↗</kbd> short lob left or right</dd>
@@ -491,7 +499,7 @@ html{background:var(--screen)}
       <div class="card pf">
         <div class="sheet-h">
           <button class="back" id="pfOk" aria-label="Back"><svg viewBox="0 0 8 8" aria-hidden="true"><rect x="4" y="0" width="2" height="2" fill="currentColor"/><rect x="2" y="2" width="2" height="2" fill="currentColor"/><rect x="2" y="4" width="2" height="2" fill="currentColor"/><rect x="4" y="6" width="2" height="2" fill="currentColor"/></svg></button>
-          <h2>Skills</h2>
+          <h2 id="pfTitle">Skills</h2>
           <p class="coins pill" aria-label="Coins"><span class="coin" aria-hidden="true"></span><span class="n" id="pfCoins">0</span></p>
         </div>
         <div class="pf-top">
@@ -509,6 +517,10 @@ html{background:var(--screen)}
           <div class="pf-list"><ol class="board" id="pfBoard"></ol></div>
           <p class="pf-hint">Players you meet online join this list.</p>
         </div>
+        <div class="pf-sg" id="pfSg" hidden>
+          <p class="pf-hint" id="pfSgMsg" aria-live="polite"></p>
+          <div class="row"><button class="btn ghost" id="pfAuto">Auto</button><button class="btn" id="pfGo">Start</button></div>
+        </div>
       </div>
     </div>
 
@@ -522,7 +534,7 @@ html{background:var(--screen)}
         </div>
         <button class="btn ghost" id="mpBack">Back</button>
         <p class="rec" id="mpMsg" aria-live="polite"></p>
-        <p class="rec" style="opacity:.45;font-size:11px;margin:0">build 2026-11-11a</p>
+        <p class="rec" style="opacity:.45;font-size:11px;margin:0">build 2026-11-11b</p>
       </div>
       <div class="panel" id="mpLobby" hidden>
         <p class="label">Room code</p>
@@ -535,7 +547,7 @@ html{background:var(--screen)}
           <button class="slot" id="slot3" aria-pressed="false"><i>Front</i><b>CPU</b><em></em></button>
         </div>
         <button class="btn ghost" id="mpShare">Share link</button>
-        <button class="btn ghost" id="mpHy" aria-pressed="false">Mode: Classic</button>
+        <div class="mp-opts"><button class="btn ghost" id="mpHy" aria-pressed="false">Mode: Classic</button><button class="btn ghost" id="mpSg" aria-pressed="false">Skill Games: Off</button></div>
         <p class="rec" id="mpHyInfo" style="margin:0"></p>
         <button class="btn" id="mpGo">Start</button>
         <button class="btn ghost" id="mpLeave">Leave</button>
@@ -581,6 +593,7 @@ html{background:var(--screen)}
 <script src="js/ui.js"></script>
 <script src="js/shop.js"></script>
 <script src="js/profile.js"></script>
+<script src="js/skillgames.js"></script>
 <script src="js/mp.js"></script>
 <script src="js/social.js"></script>
 <script src="js/render.js"></script>

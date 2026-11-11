@@ -15,7 +15,8 @@ const MPCODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const MP = {
   net: null, host: false, code: '', slots: [null, null, null, null], myId: '', mySlot: -1, team: 0, role: 0,
   st: null, view: null, level: 1, snapT: 0, off: 0, offOk: false, rtt: 0.12, pingT: 0, lastBall: null, pred: { lane: 1, until: 0 },
-  hintAtk: null, hy: false, rot: [0, 0], sw: [false, false], fig: 0
+  hintAtk: null, hy: false, rot: [0, 0], sw: [false, false], fig: 0,
+  sg: false, sgOpen: false, sgp: null, sgEnd: 0 // P6 Skill Games (js/skillgames.js)
 };
 
 /* ---------- transport: WebRTC via Trystero (signalling over several public Nostr relays), BroadcastChannel for same-device tests (?bc) ---------- */
@@ -108,7 +109,7 @@ async function mpCreate() {
   try { if (!useBC) await loadPeer(); } catch (e) { mpMsg('No connection'); return; }
   if (MP.net) { try { MP.net.close(); } catch (e) {} MP.net = null; }
   const code = mpNewCode();
-  MP.host = true; MP.hy = false; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin, prof: profIn(myProf()) }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
+  MP.host = true; MP.hy = false; MP.sg = false; MP.sgOpen = false; MP.code = code; MP.myId = 'H'; MP.slots = [{ id: 'H', n: 1, sk: mySkin, prof: profIn(myProf()) }, null, null, null]; MP.mySlot = 0; MP.level = G.level;
   MP.net = netCreate(code, {
     open() { mpLobbyShow(); },
     conn(id) {
@@ -118,11 +119,11 @@ async function mpCreate() {
       const used = MP.slots.filter(Boolean).map(s => s.n);
       let n = 1; while (used.includes(n)) n++;
       MP.slots[free] = { id, n };
-      mpLobbySync();
-      if (G.mode === 'mp') { MP.net.send(id, { t: 'start', level: MP.level, hy: MP.hy }); if (MP.lastBall) MP.net.send(id, { t: 'fx', e: MP.lastBall }); }
+      mpLobbySync(); sgMpJoin(id);
+      if (G.mode === 'mp') { MP.net.send(id, { t: 'start', level: MP.level, hy: MP.hy, sg: MP.sg }); if (MP.lastBall) MP.net.send(id, { t: 'fx', e: MP.lastBall }); }
     },
     msg(id, d) { mpHostMsg(id, d); },
-    gone(id) { const i = MP.slots.findIndex(s => s && s.id === id); if (i >= 0) { MP.slots[i] = null; mpLobbySync(); } },
+    gone(id) { const i = MP.slots.findIndex(s => s && s.id === id); if (i >= 0) { MP.slots[i] = null; mpLobbySync(); sgMpCheck(); } },
     fail(k) { const n = MP.net; MP.net = null; if (n) n.close(); if (k === 'taken') mpCreate(); else mpMsg('No connection'); }
   });
 }
@@ -162,7 +163,7 @@ function mpLeave() {
 }
 function mpLobbySync() {
   if (!MP.host) return;
-  MP.net.all({ t: 'lobby', slots: MP.slots, code: MP.code, level: MP.level, live: G.mode === 'mp', hy: MP.hy });
+  MP.net.all({ t: 'lobby', slots: MP.slots, code: MP.code, level: MP.level, live: G.mode === 'mp', hy: MP.hy, sg: MP.sg });
   mpLobbyDraw();
 }
 function mpLobbyShow() { mpMsg(''); showOnly('mpOv'); $('#mpStart').hidden = true; $('#mpLobby').hidden = false; mpLobbyDraw(); }
@@ -180,7 +181,8 @@ function mpLobbyDraw() {
   }
   $('#mpGo').hidden = !MP.host;
   const hb = $('#mpHy'); hb.textContent = 'Mode: ' + (MP.hy ? 'Hybrid' : 'Classic'); hb.disabled = !MP.host || G.mode === 'mp'; hb.setAttribute('aria-pressed', String(MP.hy));
-  $('#mpHyInfo').textContent = MP.hy ? 'Hybrid: both roles, rotate on side-out, set by lane' : '';
+  const sb = $('#mpSg'); sb.textContent = 'Skill Games: ' + (MP.sg ? 'On' : 'Off'); sb.disabled = !MP.host || G.mode === 'mp' || !!MP.sgOpen; sb.setAttribute('aria-pressed', String(!!MP.sg));
+  $('#mpHyInfo').textContent = [MP.hy ? 'Hybrid: both roles, rotate on side-out, set by lane' : '', MP.sg ? 'Skill Games: all start at 60, spend ' + sgBudget() + ' coins for this match' : ''].filter(Boolean).join(' · ');
   if (!/copied|http/.test($('#mpWait').textContent) || !MP.host) $('#mpWait').textContent = MP.host ? '' : 'Waiting for start';
 }
 function inviteURL() {
@@ -199,17 +201,19 @@ function mpPickSlot(i) {
 }
 function mpHostMsg(id, d) {
   const i = MP.slots.findIndex(s => s && s.id === id);
-  if (d.t === 'slot') { if (i >= 0 && !MP.slots[d.i] && G.mode !== 'mp') { MP.slots[d.i] = MP.slots[i]; MP.slots[i] = null; mpLobbySync(); } }
+  if (d.t === 'slot') { if (i >= 0 && !MP.slots[d.i] && G.mode !== 'mp' && !MP.sgOpen) { MP.slots[d.i] = MP.slots[i]; MP.slots[i] = null; mpLobbySync(); } }
   else if (d.t === 'p') MP.net.send(id, { t: 'q', c: d.c });
   else if (d.t === 'skin' && i >= 0 && SKIN[d.sk]) { MP.slots[i].sk = d.sk; mpLobbySync(); if (G.mode === 'mp') mpRoles(); }
   else if (d.t === 'in' && i >= 0 && G.mode === 'mp') hostInput(i, d.k, d.dx, d.dy, d.ht);
   else if (d.t === 'prof' && i >= 0) mpProfIn(i, d.p);
   else if (d.t === 'emo' && i >= 0 && G.mode === 'mp') emoteHost(i, d.e);
+  else if (d.t === 'sgp') sgMpIn(i, d.p);
 }
 function mpClientMsg(d) {
-  if (d.t === 'lobby') { MP.slots = mpProfSlots(d.slots); MP.code = d.code; MP.level = d.level; MP.hy = !!d.hy; if (G.mode !== 'mp') mpLobbyShow(); else mpRoles(); }
+  if (d.t === 'lobby') { MP.slots = mpProfSlots(d.slots); MP.code = d.code; MP.level = d.level; MP.hy = !!d.hy; MP.sg = !!d.sg; if (G.mode === 'mp') mpRoles(); else if (SG.mp) mpLobbyDraw(); else mpLobbyShow(); }
   else if (d.t === 'full') { mpMsg('Room full'); MP.net.close(); MP.net = null; }
-  else if (d.t === 'start') { MP.level = d.level; MP.hy = !!d.hy; mpEnter(); }
+  else if (d.t === 'start') { MP.level = d.level; MP.hy = !!d.hy; MP.sg = !!d.sg; mpEnter(); }
+  else if (d.t === 'sgo' || d.t === 'sgr') sgMpMsg(d);
   else if (d.t === 's') mpSnap(d);
   else if (d.t === 'fx') applyFx(d.e);
   else if (d.t === 'q') { const r = (performance.now() - d.c) / 1000; MP.rtt = MP.rtt * 0.7 + r * 0.3; }
@@ -232,18 +236,18 @@ function mpEnter() {
   G.mode = 'mp'; G.paused = false; G.ev.length = 0; G.pops.length = 0; G.fade = 1; G.fadeV = -4; G.hype = 0;
   oA.spring = true; MP.rot = [0, 0]; MP.sw = [false, false]; mpRoles();
   MP.view = { hy: MP.hy,  score: [0, 0], server: 0, meter: 0, fire: false, ring: null, inc: null, blk: null, ph: '' };
-  mpCardHide(); showOnly(null); setHint('');
+  mpCardHide(); sgClose(); showOnly(null); setHint('');
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
 }
 function mpBegin() {
   if (!MP.host) return;
   MP.level = G.level;
-  MP.net.all({ t: 'start', level: MP.level, hy: MP.hy });
+  MP.net.all({ t: 'start', level: MP.level, hy: MP.hy, sg: MP.sg });
   mpEnter();
   MP.st = { score: [0, 0], server: Math.random() < 0.5 ? 0 : 1, meter: [0, 0], fire: [false, false], phase: 'idle', inc: null, atk: null, srv: null,
     hist: [{ L: 0, R: 0, LOB: 0 }, { L: 0, R: 0, LOB: 0 }], lane: [1, 1], arrive: [-9, -9], dash: [false, false], rally: 0,
     wall: [0, 0], stats: [0, 1, 2, 3].map(() => ({ p: 0, b: 0, d: 0, s: 0, f: 0 })),
-    hy: MP.hy, rot: [0, 0], sw: [false, false], tch: null, side: null };
+    hy: MP.hy, rot: [0, 0], sw: [false, false], tch: null, side: null, sgp: MP.sg && MP.sgp ? MP.sgp.slice() : null };
   MP.rot = MP.st.rot; MP.sw = MP.st.sw;
   for (const f of FIGS) f.seq = null;
   mpRally();
@@ -302,7 +306,8 @@ const HY = () => !!(MP.st && MP.st.hy);
 const hitIx = t => MP.st && MP.st.sw && MP.st.sw[t] ? 1 : 0;
 // skills per player slot (Classic + Hybrid): MP.slots[i].prof = cleaned join profile (social.js); fallback SKILLS.hy.defLv, computer players by difficulty
 const HYDEF = skillsNew(SKILLS.hy.defLv);
-function slotProf(i) { const s = MP.slots[i]; return s ? (s.prof && s.prof.sk ? s.prof : HYDEF) : aiProfile(mpDiff()); }
+// P6 Skill Games: the host-checked budget profile of this match (MP.st.sgp, js/skillgames.js) wins, it never enters the board
+function slotProf(i) { const s = MP.slots[i], g = MP.st && MP.st.sgp && MP.st.sgp[i]; return g ? g : s ? (s.prof && s.prof.sk ? s.prof : HYDEF) : aiProfile(mpDiff()); }
 // EARLY / LATE on every hit, on every phone (Hybrid only; the classic mode stays as it was)
 function mpHitPop(dt, q, w) {
   if (!HY() || (q === 'perfect' && !w)) return;
@@ -1148,9 +1153,10 @@ $('#mpJoin').addEventListener('click', mpJoin);
 $('#mpCode').addEventListener('keydown', e => { if (e.key === 'Enter') mpJoin(); });
 $('#mpBack').addEventListener('click', () => { if (MP.net) { MP.net.close(); MP.net = null; } menuScene(); });
 $('#mpLeave').addEventListener('click', mpLeave);
-$('#mpGo').addEventListener('click', mpBegin);
+$('#mpGo').addEventListener('click', mpGoReq);
 $('#mpShare').addEventListener('click', mpShare);
 $('#mpHy').addEventListener('click', () => { if (!MP.host || G.mode === 'mp') return; MP.hy = !MP.hy; mpLobbySync(); });
+$('#mpSg').addEventListener('click', () => { if (!MP.host || G.mode === 'mp' || MP.sgOpen) return; MP.sg = !MP.sg; SFX.tick(); mpLobbySync(); });
 // tap on a player = his card (radar + badges), on a free slot = move there
 for (let i = 0; i < 4; i++) $('#slot' + i).addEventListener('click', () => { if (!(MP.slots[i] && mpCardShow(i))) mpPickSlot(i); });
 
