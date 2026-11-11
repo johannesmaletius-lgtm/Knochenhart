@@ -55,9 +55,11 @@ Project plan and fixed game rules: `docs/FABLE_PROMPTS.md`.
   attacks (`hitIx`); `MP.fig` = my position, `MP.role` = my controls. Skills per slot: `slotProf(i)` reads `MP.slots[i].prof`
   (filled on join; default `SKILLS.hy.defLv` 60, bots `aiProfile`): spike/lob tiers + net faults, recycle vs. stuff (+ `blockQ` by jump tier); Serve/Receive/Dig skills do not act in MP yet. EARLY/LATE via fx `hp`.
 - Hybrid decisions: lanes are team-local 0 left / 1 middle / 2 right ("hinten" = right lane, back set over the setter);
-  tap = middle; straight up = dump; hitter may change lane until `laneLock` s before the hit, then one lane off = free ball
-  ("Danke-Ball"), two off = floor. Aimed lob ↖/↗ needs no Lob 75 in Hybrid. Double touch is a guard (`mpContact`), the
-  dig -> set -> attack plan avoids it; the block counts as the blocking team's touch. Bot setters set the hitter's lane.
+  tap / straight up = middle ball; no dump (the setter never plays it over); a set two lanes off the hitter drops at once ("BAD SET");
+  one lane off: hitter may change lane until `laneLock` s before the hit, else free ball ("Danke-Ball"). Aimed lob ↖/↗ needs no Lob 75 in Hybrid. Double touch is a guard (`mpContact`), the
+  dig -> set -> attack plan avoids it; the block counts as the blocking team's touch. Bot setters set the hitter's lane. Both modes: the digger attacks (`hyPlan`, `st.sw`, sent in every snapshot).
+- MP start / rotation: names over the skeletons (`drawWho`, `MP.whoUntil`). Remote defender: the ball waits at its target during `grace` (fx `bstop`). Short balls: `BAL.tipNear/tipLane/tipLate`.
+- Skill Games MP: no timer, starts when every player is Ready.
 - P6 Skill Games: temp profile (`tmp`+`sg`, all 60, budget = `share` x `totalCost()`) edited on `#skillOv` (`pfSG` mode). SP swaps `PROFILE`
   for the match (`sgEnter`), `gameOver`/`menuScene` swap back; computer = `SG.opp`. MP: host `sgCheck`s into `MP.st.sgp` (wins in `slotProf`), never `prof`/board. Coins as normal (`coinMul` 1).
 - P7 Campaign: real `PROFILE`; `caStart` sets `oA/oB.skin`, `CA.opp` (`oppProf`), `G.level` (unsaved, `caEnd` restores) + `CA.d` (`D()`); their spike/serve faults `oppErr` = `aiErr(CA.opp)` (also SG, else the level table). Win: normal coins + stage bonus (full once), next stage, Again = Next; no menu record.

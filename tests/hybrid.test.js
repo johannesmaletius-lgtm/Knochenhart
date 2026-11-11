@@ -46,22 +46,22 @@ for (const dig of [0, 1]) {
 }
 ok(H.hyPlan(1).set === 0, 'blocker digs: back player sets');
 
-// set swipe -> lane: left = left (0), diagonal up-left = middle (1), right = right / back (2), straight up = dump, tap = middle
+// set swipe -> lane: left = left (0), straight up / diagonal up-left = middle ball (1), right = right / back (2), tap = middle; no dump
 ok(H.hySetLane('swipe', -1, 0.2) === 0, 'left -> lane 0');
 ok(H.hySetLane('swipe', -1, -1) === 1, 'up-left diagonal -> lane 1');
 ok(H.hySetLane('swipe', -1, -0.5) === 1 && H.hySetLane('swipe', -0.5, -1) === 1, 'up-left (flat / steep) -> lane 1');
 ok(H.hySetLane('swipe', 1, 0) === 2 && H.hySetLane('swipe', 1, -1) === 2 && H.hySetLane('swipe', 1, 1) === 2, 'right (any) -> lane 2');
-ok(H.hySetLane('swipe', 0, -1) === 'dump' && H.hySetLane('swipe', 0.2, -1) === 'dump', 'straight up -> dump');
+ok(H.hySetLane('swipe', 0, -1) === 1 && H.hySetLane('swipe', 0.2, -1) === 1 && H.hySetLane('swipe', -0.2, -1) === 1, 'straight up -> middle ball');
 ok(H.hySetLane('swipe', -1, -0.2) === 0, 'nearly flat left -> lane 0');
 ok(H.hySetLane('swipe', -1, 1) === 0, 'down-left -> lane 0');
 ok(H.hySetLane('tap', 0, 0) === 1 && H.hySetLane('swipe', 0, 1) === 1, 'tap / down -> middle');
-// random swipe directions: every swipe maps to exactly one lane / dump, angle bands as documented
-{ const c = { 0: 0, 1: 0, 2: 0, dump: 0 };
+// random swipe directions: every swipe maps to exactly one lane (never a dump), angle bands as documented
+{ const c = { 0: 0, 1: 0, 2: 0 };
   for (let i = 0; i < K; i++) { const a = rnd() * Math.PI * 2; c[H.hySetLane('swipe', Math.cos(a), Math.sin(a))]++; }
   const at = Math.atan(SKILLS.hy.setTilt) / (2 * Math.PI); // one tilt band as a share of the full circle
-  near(c.dump / K, 2 * at, 0.015, 'dump share = straight-up band');
+  ok(c[0] + c[1] + c[2] === K, 'every set swipe is a lane');
   near(c[2] / K, 0.5 - at, 0.015, 'right half -> lane 2');
-  near(c[1] / K, 0.25 - 2 * at, 0.015, 'up-left diagonal band -> lane 1');
+  near(c[1] / K, 0.25, 0.015, 'straight-up + up-left diagonal band -> lane 1');
   near(c[0] / K, 0.25 + at, 0.015, 'flat left + down-left -> lane 0'); }
 
 // wrong lane: next lane = free ball (Danke-Ball), two off = floor

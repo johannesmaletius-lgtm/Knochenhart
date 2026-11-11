@@ -24,17 +24,18 @@ const hyPlan = dig => ({ set: 1 - dig, hit: dig });
 function hyTouch(last, t, slot) {
   return { fault: !!last && last.t === t && last.slot === slot, last: { t, slot } };
 }
-// setter swipe -> lane of the set (team-local 0 left, 1 middle, 2 right) or 'dump' (straight up).
-// left = left, diagonal up-left = middle, right = right ("back set" behind the setter), tap / down = middle
+// setter swipe -> lane of the set (team-local 0 left, 1 middle, 2 right). The setter never plays the ball over the net.
+// left = left, straight up / diagonal up-left = middle ball, right = right ("back set" behind the setter), tap / down = middle
 function hySetLane(k, dx, dy, tilt = HYS.hy.setTilt) {
   if (k !== 'swipe') return 1;
   const ax = Math.abs(dx || 0), ay = Math.abs(dy || 0);
-  if (dy < 0 && ax < ay * tilt) return 'dump';
+  if (dy < 0 && ax < ay * tilt) return 1;
   if (dx > 0) return 2;
   if (dx < 0) return dy < 0 && ay >= ax * tilt ? 1 : 0;
   return 1;
 }
-// the hitter approached in lane hit, the set went to lane set: 'hit' (same), 'danke' (next lane: only a bump over, a free ball), 'floor' (two lanes off)
+// the hitter approached in lane hit, the set went to lane set: 'hit' (same), 'danke' (next lane: only a bump over, a free ball), 'floor' (two lanes off).
+// mp.js checks it twice: at the set (two lanes off = the ball drops, nobody can run there) and at laneLock
 function hyLaneResult(set, hit) {
   const d = Math.abs(set - hit);
   return d === 0 ? 'hit' : d === 1 ? 'danke' : 'floor';
