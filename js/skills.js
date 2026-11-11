@@ -1,7 +1,7 @@
 'use strict';
 // skills: SKILLS table (curves, costs, thresholds, badge perks), OVR, profile load/save, ?ovr= debug.
-// Data + small helpers only (no engine effect yet). Runs in the browser (classic script, globals)
-// and in Node (module.exports) so tests/ can load it directly.
+// Data + pure decision helpers (the engine only calls them). Runs in the browser (classic script, globals)
+// and in Node (module.exports) so tests/ can load it directly. ?seed=N: deterministic RNG for skill rolls.
 /* ---------------- skill table: every skill number lives here ---------------- */
 const SKILLS = {
   ids: ['spike', 'lob', 'recv', 'dig', 'block', 'serve'],
@@ -18,9 +18,18 @@ const SKILLS = {
   plan: { matchesPerDay: 20, winRate: 0.5, days: 3 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
-  timing: { pen: [1, 0.55], floor: [0, 0.4] },
+  // tiers: raw err < perfect = perfect (pure timing); else effective err (1 - quality) < net.okay = good, else weak
+  timing: { pen: [1, 0.55], floor: [0, 0.4], perfect: 0.15 },
   // net fault: 0 at timing "okay" or better (err <= okay), max at very bad (err >= 1), linear between
   net: { okay: 0.35, max: 0.3 },
+  // P3 singleplayer effects. dig: scatter of our digs by Receive/Dig skill (60 -> 99)
+  dig: { wild: [1, 0.5] },
+  // Dive (Dig 70): automatic diving save for balls up to reach (m) beside you; save chance base .. 1 by Dig skill
+  dive: { reach: 1.5, base: 0.5 },
+  // our net blocker vs. their spike: stuff chance by your Block skill (60 -> 99), x split once Split block is unlocked
+  mateBlock: { stuff: [0.03, 0.09], split: 1.5 },
+  // opponent skills = base + rise * D() (D = level + score pressure, 0..1); 66..77 keeps the old block/recycle feel
+  ai: { base: 66, rise: 11 },
   // block recycle: chance the attacking team still saves a blocked ball, by the blocker's Block skill
   recycle: [[60, 0.7], [70, 0.45], [80, 0.25], [90, 0.1], [99, 0.03]],
   // threshold unlocks: feature -> [skill, level]
@@ -28,7 +37,11 @@ const SKILLS = {
   unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball' },
   // local leaderboard (profile.js): stored entries, player name length
   board: { max: 50, nameMax: 12 },
-  // skill badge at 90: pick one perk in the same area; v = effect value for the engine (P3)
+  // skill badge at 90: pick one perk in the same area; v = effect value for the engine:
+  // hotHand: fireball bar length x v; heavyArm: + v spike quality; feather: lob dig chance x (1 - v); sneaky: lobs feed
+  // the AI read x (1 - v); platform: receive timing err x (1 - v); calm: failed late receives x v; catReflex: dive reach x v;
+  // pancake: + v late-dig quality; longArms: stuff chance x v; wall: recycle against you x v; jumpServe: ace x v, flight / v;
+  // pinpoint: serve timing windows x v
   badgeAt: 90,
   perks: {
     spike: [{ id: 'hotHand', n: 'Hot Hand', d: 'Fireball charges faster', v: 0.75 }, { id: 'heavyArm', n: 'Heavy Arm', d: 'Weak timing still hits hard', v: 0.15 }],
@@ -110,6 +123,62 @@ function skillsLoad(st) {
 // tmp profiles (?ovr= debug) are never saved
 function skillsSave(p, st) { if (!p.tmp) st.set('skills', { v: 1, sk: p.sk, badge: p.badge }); }
 
+/* ---------------- P3 decisions: pure, rng passed in (engine: RNG) ---------------- */
+// mulberry32: small seeded RNG (?seed=N)
+function mulberry32(a) {
+  return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const clip01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const perkV = (p, id, perkId, d) => { const k = perk(p, id); return k && k.id === perkId ? k.v : d; };
+// raw timing error 0..1 from |dt| and windows w = [perfect, good, max] (s); at skill 60 the tiers equal the old windows
+function timingErr(adt, w) {
+  const P = SKILLS.timing.perfect, O = SKILLS.net.okay;
+  if (adt < w[0]) return P * adt / w[0];
+  if (adt < w[1]) return P + (O - P) * (adt - w[0]) / (w[1] - w[0]);
+  return O + (1 - O) * Math.min(1, (adt - w[1]) / Math.max(1e-6, w[2] - w[1]));
+}
+// effective error after skill (+ perk bonus on quality)
+const effErr = (skill, err, bonus = 0) => clip01(1 - timingQ(skill, err) - bonus);
+function hitTier(skill, err, bonus = 0) {
+  if (err < SKILLS.timing.perfect) return 'perfect';
+  return effErr(skill, err, bonus) < SKILLS.net.okay ? 'good' : 'weak';
+}
+// fault after our hit: 'net' (net fault curve on the effective error), 'out' (chance outP) or ''
+function hitFault(skill, err, bonus, outP, rng) {
+  if (rng() < netFault(effErr(skill, err, bonus))) return 'net';
+  return rng() < outP ? 'out' : '';
+}
+// an attack at the net block: 'graze' (touches the block, BAL.blockGraze), 'stuff' or ''
+function blockRoll(graze, stuff, rng) { const r = rng(); return r < graze ? 'graze' : r < graze + stuff ? 'stuff' : ''; }
+// our net blocker: stuff chance by profile p (Block skill, split block, Long Arms)
+function stuffChance(p) {
+  const m = SKILLS.mateBlock;
+  return skMix(m.stuff, p.sk.block) * (unlocked(p, 'splitBlock') ? m.split : 1) * perkV(p, 'block', 'longArms', 1);
+}
+// chance the attacking team still saves a ball stuffed by blocker profile p (Wall perk)
+const recycleP = p => recycleChance(p.sk.block) * perkV(p, 'block', 'wall', 1);
+// defense: serves and free balls are receives (Receive), the rest digs (Dig)
+const defSkill = type => type === 'serve' || type === 'free' ? 'recv' : 'dig';
+// late arrival (very bad timing): save chance from the old base; skill 60 = base, higher skill saves more
+function lateSaveP(p, type, base) {
+  const id = defSkill(type);
+  const err = 1 - perkV(p, id, 'platform', 0);
+  let s = base + (1 - base) * clip01(timingQ(p.sk[id], err) + perkV(p, id, 'pancake', 0));
+  if (type === 'serve') s = 1 - (1 - s) * perkV(p, id, 'calm', 1);
+  return s;
+}
+const digWild = (p, type) => skMix(SKILLS.dig.wild, p.sk[defSkill(type)]);
+// Dive (Dig 70): reach beside you (0 = locked) and save chance
+const diveReach = p => unlocked(p, 'dive') ? SKILLS.dive.reach * perkV(p, 'dig', 'catReflex', 1) : 0;
+const diveSave = p => SKILLS.dive.base + (1 - SKILLS.dive.base) * timingQ(p.sk.dig, 1);
+// fireball bar length (Hot Hand shortens it)
+const fireMax = (p, max) => Math.max(1, Math.round(max * perkV(p, 'spike', 'hotHand', 1)));
+// opponent profile from difficulty d 0..1 (never saved)
+function aiProfile(d) {
+  const a = SKILLS.ai, p = skillsNew(Math.round(Math.min(SKILLS.max, Math.max(SKILLS.min, a.base + a.rise * d))));
+  p.tmp = true; return p;
+}
+
 /* ---------------- browser: own profile, ?ovr=NN debug override ---------------- */
 let PROFILE = null;
 if (typeof store !== 'undefined') {
@@ -117,6 +186,9 @@ if (typeof store !== 'undefined') {
   const m = typeof location !== 'undefined' && location.search.match(/[?&]ovr=(\d+)/);
   if (m) { PROFILE = skillsNew(Math.min(SKILLS.max, Math.max(SKILLS.min, +m[1]))); PROFILE.tmp = true; }
 }
+// skill rolls: ?seed=N = deterministic (mulberry32), else Math.random
+let RNG = Math.random;
+if (typeof location !== 'undefined') { const sd = location.search.match(/[?&]seed=(\d+)/); if (sd) RNG = mulberry32(+sd[1]); }
 // spend shop coins on one level of a skill (UI glue for P2)
 function skillUp(id) {
   const c = trySkillUp(PROFILE, id, coins);
@@ -124,4 +196,5 @@ function skillUp(id) {
   return c;
 }
 
-if (typeof module !== 'undefined') module.exports = { SKILLS, curve, recycleChance, timingQ, netFault, levelCost, costTo, totalCost, skillsNew, ovr, unlocked, hasBadge, perk, hasPerk, pickPerk, trySkillUp, skillsLoad, skillsSave };
+if (typeof module !== 'undefined') module.exports = { SKILLS, curve, recycleChance, timingQ, netFault, levelCost, costTo, totalCost, skillsNew, ovr, unlocked, hasBadge, perk, hasPerk, pickPerk, trySkillUp, skillsLoad, skillsSave,
+  mulberry32, timingErr, effErr, hitTier, hitFault, blockRoll, stuffChance, recycleP, defSkill, lateSaveP, digWild, diveReach, diveSave, fireMax, aiProfile };

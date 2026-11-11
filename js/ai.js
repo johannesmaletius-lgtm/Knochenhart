@@ -180,6 +180,12 @@ function oppSet(hl, easy) {
   const fake = !tip && Math.random() < clamp(pFake, 0, [0.15, 0.35, 0.5][G.level]);
   const tellLean = fake ? pick([-1, 0, 1].filter(v => v !== lean)) : lean;
   const O = G.oppAtk = { tc, al, hl, tip, fake, tellLean, tellLane: me.lane };
+  // our net blocker (mate): graze (BAL.blockGraze) or stuff (your Block skill, split block); jumps only when it gets a hand on it
+  O.blk = tip ? '' : blockRoll(BAL.blockGraze, stuffChance(PROFILE), RNG);
+  if (O.blk) {
+    at(tc - Math.min(0.5, T - 0.05), () => { mate.tx = clamp(LX[al] * 0.8, -2.6, 2.6); mate.tz = 0.45; mate.sx = mate.sz = 9; });
+    at(tc - 0.25, () => { jump(mate, 3.4); setPose(mate, 'block', 0.5, 22); });
+  }
   at(tc - Math.min(0.8, T - 0.05), () => { oA.tx = hx; oA.tz = -3.0; oA.sz = Math.max(3, Math.abs(oA.z + 3.0) / 0.4); oA.sx = 7; });
   at(tc - 0.43, () => { jump(oA, 4.1); setPose(oA, 'jumpM', 0, 18); setBase(oA, 'jumpM'); });
   at(tc - lerp(0.55, 0.28, d), () => { if (!tip) { oA.leanT = tellLean; O.tellLane = me.lane; } });
@@ -207,7 +213,42 @@ function oppAttack(O, d) {
   const err = [0.09, 0.06, 0.04][G.level] || 0.06, r = Math.random();
   if (r < err * 0.45) { intoNet(-1, LX[al] * 0.5, () => point(0, 'NET')); after(0.6, () => react(oA, 'headHands', 1, 12)); G.phase = 'over'; return; }
   if (r < err) { outBall(Math.random() < 0.6 ? me.lane : al, T * 1.2, lerp(BAL.markDelay[0], BAL.markDelay[1], d)); return; }
+  const md = lerp(BAL.markDelay[0], BAL.markDelay[1], d), tac = O.fake ? 'aFake' : al === me.lane ? 'aNear' : 'aFar';
+  if (O.blk === 'stuff') { mateStuff(); return; }
+  if (O.blk === 'graze') { mateGraze(al, T, md, tac); return; }
   launch({ x: LX[al], y: 0.85, z: DZ + 0.1 }, T, { spin: 22 });
-  incoming('spike', al, LX[al], DZ + 0.1, T, lerp(BAL.markDelay[0], BAL.markDelay[1], d)).tac = O.fake ? 'aFake' : al === me.lane ? 'aNear' : 'aFar';
+  incoming('spike', al, LX[al], DZ + 0.1, T, md).tac = tac;
+}
+// Block-Anschlag on our side: the spike brushes our blocker's hands and comes slower
+function mateGraze(al, T, md, tac) {
+  const T2 = T * BAL.grazeSlow;
+  launch({ x: mate.x, y: 2.55, z: 0.25 }, 0.1, { spin: 22 });
+  incoming('spike', al, LX[al], DZ + 0.1, 0.1 + T2, md).tac = tac;
+  after(0.1, () => {
+    SFX.touch(); G.netWob = 0.5; sparks(ball.x, ball.y, ball.z, 6, [C.bone, C.accent]); burst(C.bone, false);
+    launch({ x: LX[al], y: 0.85, z: DZ + 0.1 }, T2, { spin: 10 });
+  });
+}
+// our blocker stuffs it; they recycle it with a chance set by your Block skill (SKILLS.recycle, Wall perk)
+function mateStuff() {
+  const hx = mate.x;
+  launch({ x: hx, y: 2.55, z: 0.25 }, 0.1, { spin: 22 });
+  G.phase = 'over'; setHint('');
+  after(0.1, () => {
+    if (G.mode !== 'play') return;
+    SFX.block(); shake(4); G.netWob = 1; G.stop = 0.08;
+    sparks(ball.x, ball.y, ball.z, 8, [C.bone, C.accent]); burst(C.accent, true);
+    const sx = clamp(hx + rand(-0.6, 0.6), -3, 3), sz = -rand(0.8, 1.6);
+    if (RNG() < recycleP(PROFILE)) {
+      launch({ x: sx, y: 0.5, z: sz }, 0.34, { spin: -16 });
+      oA.onLand = null; oA.tx = sx; oA.tz = sz - 0.15; oA.sx = oA.sz = 12;
+      after(0.34, () => { defAnim(oA, 'reflex', 1); SFX.dig(); oppPass(false, true); });
+    } else {
+      launch({ x: sx, y: 0, z: sz }, 0.3, { spin: -20 });
+      G.phase = 'dead';
+      after(0.12, () => defAnim(oA, Math.abs(oA.x - sx) < 1.6 ? 'miss' : 'lunge', sx < oA.x ? -1 : 1));
+      after(0.75, () => { G.stats.kills++; addMeter(1); point(0, 'BLOCK!'); });
+    }
+  });
 }
 

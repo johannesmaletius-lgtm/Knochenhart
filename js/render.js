@@ -197,11 +197,13 @@ function updBoard() {
   }
   BD.srv[0].classList.toggle('on', SV === 0); BD.srv[1].classList.toggle('on', SV === 1);
   $('#sbR').classList.toggle('flare', G.mode === 'play' && G.t - AI.planT < 2.2);
-  const mk = MT + '|' + FI;
+  // singleplayer: the fireball bar only with Spike 85 (fireOn), Hot Hand shortens it
+  const MM = mpv ? BAL.meterMax : meterMax(), mon = !!mpv || fireOn();
+  const mk = MT + '|' + FI + '|' + MM + '|' + mon;
   if (mk !== BD.mkey) {
-    BD.mkey = mk;
-    if (BD.mt.children.length !== BAL.meterMax) BD.mt.innerHTML = '<i></i>'.repeat(BAL.meterMax);
-    for (let i = 0; i < BAL.meterMax; i++) BD.mt.children[i].className = i < MT ? 'on' : '';
+    BD.mkey = mk; BD.mt.hidden = !mon;
+    if (BD.mt.children.length !== MM) BD.mt.innerHTML = '<i></i>'.repeat(MM);
+    for (let i = 0; i < MM; i++) BD.mt.children[i].className = i < MT ? 'on' : '';
     BD.mt.classList.toggle('fire', !!FI);
   }
   const wl = mpv && MP.role === 1 && mpv.wall != null ? mpv.wall : -1, wk = String(wl);

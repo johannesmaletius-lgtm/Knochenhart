@@ -75,12 +75,17 @@ function onSwipe(dx, dy) {
   if (G.mode !== 'play' || G.paused) return;
   const ax = Math.abs(dx), ay = Math.abs(dy), ph = G.phase;
   if (ph === 'serveReady') { toss(); return; }
-  if (ph === 'serveToss') { serveHit(ax > ay * 0.5 ? Math.sign(dx) : 0, false); return; }
+  if (ph === 'serveToss') {
+    // swipe down = Float serve (Serve 75), tilt aims it
+    if (dy > 0 && ay > ax && unlocked(PROFILE, 'float')) { serveHit(ax > ay * BAL.lobTilt ? Math.sign(dx) : 0, false, true); return; }
+    serveHit(ax > ay * 0.5 ? Math.sign(dx) : 0, false); return;
+  }
   if (ph === 'attack') {
-    let dir;
-    if (dy < 0 && ay > ax * 1.1) dir = 'LOB';
+    let dir, aim = 0;
+    // up = lob; tilted up-left / up-right = aimed lob (Lob 75)
+    if (dy < 0 && ay > ax * 1.1) { dir = 'LOB'; if (ax > ay * BAL.lobTilt) aim = Math.sign(dx); }
     else dir = dx < 0 ? 'L' : dx > 0 ? 'R' : (Math.random() < 0.5 ? 'L' : 'R');
-    swipeAttack(dir); return;
+    swipeAttack(dir, aim); return;
   }
   if (ph === 'defend' || ph === 'pass' || ph === 'oppPlay' || ph === 'over' || ph === 'served' || ph === 'wait') {
     if (ax >= ay * 0.8) { moveLane(dx < 0 ? -1 : 1); return 'lane'; }
@@ -137,7 +142,8 @@ addEventListener('keydown', e => {
   if (G.mode !== 'play' || G.paused) return;
   audioInit();
   const m = { ArrowLeft: [-1, 0.2], a: [-1, 0.2], A: [-1, 0.2], ArrowRight: [1, 0.2], d: [1, 0.2], D: [1, 0.2],
-    ArrowUp: [0, -1], w: [0, -1], W: [0, -1], ArrowDown: [0, 1], s: [0, 1], S: [0, 1], q: [-1, 1], Q: [-1, 1], e: [1, 1], E: [1, 1] }[k];
+    ArrowUp: [0, -1], w: [0, -1], W: [0, -1], ArrowDown: [0, 1], s: [0, 1], S: [0, 1], q: [-1, 1], Q: [-1, 1], e: [1, 1], E: [1, 1],
+    z: [-0.6, -1], Z: [-0.6, -1], c: [0.6, -1], C: [0.6, -1] }[k];
   if (m) onSwipe(m[0], m[1]);
   else if (k === ' ' || k === 'Enter') onTap();
 });
