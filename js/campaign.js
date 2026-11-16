@@ -3,7 +3,7 @@
 // You play with your real profile (skills and coins as usual, it is never swapped). The first win of a stage pays a bonus and
 // opens the next one; every stage has 2 goals (stars), a boss win gives its skin. The computer gets a profile of the stage
 // OVR with the stage's focus skill on top, the AI level/pressure follow that OVR.
-// Progress: store 'camp' ({ v: 2, w: wins per stage, s: star bits per stage }). Pure part also runs in Node (tests/campaign.test.js).
+// Progress: store 'camp' ({ v: SKILLS.camp.v, w: wins per stage, s: star bits per stage }). Pure part also runs in Node (tests/campaign.test.js).
 if (typeof SKILLS === 'undefined' && typeof require === 'function') Object.assign(globalThis, require('./skills.js'));
 /* ---------------- pure ---------------- */
 // stage list built from SKILLS.camp: { ch, j (stage in chapter), boss, skin, ovr, focus, c, goals: [{ k, v, t }], ab (ability),
@@ -28,19 +28,18 @@ function caStages() {
 }
 const caName = s => s.boss ? SKIN_N(s.skin) : SKIN_N(s.skin) + ' ' + SKILLS.camp.rank[s.j];
 const SKIN_N = id => typeof SKIN !== 'undefined' && SKIN[id] ? SKIN[id].n : id;
-function caNew() { const n = caStages().length; return { v: 2, w: new Array(n).fill(0), s: new Array(n).fill(0) }; }
+function caNew() { const n = caStages().length; return { v: SKILLS.camp.v, w: new Array(n).fill(0), s: new Array(n).fill(0) }; }
 // v1 saves (one stage per skin): a beaten old stage = that whole chapter beaten (win star only, goal stars still open)
+// saves older than SKILLS.camp.v (campaign reset) start fresh; skins and coins stay
 function caLoad(st) {
-  const c = caNew(), raw = st.get('camp', null), per = SKILLS.camp.per;
-  if (!raw || !Array.isArray(raw.w)) return c;
+  const c = caNew(), raw = st.get('camp', null);
+  if (!raw || !Array.isArray(raw.w) || !(raw.v >= SKILLS.camp.v)) return c;
   const num = x => Math.max(0, Math.floor(+x) || 0);
-  if (raw.v >= 2) {
-    c.w = c.w.map((_, i) => num(raw.w[i]));
-    if (Array.isArray(raw.s)) c.s = c.s.map((_, i) => num(raw.s[i]) & 3);
-  } else c.w = c.w.map((_, i) => num(raw.w[Math.floor(i / per)]) > 0 ? 1 : 0);
+  c.w = c.w.map((_, i) => num(raw.w[i]));
+  if (Array.isArray(raw.s)) c.s = c.s.map((_, i) => num(raw.s[i]) & 3);
   return c;
 }
-function caSave(c, st) { st.set('camp', { v: 2, w: c.w.slice(), s: c.s.slice() }); }
+function caSave(c, st) { st.set('camp', { v: SKILLS.camp.v, w: c.w.slice(), s: c.s.slice() }); }
 // 'locked' | 'open' | 'beaten': stage 1 is always open, every other one after a win of the stage before
 function caStatus(c, i) {
   if (!(i >= 0 && i < c.w.length)) return 'locked';
