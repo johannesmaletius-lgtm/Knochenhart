@@ -126,7 +126,7 @@ function oppServeHit() {
     sHammer: (d > 0.35 ? 0.3 : 0.08 * k) * AI.adapt('sHammer')
   });
   const float = kind === 'sFloat', hammer = kind === 'sHammer';
-  const T = lerp(BAL.oppServeT[0], BAL.oppServeT[1], d) * (hammer ? 0.8 : 1) * (1 - AI.speed()) * pwSlow() * pwCannon();
+  const T = lerp(BAL.oppServeT[0], BAL.oppServeT[1], d) * (hammer ? 0.8 : 1) * (1 - AI.speed()) * pwSlow(true) * pwCannon();
   const o = float ? { wob: rand(0.9, 1.4) * (Math.random() < 0.5 ? -1 : 1), wobF: Math.PI * 2 * rand(1.0, 1.6), spin: 1 } : { spin: hammer ? 26 : 12 };
   launch({ x: LX[lane], y: 0.85, z: DZ + 0.1 }, T, o);
   const inc = incoming('serve', lane, LX[lane], DZ + 0.1, T, float ? T * 0.5 : lerp(0, 0.15, d)); inc.tac = kind;
@@ -207,14 +207,14 @@ function oppAttack(O, d) {
   if (tip) {
     setPose(oA, 'lobM', 0.3); setBase(oA, 'followM'); SFX.lob();
     if (PW.wall && G.mode === 'play') { G.netWob = 0.8; popup('BLOCKED OUT', C.accent, 1, null, H * 0.42, 0.9); }
-    const tT = 0.82 * pwSlow();
+    const tT = 0.82 * pwSlow(true);
     launch({ x: LX[al] * 0.85, y: 0.45, z: 2.1 }, tT, { spin: 2 });
     incoming('tip', al, LX[al] * 0.85, 2.1, tT, 0.1).tac = 'aTip';
     return;
   }
   setPose(oA, 'spikeM', 0.14, 40); setBase(oA, 'followM'); SFX.spike(); shake(2); G.stop = 0.04;
   sparks(ball.x, ball.y, ball.z, 5, [C.bone, C.bad]);
-  const T = lerp(BAL.oppSpikeT[0], BAL.oppSpikeT[1], d) * (1 - AI.speed()) * pwSlow();
+  const T = lerp(BAL.oppSpikeT[0], BAL.oppSpikeT[1], d) * (1 - AI.speed()) * pwSlow(true);
   const md0 = lerp(BAL.markDelay[0], BAL.markDelay[1], d);
   if (O.hot) {
     // their fireball (powers.js): faster, no dive, no late save

@@ -71,7 +71,7 @@ ok(pOk, 'caProfile: OVR = target (60..99, every focus), skills in range, badges 
 ok(fOk, 'caProfile: focus skill is the highest, about lead (' + SKILLS.camp.lead + ') above the lowest in the middle range');
 ok(SKILLS.ids.every(id => C.caProfile(60).sk[id] === 60) && SKILLS.ids.every(id => C.caProfile(99, 'block').sk[id] === 99), 'OVR 60 = all 60, OVR 99 = all 99');
 const p72 = C.caProfile(72, 'block'); console.log('stage profile OVR 72, focus block:', JSON.stringify(p72.sk));
-ok(st.every(s => ovr(C.caProfile(s.ovr, s.focus)) === s.ovr), 'every stage profile has its stage OVR');
+ok(st.every(s => ovr(C.caProfile(s.pOvr, s.focus)) === s.pOvr && s.pOvr === Math.min(99, s.ovr + (s.boss ? K.bossOvr : 0))), 'every stage profile has its stage OVR (bosses + bossOvr)');
 // AI level and pressure rise with the OVR
 const df = st.map(s => C.caDiff(s.ovr));
 ok(df.every((x, i) => !i || (x.lv >= df[i - 1].lv && x.d > df[i - 1].d)), 'AI level and D() base never fall along the ladder');

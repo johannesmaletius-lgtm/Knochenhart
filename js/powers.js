@@ -36,6 +36,7 @@ function pwReset() {
   Object.assign(PW, { item: null, drop: null, coins: [], ghost: false, wall: false, slow: false, oArm: null, oWall: false, om: 0, dec: null, dark: false,
     frozen: 0, hide: null, decoy: null, windAt: -9, ab: s && s.ab, abK: s ? s.abK : 1, boss: !!(s && s.boss), items: !!(s && s.items), ch: s ? s.ch : 0 });
   pwUI();
+  if (PW.boss && PW.items) after(2.6, () => { if (!PW.oArm) pwOppItem(); }); // bosses start with an item
   if (PW.ab) after(1.2, () => popup((PW.boss ? 'BOSS: ' : '') + PW.ab.n.toUpperCase(), C.bad, 1, null, H * 0.36, 2.2));
 }
 // chance of ability id right now (0 = off): the stage's own ability, or this rally's Royal Decree pick
@@ -83,7 +84,7 @@ function pwUse() {
   const k = PW.item; PW.item = null; G.meter = 0;
   if (k === 'fire') { G.fire = true; G.flash = 0.5; SFX.fire(); }
   else if (k === 'ghost') { PW.ghost = true; SFX.plan(); }
-  else if (k === 'wall') { PW.wall = true; SFX.block(); G.netWob = 1; shake(2); }
+  else if (k === 'wall') { PW.wall = true; PW.wallT = G.t; SFX.block(); G.netWob = 1; shake(2); }
   else if (k === 'slow') { PW.slow = true; SFX.plan(); }
   pwSay(SKILLS.items.names[k].toUpperCase(), k === 'fire' ? C.fire2 : C.accent, 0.36);
   pwUI();
@@ -106,8 +107,20 @@ function ghostFx(x, z, col) {
   for (let i = 0; i < 14; i++) G.parts.push({ x: x + rand(-0.5, 0.5), y: rand(0.1, 1.6), z: z + rand(-0.3, 0.3), vx: rand(-0.4, 0.4), vy: rand(0.8, 2), vz: 0, age: 0, life: rand(0.5, 0.9), c: pick([col, '#ffffff', '#8fb7d6']) });
   SFX.touch();
 }
-// Bone Time: their flights x slowK
-const pwSlow = () => pwSP() && PW.slow ? SKILLS.items.slowK : 1;
+// Bone Time: their flights x slowK; use = this is their next attack/serve, the effect ends with it (one attack only)
+function pwSlow(use) {
+  if (!pwSP() || !PW.slow) return 1;
+  if (use) { PW.slow = false; pwUI(); }
+  return SKILLS.items.slowK;
+}
+// one attack only: after our attack their Power Block and Ghost Dig are gone, an unused Fireball too (lob / late hit)
+function pwAttackDone() {
+  if (!pwSP()) return;
+  G.fire = false;
+  after(0.2, () => { PW.oWall = false; if (PW.oArm === 'ghost') { PW.oArm = null; pwSay('THEIR GHOST FADES', C.boneDim, 0.3); } });
+}
+// after their ball reached you (dug, saved or missed): our Ghost Dig is used up, the Power Block too unless it was a serve
+function pwDefDone(inc) { if (!pwSP()) return; PW.ghost = false; if (!inc || inc.type !== 'serve') PW.wall = false; }
 
 /* their items + abilities: hooks */
 function pwOppItem(kind) {
@@ -147,7 +160,7 @@ function pwPoint(w) {
 function pwAttackStart() {
   if (!pwSP() || PW.oWall) return;
   if (PW.oArm === 'wall') PW.oArm = null; else if (!pwRoll('hellwall')) return;
-  PW.oWall = true; G.netWob = 1; SFX.block(); shake(2);
+  PW.oWall = true; PW.oWallT = G.t; G.netWob = 1; SFX.block(); shake(2);
   pwSay('POWER BLOCK! LOB IT', C.bad, 0.42);
   setBase(oB, 'blockW'); setPose(oB, 'blockW', 0, 22); oB.tx = 0; oB.tz = BLK_Z;
 }
@@ -187,6 +200,34 @@ function pwOppHit(inc, T, kind) {
     });
   }
 }
+// skeleton arms over the whole net: grow out of the tape in 0.25 s, sway, hands open and grab; side 1 = our side, -1 = theirs.
+// Pairs lean towards each other like a real block; bones 2 px with a dark edge, knobby elbow, palm + 4 fingers + thumb
+function pwArms(t0, side, glow) {
+  const g = clamp((G.t - t0) / 0.25, 0, 1), n = SKILLS.items.arms, z = side * 0.12;
+  // glowing tape under the arms
+  const l = pv(-4.7, 2.43, z), r = pv(4.7, 2.43, z);
+  ctx.globalAlpha = 0.55 + 0.3 * Math.sin(G.t * 9); line(l.x, l.y - 1, r.x, r.y - 1, glow, 2); ctx.globalAlpha = 1;
+  for (let i = 0; i < n; i++) {
+    const x = -4.4 + 8.8 * i / (n - 1), lean = (i % 2 ? -1 : 1) * 0.16, sw = Math.sin(G.t * 4 + i * 1.3) * 0.07;
+    const a = pv(x, 2.43, z), e = pv(x - lean * 0.6 + sw * 0.4, 2.43 + 0.55 * g, z), h = pv(x + lean + sw, 2.43 + 1.15 * g, z);
+    const u = Math.max(1, Math.round(0.03 * h.s));
+    // shadow edge, glow edge, bone
+    line(a.x - u, a.y, e.x - u, e.y, C.ink, u + 1); line(e.x - u, e.y, h.x - u, h.y, C.ink, u + 1);
+    line(a.x + u, a.y, e.x + u, e.y, glow, u); line(e.x + u, e.y, h.x + u, h.y, glow, u);
+    line(a.x, a.y, e.x, e.y, C.bone, u + 1); line(e.x, e.y, h.x, h.y, C.boneMid, u + 1);
+    rect(e.x - u - 1, e.y - u, 2 * u + 3, 2 * u + 1, C.bone); rect(e.x - u - 1, e.y + u, 2 * u + 3, 1, C.boneDim); // elbow knob
+    if (g < 0.6) continue;
+    // hand sprite (u px per pixel): palm 7 x 3, four fingers with a gap, curled now and then, thumb to the side
+    const grab = ((G.t * 3 + i * 0.37) % 2) < 0.25, fl = grab ? 1 : 3;
+    const px = Math.round(h.x) - 3 * u, py = Math.round(h.y) - u;
+    rect(px - 1, py - 1, 7 * u + 2, 3 * u + 2, C.ink); rect(px, py, 7 * u, 3 * u, C.boneMid); rect(px, py, 7 * u, u, C.bone);
+    for (let f = 0; f < 4; f++) {
+      const fx = px + 2 * f * u;
+      rect(fx - 1, py - fl * u - 1, u + 2, fl * u + 1, C.ink); rect(fx, py - fl * u, u, fl * u, C.bone);
+    }
+    const th = (i % 2 ? -1 : 1) > 0 ? px + 7 * u : px - 2 * u; rect(th, py + u, 2 * u, u, C.bone);
+  }
+}
 const pwFrozen = () => pwSP() && G.t < PW.frozen;
 const pwHidden = () => pwSP() && PW.hide && G.t > PW.hide[0] && G.t < PW.hide[1];
 
@@ -210,13 +251,9 @@ function pwDraw() {
       text(SKILLS.items.short[fd.kind], p.x, p.y - s - 9, PW_COL[fd.kind], 1, 'c');
     }
   }
-  // power blocks: a glowing wall over the net (ours blue, theirs red)
-  for (const [on, col] of [[PW.wall, '#6fb8ff'], [PW.oWall, C.bad]]) if (on) {
-    const a = proj(-4.6, 2.45, 0), b = proj(4.6, 3.6, 0);
-    ctx.globalAlpha = 0.28 + 0.12 * Math.sin(G.t * 9);
-    rect(Math.round(a.x), Math.round(b.y), Math.round(b.x - a.x), Math.round(a.y - b.y), col);
-    ctx.globalAlpha = 1;
-  }
+  // power blocks: a row of skeleton arms reaching up out of the net (ours: bone + blue, theirs: bone + red)
+  if (PW.wall) pwArms(PW.wallT, 1, '#6fb8ff');
+  if (PW.oWall) pwArms(PW.oWallT, -1, C.bad);
   // decoy ball: no shadow, flickers
   const D2 = PW.decoy;
   if (D2) {

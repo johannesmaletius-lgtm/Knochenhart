@@ -93,25 +93,25 @@ const SKILLS = {
   // on the floor of your court in another lane: walk within reach m of it to pick it up, it fades after life s;
   // Fireball x fireUnlock with the Spike 85 unlock), used with the item button. fire: next spike (not lob) is a fireball;
   // ghost: the next ball that would drop on your side is dug by a ghost; wall: Power Block until the next point, they can only
-  // tip over; slow: Bone Time, their balls fly slowK x longer until the next point. Campaign opponents from chapter opp.from:
+  // tip over; slow: Bone Time, their balls fly slowK x longer. Each lasts one attack (arms = skeleton arms drawn for a block). Campaign opponents from chapter opp.from:
   // an item after round(meter[0] + meter[1] x chapter) (min meter[2]) points they win, bosses x bossMul faster; their
   // fireball flies fireT x faster and cannot be dived or saved late (a ghost dig still saves it, it burns through a wall)
   items: {
     kinds: ['fire', 'ghost', 'wall', 'slow'],
     names: { fire: 'Fireball', ghost: 'Ghost Dig', wall: 'Power Block', slow: 'Bone Time' },
-    short: { fire: 'FIRE', ghost: 'GHOST', wall: 'BLOCK', slow: 'SLOW' },
+    short: { fire: 'FIRE', ghost: 'GHOST', wall: 'BLOCK', slow: 'SLOW' }, arms: 10,
     w: { fire: 1, ghost: 1, wall: 1, slow: 1 }, fireUnlock: 2.5, slowK: 1.5, reach: 0.6, life: 14,
     // floor coins: chance p per rally that one (value v) appears in a lane of your court, max on the floor, fades after life s;
     // expected pick-ups per match are in plan.floor (tests/sim-progress.js)
     coin: { p: 0.15, v: 1, max: 2, life: 9 },
-    opp: { kinds: ['fire', 'ghost', 'wall'], from: 1, meter: [9, -0.5, 4], bossMul: 1.5, fireT: 0.7 }
+    opp: { kinds: ['fire', 'ghost', 'wall'], from: 1, meter: [9, -0.5, 4], bossMul: 2.2, fireT: 0.68 }
   },
   // P7 campaign (js/campaign.js): 10 chapters = shop skins, `per` stages each (last = boss with the chapter focus, the others
   // cycle SKILLS.ids), stage OVR 60 -> 99 (+1 per stage). Coins on the first win: round(c[0] + c[1] x chapter), boss x boss;
   // later wins round(c x repeat). Goals: 2 per stage (stars 2 + 3, the win is star 1), kinds cycle through `goals` (k = G.stats
   // key, or 'held' = opponent points <= v, 'margin' = win by >= v); v = round(a + b x chapter); each new goal star pays `star`
   // coins (only in a won match). Beating a boss gives its skin for free (kept if already owned). bossD = extra D() pressure for
-  // bosses. focus = skill kept `lead` levels above the rest. AI level (G.level) 0 below lv[0] OVR, 1 below lv[1], else 2;
+  // bosses (+ bossOvr on their profile OVR, start with an item). focus = skill kept `lead` levels above the rest. AI level (G.level) 0 below lv[0] OVR, 1 below lv[1], else 2;
   // D() base 60 -> 99 = d. tests/sim-progress.js (worst case: all stars on the first win) stays >= plan.campMin days
   camp: {
     // ab = the chapter boss ability (js/powers.js); the Elite stage (j = per - 2) previews it at elite x its chances.
@@ -121,20 +121,20 @@ const SKILLS = {
     // hellwall: power block on your attack; decoy: a fake pumpkin ball to another lane; phase: the spike jumps a lane at
     // `at` of the flight; decree: every rally one of the other abilities (not wind). p = chance per hit / rally
     chapters: [
-      { skin: 'knochen', ab: { id: 'wind', n: 'Second Wind', d: 'Gets an item when behind', gap: 3, cd: 4 } },
-      { skin: 'neon', focus: 'recv', ab: { id: 'strobe', n: 'Strobe', d: 'Spikes vanish in flight', p: 0.55, hide: [0.2, 0.8] } },
-      { skin: 'nacht', focus: 'dig', ab: { id: 'dark', n: 'Blackout', d: 'Lights out for a rally', p: 0.4, r: 0.2 } },
-      { skin: 'eis', focus: 'block', ab: { id: 'freeze', n: 'Deep Freeze', d: 'Freezes you on their hit', p: 0.45, t: 0.3 } },
-      { skin: 'lava', focus: 'spike', ab: { id: 'meteor', n: 'Meteor', d: 'Fireball spikes: no dive, no late save', p: 0.35 } },
-      { skin: 'pirat', focus: 'lob', ab: { id: 'plunder', n: 'Cannon & Plunder', d: 'Cannon serves, steals your item', p: 0.5, T: 0.72 } },
-      { skin: 'teufel', focus: 'serve', ab: { id: 'hellwall', n: 'Hellwall', d: 'Blocks the whole net: lob it', p: 0.35 } },
-      { skin: 'kuerbis', focus: 'dig', ab: { id: 'decoy', n: 'Pumpkin Decoy', d: 'Fake ball, the real one has a shadow', p: 0.5 } },
-      { skin: 'geist', focus: 'lob', ab: { id: 'phase', n: 'Phase Shift', d: 'Spikes jump a lane mid-air', p: 0.45, at: 0.42 } },
+      { skin: 'knochen', ab: { id: 'wind', n: 'Second Wind', d: 'Gets an item when behind', gap: 2, cd: 3 } },
+      { skin: 'neon', focus: 'recv', ab: { id: 'strobe', n: 'Strobe', d: 'Spikes vanish in flight', p: 0.7, hide: [0.15, 0.85] } },
+      { skin: 'nacht', focus: 'dig', ab: { id: 'dark', n: 'Blackout', d: 'Lights out for a rally', p: 0.55, r: 0.18 } },
+      { skin: 'eis', focus: 'block', ab: { id: 'freeze', n: 'Deep Freeze', d: 'Freezes you on their hit', p: 0.55, t: 0.36 } },
+      { skin: 'lava', focus: 'spike', ab: { id: 'meteor', n: 'Meteor', d: 'Fireball spikes: no dive, no late save', p: 0.5 } },
+      { skin: 'pirat', focus: 'lob', ab: { id: 'plunder', n: 'Cannon & Plunder', d: 'Cannon serves, steals your item', p: 0.6, T: 0.68 } },
+      { skin: 'teufel', focus: 'serve', ab: { id: 'hellwall', n: 'Hellwall', d: 'Blocks the whole net: lob it', p: 0.5 } },
+      { skin: 'kuerbis', focus: 'dig', ab: { id: 'decoy', n: 'Pumpkin Decoy', d: 'Fake ball, the real one has a shadow', p: 0.65 } },
+      { skin: 'geist', focus: 'lob', ab: { id: 'phase', n: 'Phase Shift', d: 'Spikes jump a lane mid-air', p: 0.6, at: 0.45 } },
       { skin: 'koenig', ab: { id: 'decree', n: 'Royal Decree', d: 'A new boss power every rally', p: 1 } }
     ],
     elite: 0.5,
     v: 3, // save version: older campaign saves are reset (everyone starts at stage 1-1 again)
-    per: 4, rank: ['Rookies', 'Squad', 'Elite'], c: [2, 1], boss: 3, star: 2, bossD: 0.05,
+    per: 4, rank: ['Rookies', 'Squad', 'Elite'], c: [2, 1], boss: 3, star: 2, bossD: 0.12, bossOvr: 4,
     goals: [
       { k: 'kills', a: 8, b: 0.7, t: 'Attack points: N' }, { k: 'held', a: 11, b: -0.35, t: 'Opponent max N points' },
       { k: 'aces', a: 1, b: 0.3, t: 'Aces: N' }, { k: 'perfect', a: 5, b: 1, t: 'Perfect timings: N' },
