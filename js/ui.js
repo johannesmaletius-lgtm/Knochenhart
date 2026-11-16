@@ -215,7 +215,8 @@ function waitTip(fx) {
 // right-hand infos of the menu rows (campaign stage, Skill Games budget, your OVR)
 function menuInfo() {
   const c = caProg(), n = caStages().length, beat = c.w.filter(x => x > 0).length;
-  $('#mCa').textContent = beat >= n ? 'all ' + n + ' beaten' : 'stage ' + (caNext(c) + 1) + '/' + n;
+  const x = caStages()[caNext(c)];
+  $('#mCa').textContent = beat >= n ? 'all ' + n + ' beaten' : 'stage ' + (x.ch + 1) + '-' + (x.j + 1);
   $('#mSg').textContent = 'budget ' + sgBudget();
   $('#mOvr').textContent = 'OVR ' + ovr(PROFILE);
 }

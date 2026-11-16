@@ -1,15 +1,15 @@
 // Progress sim: days until all six skills are 99 with normal play (SKILLS.plan), coins as in the game.
 // P7 campaign: same player, but a win clears the next stage once OVR >= stage OVR - plan.campEdge (first-win bonus c), and
-// every other win is a replay of the hardest beaten stage (worst case: + round(c x repeat) each). Must stay >= plan.campMin days.
+// worst case: both goal stars on the first win (+ 2 x camp.star); every other win is a replay of the hardest beaten stage (worst case: + round(c x repeat) each). Must stay >= plan.campMin days.
 // Usage: node tests/sim-progress.js   (exit 1 if the plan win rate misses the target by more than 0.5 days or the campaign is too fast)
 'use strict';
-const S = require('../js/skills.js'), { SKILLS } = S;
+const S = require('../js/skills.js'), { SKILLS } = S, C = require('../js/campaign.js');
 let seed = 1;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 
 // one player: plays matchesPerDay matches a day, first win of the day pays daily, spends coins on the lowest skill
 function run(winRate, camp) {
-  const E = SKILLS.earn, perDay = SKILLS.plan.matchesPerDay, p = S.skillsNew(), st = SKILLS.camp.stages;
+  const E = SKILLS.earn, perDay = SKILLS.plan.matchesPerDay, p = S.skillsNew(), st = C.caStages(), star = 2 * SKILLS.camp.star;
   let coins = 0, m = 0, k = 0;
   for (let day = 0; day < 365; day++) {
     let bonus = true;
@@ -17,7 +17,7 @@ function run(winRate, camp) {
     for (let i = 0; i < perDay; i++, m++) {
       if (rnd() < winRate) {
         coins += bonus ? E.win * E.dailyMul : E.win; bonus = false;
-        if (camp && k < st.length && S.ovr(p) >= st[k].ovr - SKILLS.plan.campEdge) coins += st[k++].c;
+        if (camp && k < st.length && S.ovr(p) >= st[k].ovr - SKILLS.plan.campEdge) coins += st[k++].c + star;
         else if (camp && k) coins += Math.round(st[k - 1].c * SKILLS.camp.repeat);
       } else coins += E.loss;
       for (;;) {
@@ -48,7 +48,7 @@ for (const w of [0.3, 0.4, 0.5, 0.6, 0.7]) {
 }
 const t = stats(P.winRate, 2000).mean, ok = Math.abs(t - P.days) <= 0.5;
 console.log((ok ? 'OK' : 'FAIL') + ': plan ' + P.days + ' days, simulated ' + t.toFixed(2));
-const cs = SKILLS.camp.stages, ct = stats(P.winRate, 2000, true).mean, cok = ct >= P.campMin;
-console.log('campaign: first-win bonus total ' + cs.reduce((a, s) => a + s.c, 0) + ' coins over ' + cs.length + ' stages, repeat x' + SKILLS.camp.repeat);
+const cs = C.caStages(), ct = stats(P.winRate, 2000, true).mean, cok = ct >= P.campMin;
+console.log('campaign: first-win bonus + all stars ' + cs.reduce((a, s) => a + s.c + 2 * SKILLS.camp.star, 0) + ' coins over ' + cs.length + ' stages, repeat x' + SKILLS.camp.repeat);
 console.log((cok ? 'OK' : 'FAIL') + ': with campaign (worst case replays) simulated ' + ct.toFixed(2) + ' days, min ' + P.campMin);
 process.exit(ok && cok ? 0 : 1);

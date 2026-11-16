@@ -40,7 +40,7 @@ const SKILLS = {
     hardOvr: 86 // campaign / Skill Games: a win vs. this OVR or more counts as Hard
   },
   // progression target: normal play (chal = expected daily challenge coins per day); campaign (P7): stage cleared once OVR >= stage OVR - campEdge, still >= campMin days
-  plan: { matchesPerDay: 20, winRate: 0.5, days: 30, campEdge: 4, campMin: 27, chal: 20 },
+  plan: { matchesPerDay: 20, winRate: 0.5, days: 30, campEdge: 4, campMin: 25, chal: 20 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
   // P8 (tests/balance.js): 99 a bit stricter than P3 (0.55 / 0.4): very bad timing at 99 = weak, ~14 % net faults (60: 30 %)
@@ -89,18 +89,28 @@ const SKILLS = {
       { id: 'def', n: 'Defender', t: [['dig', 90], ['recv', 90]], perk: { dig: 'catReflex', recv: 'platform' } },
       { id: 'all', n: 'All-round', t: [] }
     ] },
-  // P7 campaign (js/campaign.js): stages = shop skins (SKINS ids) with rising OVR; focus = skill kept `lead` levels above the rest;
-  // c = bonus coins on the first win (on top of the normal match coins), later wins pay round(c x repeat). Opponent AI: level
-  // (G.level arrays) 0 below lv[0] OVR, 1 below lv[1], else 2; D() base 60 -> 99 = d. Bonus pool ~6% of totalCost(): with it
-  // tests/sim-progress.js (stage cleared once OVR >= ovr - plan.campEdge, worst-case replays) stays >= plan.campMin days
+  // P7 campaign (js/campaign.js): 10 chapters = shop skins, `per` stages each (last = boss with the chapter focus, the others
+  // cycle SKILLS.ids), stage OVR 60 -> 99 (+1 per stage). Coins on the first win: round(c[0] + c[1] x chapter), boss x boss;
+  // later wins round(c x repeat). Goals: 2 per stage (stars 2 + 3, the win is star 1), kinds cycle through `goals` (k = G.stats
+  // key, or 'held' = opponent points <= v, 'margin' = win by >= v); v = round(a + b x chapter); each new goal star pays `star`
+  // coins (only in a won match). Beating a boss gives its skin for free (kept if already owned). bossD = extra D() pressure for
+  // bosses. focus = skill kept `lead` levels above the rest. AI level (G.level) 0 below lv[0] OVR, 1 below lv[1], else 2;
+  // D() base 60 -> 99 = d. tests/sim-progress.js (worst case: all stars on the first win) stays >= plan.campMin days
   camp: {
-    stages: [
-      { skin: 'knochen', ovr: 60, c: 1 }, { skin: 'neon', ovr: 64, focus: 'recv', c: 1 }, { skin: 'nacht', ovr: 68, focus: 'dig', c: 2 },
-      { skin: 'eis', ovr: 72, focus: 'block', c: 2 }, { skin: 'lava', ovr: 76, focus: 'spike', c: 3 }, { skin: 'pirat', ovr: 80, focus: 'lob', c: 3 },
-      { skin: 'teufel', ovr: 85, focus: 'serve', c: 4 }, { skin: 'kuerbis', ovr: 90, focus: 'dig', c: 4 }, { skin: 'geist', ovr: 95, focus: 'lob', c: 5 },
-      { skin: 'koenig', ovr: 99, c: 7 }
+    chapters: [
+      { skin: 'knochen' }, { skin: 'neon', focus: 'recv' }, { skin: 'nacht', focus: 'dig' }, { skin: 'eis', focus: 'block' },
+      { skin: 'lava', focus: 'spike' }, { skin: 'pirat', focus: 'lob' }, { skin: 'teufel', focus: 'serve' }, { skin: 'kuerbis', focus: 'dig' },
+      { skin: 'geist', focus: 'lob' }, { skin: 'koenig' }
     ],
-    lead: 12, repeat: 0.1, lv: [72, 86], d: [0.1, 0.55]
+    per: 4, rank: ['Rookies', 'Squad', 'Elite'], c: [2, 1], boss: 3, star: 2, bossD: 0.05,
+    goals: [
+      { k: 'kills', a: 8, b: 0.7, t: 'Attack points: N' }, { k: 'held', a: 11, b: -0.35, t: 'Opponent max N points' },
+      { k: 'aces', a: 1, b: 0.3, t: 'Aces: N' }, { k: 'perfect', a: 5, b: 1, t: 'Perfect timings: N' },
+      { k: 'saves', a: 2, b: 0.35, t: 'Diving saves: N' }, { k: 'margin', a: 3, b: 0.4, t: 'Win by N+' },
+      { k: 'lobs', a: 1, b: 0.3, t: 'Lob points: N' }, { k: 'maxRally', a: 6, b: 0.6, t: 'Rally: N+ touches' },
+      { k: 'bout', a: 1, b: 0.25, t: 'Block-outs: N' }, { k: 'fires', a: 1, b: 0.12, t: 'Fireballs: N' }
+    ],
+    lead: 12, repeat: 0.05, lv: [72, 86], d: [0.1, 0.55]
   },
   // skill badge at 90: pick one perk in the same area; v = effect value for the engine:
   // hotHand: fireball bar length x v; heavyArm: + v spike quality; feather: lob dig chance x (1 - v); sneaky: lobs feed
