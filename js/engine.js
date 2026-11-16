@@ -452,6 +452,7 @@ function resetCourt() {
 function startRally() {
   if (G.mode !== 'play') return;
   resetCourt();
+  pwRally();
   G.fadeV = -5;
   if (AI.huddle) {
     // new game plan: the opponents put their heads together, eyes flare
@@ -475,8 +476,7 @@ function startRally() {
     after(1.0, oppToss);
   }
 }
-// Fireball needs Spike 85 (SKILLS.unlock); Hot Hand shortens the bar
-const fireOn = () => unlocked(PROFILE, 'fireball');
+// full skull bar = one item (powers.js, SKILLS.items); Hot Hand shortens the bar
 const meterMax = () => fireMax(PROFILE, BAL.meterMax);
 // opponent skills follow the difficulty (SKILLS.ai)
 // P6 Skill Games: the computer's budget profile; P7 campaign: the stage profile (caProfile)
@@ -484,9 +484,9 @@ const oppProf = () => SG.on && SG.opp ? SG.opp : CA.on && CA.opp ? CA.opp : aiPr
 // P8: their spike / serve fault chance: campaign / Skill Games opponents by their profile (SKILLS.ai.err), else the level table lv
 const oppErr = (kind, lv) => SG.on && SG.opp || CA.on && CA.opp ? aiErr(oppProf(), kind) : lv[G.level] || lv[1];
 function addMeter(n) {
-  if (G.mode !== 'play' || G.fire || !fireOn()) return;
+  if (G.mode !== 'play' || G.fire || PW.item || PW.drop) return;
   G.meter = clamp(G.meter + n, 0, meterMax());
-  if (G.meter >= meterMax()) { G.fire = true; after(0.4, () => { G.flash = 0.5; SFX.fire(); }); }
+  if (G.meter >= meterMax()) after(0.4, pwDrop);
 }
 // long rallies: the skeletons start to sweat
 function sweat() {
@@ -523,6 +523,7 @@ function incoming(type, lane, x, z, T, markDelay) {
   return inc;
 }
 function moveLane(d) {
+  if (pwFrozen()) return;
   const nl = clamp(me.lane + d, 0, 2);
   if (nl === me.lane) return;
   me.lane = nl; me.tx = LX[nl]; me.sx = 15; me.lastMove = G.t; me.moveDir = d;
@@ -532,7 +533,7 @@ function moveLane(d) {
   if (!me.lock && !me.air) setPose(me, d < 0 ? 'reachL' : 'reachR', 0.1, 26); // push-off step
 }
 function dash() {
-  const inc = G.incoming; if (!inc || inc.done || me.dash) return;
+  const inc = G.incoming; if (!inc || inc.done || me.dash || pwFrozen()) return;
   me.dash = true; me.sz = 13;
   if (inc.type === 'tip') { me.tz = inc.z + 0.3; me.tx = inc.x; me.sx = 9; }
   else me.tz = 2.6;
@@ -576,16 +577,20 @@ function resolveDefense() {
   me.dash = false;
   const late = G.t - (me.arriveT || 0) < 0.08;
   // late = very bad timing: Receive/Dig skill (+ perks) still saves more of them (skill 60 = old chance)
-  if (ok && (!late || RNG() < lateSaveP(PROFILE, inc.type, lerp(BAL.diveOk[0], BAL.diveOk[1], D())))) {
+  // their fireball (powers.js): no late save, no dive
+  const hot = !!inc.fire;
+  if (ok && (!late || (!hot && RNG() < lateSaveP(PROFILE, inc.type, lerp(BAL.diveOk[0], BAL.diveOk[1], D()))))) {
     if (late) hitPop(1, 'weak');
     AI.defended(inc, false); ourDig(inc, late); return;
   }
   // Dive (Dig 70): a ball just beside you gets an automatic diving save
-  if (!ok && dzOk && dx < diveReach(PROFILE) && RNG() < diveSave(PROFILE)) {
+  if (!hot && !ok && dzOk && dx < diveReach(PROFILE) && RNG() < diveSave(PROFILE)) {
     me.moveDir = inc.x < me.x ? -1 : 1;
     hitPop(1, 'good', 'DIVE');
     AI.defended(inc, false); ourDig(inc, true); return;
   }
+  // Ghost Dig item
+  if (pwGhostSave(inc)) { ourDig(inc, true); return; }
   AI.defended(inc, true);
   G.phase = 'dead'; setHint('');
   const side = inc.x < me.x - 0.05 ? -1 : inc.x > me.x + 0.05 ? 1 : (me.moveDir || 1);
@@ -684,6 +689,7 @@ function ourSet() {
   const A = G.attack = { tc, C: Cp, lane, hit: false, lock: 0, block: decideBlock(d), shown: null, tac: null };
   G.phase = 'attack';
   setHint('attack');
+  pwAttackStart();
   // blocker follows the set
   oB.tx = clamp(Cp.x, -2.8, 2.8); oB.tz = BLK_Z; oB.sx = oB.sz = 7; setBase(oB, 'setReady'); setPose(oB, 'setReady');
   const lead = lerp(0.72, 0.4, d);
@@ -724,6 +730,7 @@ function decideBlock(d) {
 }
 function showBlock(side) {
   const A = G.attack; if (!A || A.hit) return;
+  if (PW.oWall) side = 'W';
   A.shown = side; SFX.tick();
   if (side === 'D') { oB.tz = -2.4; oB.sz = 5; setBase(oB, 'ready'); setPose(oB, 'ready'); }
   else {
@@ -757,8 +764,9 @@ function swipeAttack(dir, aim = 0) {
   setHint('');
   rallyTick();
   const sideX = dir === 'L' ? -1 : 1;
-  if (G.fire && fireOn() && dir !== 'LOB' && q !== 'weak') { fireball(sideX); return; }
+  if (G.fire && dir !== 'LOB') { fireball(sideX); return; } // Fireball item: burns through any block
   if (dir === 'LOB') { lob(q, aim); return; }
+  if (PW.oWall) { doBlocked(sideX); return; } // their Power Block stops every spike
   const blocked = A.block === 'W' || A.block === dir;
   if (blocked) {
     // a hit into the block can glance off the hands: out (our point) or up into their court
@@ -805,7 +813,7 @@ function spike(sideX, q) {
   p *= 0.7 + 0.5 * d; if (A.block === 'D') p += 0.15; p = clamp(p, 0, 0.92);
   SFX.spike(); shake(q === 'perfect' ? 3 : 2); vib(18); G.stop = q === 'perfect' ? 0.07 : 0.04;
   sparks(ball.x, ball.y, ball.z, q === 'perfect' ? 10 : 5);
-  if (Math.random() < p) {
+  if (Math.random() < p || pwOppGhost()) {
     launch({ x: tx, y: 0.55, z: tz }, T, { spin: 20 });
     oA.tx = tx; oA.tz = tz + 0.2; oA.sx = oA.sz = 10;
     after(T, () => {
@@ -843,7 +851,7 @@ function oppOverpass() {
     setPose(mate, 'spike', 0.2, 40); setBase(mate, 'stand'); SFX.spike(); shake(3); G.stop = 0.06; sparks(ball.x, ball.y, ball.z, 8);
     const kx = rand(-3, 3), kz = -rand(2.5, 6);
     oA.tx = lerp(oA.x, kx, 0.5); oA.sx = 8;
-    if (Math.random() < 0.85) {
+    if (Math.random() < 0.85 && !pwOppGhost()) {
       launch({ x: kx, y: 0, z: kz }, 0.32, { spin: 24 });
       after(0.2, () => defAnim(oA, 'miss', kx < oA.x ? -1 : 1));
       after(0.7, () => { G.stats.kills++; point(0, 'POINT!'); });
@@ -865,7 +873,7 @@ function doBlocked(sideX) {
     G.stats.blocked++;
     sparks(ball.x, ball.y, ball.z, 8, [C.bone, C.bad]);
     // Block recycle: we keep the ball alive with a chance set by their blocker's Block skill
-    if (RNG() >= recycleP(oppProf())) {
+    if (RNG() >= recycleP(oppProf()) && !pwGhostSave()) {
       const sx = ball.x + rand(-0.6, 0.6), sz = rand(0.6, 1.6);
       launch({ x: sx, y: 0, z: sz }, 0.3, { spin: -20 });
       AI.blockResult(G.attack, 1);
@@ -878,7 +886,7 @@ function doBlocked(sideX) {
     AI.blockResult(G.attack, 0.6);
     const others = [0, 1, 2].filter(l => l !== me.lane);
     const rl = Math.random() < 0.4 ? me.lane : pick(others);
-    const T = lerp(BAL.reboundT[0], BAL.reboundT[1], d);
+    const T = lerp(BAL.reboundT[0], BAL.reboundT[1], d) * pwSlow();
     launch({ x: LX[rl], y: 0.8, z: 3.3 }, T, { spin: -14 });
     incoming('block', rl, LX[rl], 3.3, T, 0);
     if (!me.air) { me.tz = 3.3; me.sz = 4; }
@@ -914,7 +922,7 @@ function blockTouch(sideX) {
     const tx = clamp(hx + sideX * rand(1.2, 2.6), -4.2, 4.2), tz = -rand(4.5, 7.5), T = 1.0;
     launch({ x: tx, y: 0.5, z: tz }, T, { spin: 14 });
     G.phase = 'over';
-    const save = Math.random() < lerp(BAL.touchSave[0], BAL.touchSave[1], d);
+    const save = Math.random() < lerp(BAL.touchSave[0], BAL.touchSave[1], d) || pwOppGhost();
     oA.tx = save ? tx : lerp(oA.x, tx, 0.7); oA.tz = save ? tz + 0.2 : lerp(oA.z, tz, 0.7); oA.sx = oA.sz = 9;
     if (save) after(T, () => { defAnim(oA, 'dive', tx < oA.x ? -1 : 1); SFX.dig(); AI.blockResult(A, 0.4); oppPass(false, true); });
     else {
@@ -928,14 +936,15 @@ function lob(q, aim) {
   // Lob aim (Lob 75): to the left or right sideline instead of the middle
   const tx = aim ? clamp(aim * rand(BAL.lobAimX[0], BAL.lobAimX[1]), -3.5, 3.5) : clamp(A.C.x * 0.5 + rand(-1.2, 1.2), -3.5, 3.5), tz = -rand(2.6, 3.8);
   const T = 1.05;
-  const digger = A.block === 'D' ? oB : oA;
-  let p = A.block === 'D' ? BAL.lobD : (A.block === 'W' ? BAL.lobW : BAL.lobLR)[q];
+  const bk = PW.oWall ? 'W' : A.block; // their Power Block stands at the net: lobs go over it
+  const digger = bk === 'D' ? oB : oA;
+  let p = bk === 'D' ? BAL.lobD : (bk === 'W' ? BAL.lobW : BAL.lobLR)[q];
   if (aim && Math.abs(digger.x - tx) > BAL.lobAimFar) p *= BAL.lobAimP;
   p *= 1 - perkV(PROFILE, 'lob', 'feather', 0);
   p = clamp(p * (0.75 + 0.4 * d), 0, 0.95);
   SFX.lob();
   if (hitFault(PROFILE.sk.lob, A.err, 0, 0, RNG) === 'net') { intoNet(1, A.C.x * 0.6, () => point(1, 'NET')); after(0.7, () => react(me, 'headHands', 1, 12)); return; }
-  if (Math.random() < p) {
+  if (Math.random() < p || pwOppGhost()) {
     launch({ x: tx, y: 0.6, z: tz }, T, { spin: 3 });
     digger.tx = tx; digger.tz = tz - 0.1; digger.sx = digger.sz = 7;
     after(T, () => {
@@ -946,7 +955,7 @@ function lob(q, aim) {
     launch({ x: tx, y: 0, z: tz }, T, { spin: 3 });
     oA.tx = lerp(oA.x, tx, 0.6); oA.tz = lerp(oA.z, tz, 0.5); oA.sx = oA.sz = 5;
     after(T * 0.8, () => defAnim(oA, 'missTip', 1));
-    after(T + 0.25, () => { G.stats.kills++; G.stats.lobs++; AI.blockResult(A, 0); point(0, A.block === 'W' ? 'OUTSMARTED!' : 'LOB POINT!'); });
+    after(T + 0.25, () => { G.stats.kills++; G.stats.lobs++; AI.blockResult(A, 0); point(0, bk === 'W' ? 'OUTSMARTED!' : 'LOB POINT!'); });
   }
 }
 function fireball(sideX) {
@@ -1070,6 +1079,7 @@ function point(w, txt) {
   AI.point(w);
   G.stats.maxRally = Math.max(G.stats.maxRally, G.rally);
   dailyTick();
+  pwPoint(w);
  
   setHint('');
   me.lock = false; me.dash = false; oA.leanT = 0;
@@ -1085,7 +1095,7 @@ function point(w, txt) {
     react(oA, mirP(oA, pick(LOSEP)), 1.1, 10); react(oB, mirP(oB, pick(['sad', 'headHands'])), 1.1, 10);
     addMeter(long ? 2 : 1);
   } else {
-    if (!G.fire) G.meter = Math.max(0, G.meter - 3);
+    if (!G.fire && !PW.item && !PW.drop) G.meter = Math.max(0, G.meter - 3);
     G.combo = 0;
     celebrate(me, false, long); react(mate, pick(['sad', 'headHands']), 1.1, 10); SFX.lose();
     celebrate(oB, true, long); after(0.1, () => { celebrate(oA, true, long); if (Math.random() < 0.3) react(oA, 'taunt', 0.8, 14); });

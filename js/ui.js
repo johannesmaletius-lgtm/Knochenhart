@@ -27,6 +27,7 @@ function startGame() {
   G.mode = 'play'; G.paused = false; G.score = [0, 0]; G.server = 1; G.meter = 0; G.combo = 0; G.fire = false; G.streak = 0; G.aceRun = 0; G.lastAim = null;
   G.hist = { L: 0, R: 0, LOB: 0 }; G.stats = newStats(); dailyStart(); AI.start(); G.pops.length = 0; G.ev.length = 0; G.fade = 1;
   showOnly(null);
+  pwReset();
   try { navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {}); } catch (e) {}
   setHint('');
   startRally();
@@ -65,6 +66,7 @@ function showOnly(id) {
   if (id === 'over' && !MP.net) $('#againBtn').hidden = false;
   for (const k of ['menu', 'how', 'over', 'pauseOv', 'mpOv', 'shop', 'skillOv', 'campOv', 'dailyOv']) $('#' + k).hidden = k !== id;
   $('#pauseBtn').hidden = G.mode !== 'play' && G.mode !== 'mp';
+  if (typeof pwUI === 'function') pwUI();
   if (typeof emoteUI === 'function') emoteUI();
   if (id === 'menu') { updRecord(); updCoins(); updMenuMeta(); dailyMenu(); }
   if (id !== 'over') $('#ovCoins').hidden = $('#ovCamp').hidden = $('#ovDaily').hidden = true;
@@ -215,7 +217,8 @@ function waitTip(fx) {
 // right-hand infos of the menu rows (campaign stage, Skill Games budget, your OVR)
 function menuInfo() {
   const c = caProg(), n = caStages().length, beat = c.w.filter(x => x > 0).length;
-  $('#mCa').textContent = beat >= n ? 'all ' + n + ' beaten' : 'stage ' + (caNext(c) + 1) + '/' + n;
+  const x = caStages()[caNext(c)];
+  $('#mCa').textContent = beat >= n ? 'all ' + n + ' beaten' : 'stage ' + (x.ch + 1) + '-' + (x.j + 1);
   $('#mSg').textContent = 'budget ' + sgBudget();
   $('#mOvr').textContent = 'OVR ' + ovr(PROFILE);
 }

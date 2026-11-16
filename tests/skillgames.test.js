@@ -10,9 +10,9 @@ const ok = (c, msg) => { n++; if (!c) { fails++; console.log('FAIL', msg); } };
 
 // budget: share (0.3) of the coins for all six skills 60 -> 99, from the cost curve
 const B = G.sgBudget();
-ok(SKILLS.sg.share === 0.3, 'share parameter is 0.3');
-ok(B === Math.round(totalCost() * 0.3) && B === 173, 'budget = 30% of the max cost (' + B + ' of ' + totalCost() + ')');
-const sh = SKILLS.sg.share; SKILLS.sg.share = 0.25; ok(G.sgBudget() === Math.round(totalCost() / 4), 'budget follows the share parameter'); SKILLS.sg.share = sh;
+ok(SKILLS.sg.share === 0.25, 'share parameter is 0.25');
+ok(B === Math.round(totalCost() * 0.25) && B === 1506, 'budget = 25% of the max cost (' + B + ' of ' + totalCost() + ')');
+const sh = SKILLS.sg.share; SKILLS.sg.share = 0.2; ok(G.sgBudget() === Math.round(totalCost() / 5), 'budget follows the share parameter'); SKILLS.sg.share = sh;
 
 // start at 60, spend up to the budget, never over it
 const p = G.sgNew();
@@ -57,7 +57,7 @@ ok(part.sk.spike >= 80 && G.sgSpent(part) <= B, 'auto spread keeps what you alre
 console.log('balanced auto spread', JSON.stringify(half.sk), 'OVR', ovr(half), '| budget', B);
 
 // a Skill Games match never touches the real profile, the saved data or the coins
-const mem = { 'skills': { v: 1, sk: { spike: 77, lob: 64, recv: 90, dig: 60, block: 71, serve: 85 }, badge: { recv: 'calm' } }, coins: 123 };
+const mem = { 'skills': { v: 2, sk: { spike: 77, lob: 64, recv: 90, dig: 60, block: 71, serve: 85 }, badge: { recv: 'calm' } }, coins: 123 };
 const st = { get: (k, d) => k in mem ? JSON.parse(JSON.stringify(mem[k])) : d, set: (k, v) => { mem[k] = JSON.parse(JSON.stringify(v)); } };
 let PROFILE = skillsLoad(st);
 const real = PROFILE, snap = JSON.stringify(mem), realSnap = JSON.stringify(real);

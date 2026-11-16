@@ -1,20 +1,21 @@
 'use strict';
 // shop: coins, skins, skull portraits, unlock progress, confetti
 /* ---------------- coins, skins, shop ---------------- */
-// bone color, headband, optional accessory; bought with coins (SKILLS.earn per win, also spent on skills)
+// bone color, headband, optional accessory; bought with coins (SKILLS.earn per win, also spent on skills); owned skins
+// stay owned (store 'skins'), campaign bosses give their skin for free
 const SKINS = [
   { id: 'knochen', n: 'Bone', p: 0, bone: '#dcdcd2', band: '#f2c25e', d: 'The classic. Clean bones, gold band.' },
-  { id: 'neon', n: 'Neon', p: 30, bone: '#8dffa8', band: '#ff5ad1', d: 'Glows under the gym lights.' },
-  { id: 'nacht', n: 'Night', p: 40, bone: '#6f7f88', band: '#a77bff', d: 'Dark bones for late matches.' },
-  { id: 'eis', n: 'Ice', p: 60, bone: '#a9dcff', band: '#ffffff', d: 'Cold as a perfect block.' },
-  { id: 'lava', n: 'Lava', p: 80, bone: '#ff8a4c', band: '#ffe08a', fx: 'ember', d: 'Smoulders. Sparks fly off the skull.' },
-  { id: 'pirat', n: 'Pirate', p: 100, bone: '#dcdcd2', band: '#d2482f', acc: 'bandana', d: 'Bandana and eye patch. Arr.' },
-  { id: 'teufel', n: 'Devil', p: 120, bone: '#e86a5a', band: '#2b0f0f', acc: 'horns', d: 'Red bones, two horns, no mercy.' },
-  { id: 'kuerbis', n: 'Pumpkin', p: 150, bone: '#dcdcd2', band: '#3d6b2f', acc: 'pumpkin', d: 'A carved pumpkin for a head.' },
-  { id: 'geist', n: 'Ghost', p: 180, bone: '#e8f4ff', band: '#9fd6ff', alpha: 0.55, d: 'Half there. Hard to read.' },
-  { id: 'koenig', n: 'King', p: 250, bone: '#f2c25e', band: '#d2482f', acc: 'crown', d: 'Golden bones and a crown. Rule the court.' }
+  { id: 'neon', n: 'Neon', p: 200, bone: '#8dffa8', band: '#ff5ad1', d: 'Glows under the gym lights.' },
+  { id: 'nacht', n: 'Night', p: 300, bone: '#6f7f88', band: '#a77bff', d: 'Dark bones for late matches.' },
+  { id: 'eis', n: 'Ice', p: 450, bone: '#a9dcff', band: '#ffffff', d: 'Cold as a perfect block.' },
+  { id: 'lava', n: 'Lava', p: 600, bone: '#ff8a4c', band: '#ffe08a', fx: 'ember', d: 'Smoulders. Sparks fly off the skull.' },
+  { id: 'pirat', n: 'Pirate', p: 800, bone: '#dcdcd2', band: '#d2482f', acc: 'bandana', d: 'Bandana and eye patch. Arr.' },
+  { id: 'teufel', n: 'Devil', p: 1000, bone: '#e86a5a', band: '#2b0f0f', acc: 'horns', d: 'Red bones, two horns, no mercy.' },
+  { id: 'kuerbis', n: 'Pumpkin', p: 1300, bone: '#dcdcd2', band: '#3d6b2f', acc: 'pumpkin', d: 'A carved pumpkin for a head.' },
+  { id: 'geist', n: 'Ghost', p: 1600, bone: '#e8f4ff', band: '#9fd6ff', alpha: 0.55, d: 'Half there. Hard to read.' },
+  { id: 'koenig', n: 'King', p: 2000, bone: '#f2c25e', band: '#d2482f', acc: 'crown', d: 'Golden bones and a crown. Rule the court.' }
 ];
-const RARITY = p => p === 0 ? ['Starter', '#97a39b'] : p <= 60 ? ['Rare', '#6fb8ff'] : p <= 150 ? ['Epic', '#c08bff'] : ['Legendary', '#f5c85f'];
+const RARITY = p => p === 0 ? ['Starter', '#97a39b'] : p <= 450 ? ['Rare', '#6fb8ff'] : p <= 1300 ? ['Epic', '#c08bff'] : ['Legendary', '#f5c85f'];
 // pixel skull portraits for the shop and the scoreboard, drawn once per skin
 const ICONS = {};
 const SKULL_PX = ['...#####...', '.#########.', '###########', '###########', '##EEE#EEE##', '##EEE#EEE##', '###########', '.####.####.', '..#######..', '..#.#.#.#..'];

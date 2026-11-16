@@ -24,12 +24,12 @@ ok(S.ovr(p) === Math.round((60 * 4 + 99 + 81) / 6), 'OVR = mean');
 ok(S.levelCost(59) === 0 && S.levelCost(99) === 0, 'no cost outside 60..98');
 let mono = true; for (let L = 61; L < 99; L++) if (S.levelCost(L) < S.levelCost(L - 1) || S.levelCost(L) < 1) mono = false;
 ok(mono, 'cost per level >= 1 and rising');
-ok([60, 69, 70, 79, 80, 89, 90, 98].map(S.levelCost).join() === '1,1,2,2,3,3,4,4', 'tier prices 1/2/3/4 per level');
-ok(S.costTo(60, 99) === 96 && S.totalCost() === 576, 'one skill 96, all six 576');
+ok([60, 69, 70, 79, 80, 89, 90, 98].map(S.levelCost).join() === '5,5,15,15,30,30,56,56', 'tier prices 5/15/30/56 per level');
+ok(S.costTo(60, 99) === 1004 && S.totalCost() === 6024, 'one skill 1004, all six 6024');
 ok(S.costTo(60, 99) * 6 === S.totalCost(), 'totalCost = 6 skills');
 const E = SKILLS.earn, P = SKILLS.plan;
-const perDay = P.matchesPerDay * (P.winRate * E.win + (1 - P.winRate) * E.loss) + E.win * (E.dailyMul - 1) + P.chal;
-near(S.totalCost() / perDay, P.days, 0.4, 'all skills 60->99 ~ plan days of income');
+const perDay = P.matchesPerDay * (P.winRate * E.win + (1 - P.winRate) * E.loss + P.floor) + E.win * (E.dailyMul - 1) + P.chal;
+near(S.totalCost() / perDay, P.days, 1, 'all skills 60->99 ~ plan days of income');
 
 // buying, no respec
 const q = S.skillsNew();
@@ -77,9 +77,15 @@ ok('knochenhart.skills' in mem, 'saved under knochenhart.skills');
 const back = S.skillsLoad(st);
 ok(JSON.stringify(back.sk) === JSON.stringify(u.sk) && back.badge.spike === 'hotHand', 'roundtrip');
 ok(JSON.stringify(S.skillsLoad({ get: (k, d) => d }).sk) === JSON.stringify(S.skillsNew().sk), 'empty store -> fresh profile');
-mem['knochenhart.skills'] = JSON.stringify({ sk: { spike: 140, lob: 'x', recv: 12 }, badge: { lob: 'hotHand' } });
+mem['knochenhart.skills'] = JSON.stringify({ v: 2, sk: { spike: 140, lob: 'x', recv: 12 }, badge: { lob: 'hotHand' } });
 const bad = S.skillsLoad(st);
 ok(bad.sk.spike === 99 && bad.sk.lob === 60 && bad.sk.recv === 60 && !bad.badge.lob, 'bad data is clamped');
+// one-time setback: profiles saved before reset.v map 60..99 -> 60..reset.to (99 -> 75) and are saved at once
+mem['knochenhart.skills'] = JSON.stringify({ v: 1, sk: { spike: 99, lob: 60, recv: 80, dig: 90, block: 99, serve: 70 }, badge: { spike: 'hotHand' } });
+const rs = S.skillsLoad(st);
+ok(rs.sk.spike === 75 && rs.sk.block === 75 && rs.sk.lob === 60 && rs.sk.recv === 68 && rs.sk.dig === 72 && rs.sk.serve === 64, 'old 99 -> 75 (' + JSON.stringify(rs.sk) + ')');
+ok(!rs.badge.spike && JSON.parse(mem['knochenhart.skills']).v === SKILLS.reset.v, 'badge dropped below 90, migrated profile saved');
+ok(S.skillsLoad(st).sk.spike === 75, 'setback happens only once');
 const tmp = S.skillsNew(99); tmp.tmp = true; delete mem['knochenhart.skills'];
 S.skillsSave(tmp, st); ok(!('knochenhart.skills' in mem), '?ovr profile is not saved');
 

@@ -116,7 +116,7 @@ function drawFig(f) {
   f._head = { x: hx, y: hy, r };
 }
 function drawBall() {
-  if (ball.mode === 'none') return;
+  if (ball.mode === 'none' || pwHidden()) return;
   for (let i = 0; i < ball.trail.length; i++) {
     const q = pv(ball.trail[i].x, ball.trail[i].y, ball.trail[i].z), tr = Math.max(0, Math.round(0.14 * q.s) - (ball.trail.length - i));
     ctx.globalAlpha = 0.12 + 0.1 * i; disc(q.x, q.y, tr, ball.fire ? C.fire2 : C.boneMid);
@@ -183,7 +183,7 @@ function updBoard() {
   if (BD.el.hidden === on) BD.el.hidden = !on;
   if (!on) { BD.last = [-1, -1]; return; }
   const mpv = G.mode === 'mp' && MP.view;
-  const SC = mpv ? mpv.score : G.score, SV = mpv ? mpv.server : G.server, MT = mpv ? mpv.meter : G.meter, FI = mpv ? mpv.fire : G.fire;
+  const SC = mpv ? mpv.score : G.score, SV = mpv ? mpv.server : G.server, MT = mpv ? mpv.meter : G.meter, FI = mpv ? mpv.fire : G.fire || !!PW.item || !!PW.drop;
   const oppSk = !mpv && CA.on ? caStages()[CA.i].skin : ''; // P7 campaign: the stage skin on the right
   if (BD.skin !== mySkin || BD.mp !== !!mpv || BD.opp !== oppSk) {
     BD.skin = mySkin; BD.mp = !!mpv; BD.opp = oppSk;
@@ -198,8 +198,8 @@ function updBoard() {
   }
   BD.srv[0].classList.toggle('on', SV === 0); BD.srv[1].classList.toggle('on', SV === 1);
   $('#sbR').classList.toggle('flare', G.mode === 'play' && G.t - AI.planT < 2.2);
-  // singleplayer: the fireball bar only with Spike 85 (fireOn), Hot Hand shortens it
-  const MM = mpv ? BAL.meterMax : meterMax(), mon = !!mpv || fireOn();
+  // singleplayer: the item bar (powers.js), Hot Hand shortens it; full while you hold an item
+  const MM = mpv ? BAL.meterMax : meterMax(), mon = true;
   const mk = MT + '|' + FI + '|' + MM + '|' + mon;
   if (mk !== BD.mkey) {
     BD.mkey = mk; BD.mt.hidden = !mon;
@@ -302,10 +302,12 @@ function render() {
   drawParts();
   drawRing();
   drawFx();
+  pwDraw();
   ctx.restore();
+  pwDark();
   drawFade();
   if (G.flash > 0) { ctx.globalAlpha = Math.min(0.5, G.flash * 0.5); rect(0, 0, W, H, C.fire1); ctx.globalAlpha = 1; }
-  if (G.mode === 'play' || G.mode === 'mp') drawHUD();
+  if (G.mode === 'play' || G.mode === 'mp') { drawHUD(); pwHUD(); }
   updBoard();
   drawPops();
 }
@@ -329,6 +331,7 @@ function update(dt) {
   runEv();
   for (const f of FIGS) updFig(f, gdt);
   updBall(gdt);
+  pwTick();
   updParts(gdt);
   updCam(dt);
   G.shake = Math.max(0, G.shake - dt * 16);

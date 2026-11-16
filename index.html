@@ -243,7 +243,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .ca-msg{margin:0;font-size:12px;line-height:1.05;color:var(--bone-dim);text-align:left}
 .ca-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;padding:3px;margin:-3px;scrollbar-width:none}
 .ca-list::-webkit-scrollbar{display:none}
-.ca-row{flex:none;display:grid;grid-template-columns:18px 30px 1fr auto;align-items:center;gap:9px;padding:7px 10px;border:0;border-radius:var(--r-sm);cursor:pointer;
+.ca-row{flex:none;display:grid;grid-template-columns:28px 30px 1fr auto;align-items:center;gap:9px;padding:7px 10px;border:0;border-radius:var(--r-sm);cursor:pointer;
   font:inherit;color:var(--bone);text-align:left;background:rgba(255,255,255,.02);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--rc) 30%,transparent)}
 .ca-row[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--rc)}
@@ -258,6 +258,21 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .ca-row.locked{cursor:default;opacity:.5}
 .ca-row.locked img{filter:brightness(.4) saturate(.3)}
 .ca-row.locked em{color:var(--bone-dim)}
+.ca-row.boss{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--rc) 55%,transparent)}
+.ca-row.boss[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--rc),3px 3px 0 0 var(--ink)}
+.ca-t b u{text-decoration:none;color:var(--gold-hi);margin-left:4px}
+.ca-ch{flex:none;margin:6px 0 0;font-family:var(--font-display);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim)}
+.ca-stars{display:flex;gap:2px;margin-right:4px}
+.ca-stars i{width:7px;height:7px;background:var(--line)}
+.ca-stars i.on{background:var(--gold-hi)}
+.ca-msg b{font-weight:400;color:var(--gold-hi)}
+.ca-goals{flex:none;margin:0;display:flex;flex-direction:column;gap:3px;font-size:11px;line-height:1.1;color:var(--bone-dim)}
+.ca-goals b{font-family:var(--font-display);font-weight:400;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone)}
+.ca-goals .ok,.ca-gl .ok{color:var(--good)}
+.ca-goals .gift{color:var(--gold-hi)}
+.ca-goals .ab{color:var(--bad)}
+.ca-gl span{display:block}
+.ca-gl .no{color:var(--bone-dim);opacity:.7}
 #caGo{width:100%}
 .ca-res{margin:0;font-size:13px;line-height:1.2;color:var(--bone)}
 .ca-res b{font-family:var(--font-display);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-hi);margin-right:4px}
@@ -417,6 +432,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--gold-hi);outlin
 .pcard .tags{justify-content:center}
 /* emote quick menu: top-left corner, under the pause button (MP only) */
 #emoBtn{left:10px;top:56px}
+/* power-up item button (powers.js): bottom left, over the court */
+#itemBtn{left:10px;top:auto;bottom:14px;width:auto;min-width:56px;padding:0 10px;font-family:var(--font-display);font-size:11px;letter-spacing:.1em;color:#2a1a04;background:#f39a3c;box-shadow:0 0 0 2px var(--ink),3px 3px 0 2px var(--ink)}
+#itemBtn[data-k="ghost"]{background:#bfe3ff}
+#itemBtn[data-k="wall"]{background:#6fb8ff}
+#itemBtn[data-k="slow"]{background:#c08bff}
 .emomenu{position:absolute;left:10px;top:100px;z-index:3;display:flex;flex-direction:column;gap:5px}
 .emo{font-family:var(--font-display);font-size:11px;letter-spacing:.1em;color:var(--bone);border:0;cursor:pointer;padding:7px 9px;text-align:left;
   border-radius:3px;background:rgba(8,14,12,.72);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
@@ -509,6 +529,7 @@ html{background:var(--screen)}
       <span class="chip" id="sbChip" hidden></span>
     </div>
 
+    <button class="icon item" id="itemBtn" aria-label="Use item" hidden>FIRE</button>
     <button class="icon" id="pauseBtn" aria-label="Pause" hidden>
       <svg viewBox="0 0 8 8" aria-hidden="true"><rect x="1" y="1" width="2" height="6" fill="currentColor"/><rect x="5" y="1" width="2" height="6" fill="currentColor"/></svg>
     </button>
@@ -567,7 +588,7 @@ html{background:var(--screen)}
         <dt><kbd>←</kbd> <kbd>↖</kbd> <kbd>→</kbd></dt><dd>Hybrid, setting: the swipe picks the lane: left, middle, right. <kbd>↑</kbd> middle ball. Two lanes away from your hitter: the ball drops. Front digs, then the back player sets and the front attacks</dd>
         <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Hybrid, hitting: run into the set lane before your approach. One lane off: only a free ball over, two off: the ball drops. <kbd>↖</kbd> <kbd>↗</kbd> short lob left or right</dd>
       </dl>
-      <p>Hit where the block is not. EARLY / LATE shows your timing; higher skills forgive bad timing. Spike 85: full skull bar, fireball. Full wall bar (front): your next block is a sure point.</p>
+      <p>Hit where the block is not. EARLY / LATE shows your timing; higher skills forgive bad timing. Full skull bar: an item drops on your court (Fireball, Ghost Dig, Power Block, Bone Time), run over it, then tap the item button or F. Spike 85: more fireballs. Full wall bar (front): your next block is a sure point.</p>
       <p>Every win earns about 10 coins, a loss with 5+ points 3. Spend them in the shop or on skills: each level costs 1 coin up to 70, 2 up to 80, 3 up to 90, 4 up to 99.</p>
       <button class="btn" id="howOk">Got it</button>
     </div>
@@ -595,8 +616,9 @@ html{background:var(--screen)}
           <h2>Campaign</h2>
           <p class="coins pill" aria-label="Your OVR"><span class="n" id="caOvr">OVR 60</span></p>
         </div>
-        <p class="ca-msg">Beat every skull, one after another. You play with your own skills.</p>
+        <p class="ca-msg">10 chapters, 4 stages each. Every boss has its own power, beat it to win its skin. Stars: win + 2 goals. <b id="caSum">0/120</b> ★</p>
         <div class="ca-list" id="caList" role="group" aria-label="Stages"></div>
+        <p class="ca-goals" id="caGoals"></p>
         <button class="btn" id="caGo">Start</button>
       </div>
     </div>
@@ -716,6 +738,7 @@ html{background:var(--screen)}
 <script src="js/profile.js"></script>
 <script src="js/skillgames.js"></script>
 <script src="js/campaign.js"></script>
+<script src="js/powers.js"></script>
 <script src="js/mp.js"></script>
 <script src="js/social.js"></script>
 <script src="js/render.js"></script>

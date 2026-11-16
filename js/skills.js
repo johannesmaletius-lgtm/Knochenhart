@@ -9,9 +9,11 @@ const SKILLS = {
   min: 60, max: 99,
   // OVR = weighted mean of all skills
   weight: { spike: 1, lob: 1, recv: 1, dig: 1, block: 1, serve: 1 },
-  // coins to raise a skill from L to L+1, fixed per tier of `step` levels: 60-69 = 1, 70-79 = 2, 80-89 = 3, 90-98 = 4
-  // (one skill 60 -> 99 = 96, all six = 576). Costs are fixed; tests/sim-progress.js checks the income against plan.days
-  cost: { step: 10, tier: [1, 2, 3, 4] },
+  // coins to raise a skill from L to L+1, fixed per tier of `step` levels: 60-69 = 5, 70-79 = 15, 80-89 = 30, 90-98 = 56
+  // (one skill 60 -> 99 = 1004, all six = 6024 = ~1 month). Costs are fixed; tests/sim-progress.js checks the income against plan.days
+  cost: { step: 10, tier: [5, 15, 30, 56] },
+  // one-time setback of saved profiles older than v (skillsLoad): every skill maps linearly 60..99 -> 60..to (99 -> 75)
+  reset: { v: 2, to: 75 },
   // coins per won match (daily.js earnWin): win x strength of the opponent. Normal singleplayer: lv[G.level] (Easy / Normal /
   // Hard); explicit opponent profile (campaign, Skill Games): ovr[0] at OVR 60 -> ovr[1] at 99, plus under per OVR point the
   // opponent is above you (max underMax). First win of the day x dailyMul. Multiplayer: x1. loss = coins for a lost match
@@ -38,7 +40,7 @@ const SKILLS = {
     hardOvr: 86 // campaign / Skill Games: a win vs. this OVR or more counts as Hard
   },
   // progression target: normal play (chal = expected daily challenge coins per day); campaign (P7): stage cleared once OVR >= stage OVR - campEdge, still >= campMin days
-  plan: { matchesPerDay: 20, winRate: 0.5, days: 3.5, campEdge: 4, campMin: 2.5, chal: 20 },
+  plan: { matchesPerDay: 20, winRate: 0.5, days: 30, campEdge: 4, campMin: 25, chal: 20, floor: 2 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
   // P8 (tests/balance.js): 99 a bit stricter than P3 (0.55 / 0.4): very bad timing at 99 = weak, ~14 % net faults (60: 30 %)
@@ -61,9 +63,9 @@ const SKILLS = {
   // MP block jump tier -> [tool x, touch x, + stuff chance] on a blocked spike (mp.js mpAttack / mpStuff); good = the recycle curve
   // as is; P8: a perfect jump stuffs more (+0.4, was +0.15) so a Block 60 player gets ~ the pre-P5 block points (tests/balance.js)
   blockQ: { perfect: [0.3, 0.5, 0.4], good: [1, 1, 0], weak: [1.6, 1.5, -0.15] },
-  // threshold unlocks: feature -> [skill, level]
+  // threshold unlocks: feature -> [skill, level] (fireball: Fireball items drop items.fireUnlock x as often)
   unlock: { lobAim: ['lob', 75], splitBlock: ['block', 75], float: ['serve', 75], dive: ['dig', 70], fireball: ['spike', 85] },
-  unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball' },
+  unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball x2.5' },
   // local leaderboard (profile.js): stored entries, player name length
   board: { max: 50, nameMax: 12 },
   // P5 MP social (social.js): emotes = pixel-text quick messages, dur = s shown over the player; rate limit per player
@@ -78,27 +80,68 @@ const SKILLS = {
   // the computer's auto spread (rest raises the lowest skill); MP: wait = s to spend, the phone auto-spends the rest grace s
   // before the end, the host waits grace s longer, then auto-spends for anyone missing; coinMul = coin reward x (1 = as normal)
   // presets (buttons on the spend screen, sgPreset): reset to 60, raise each [skill, target] in order, spread the rest evenly
-  // (lowest first); perk = badge picked for a skill that reaches 90. At budget 173: Attacker spike 99 / serve 80 / lob 75 / rest 69,
-  // Blocker block 99 / dig 80 / recv 75 / rest 69, Defender dig + recv 90 / rest ~71, All-round all ~79
-  sg: { share: 0.3, aiMix: 0.35, coinMul: 1,
+  // (lowest first); perk = badge picked for a skill that reaches 90. At budget 1506: Attacker spike 99 / serve 80 / lob 75 / rest ~70,
+  // Blocker block 99 / dig 80 / recv 75 / rest ~70, Defender dig + recv 90 / rest 75, All-round all ~81
+  sg: { share: 0.25, aiMix: 0.35, coinMul: 1,
     presets: [
       { id: 'att', n: 'Attacker', t: [['spike', 99], ['serve', 80], ['lob', 75]], perk: { spike: 'hotHand' } },
       { id: 'blk', n: 'Blocker', t: [['block', 99], ['dig', 80], ['recv', 75]], perk: { block: 'longArms' } },
       { id: 'def', n: 'Defender', t: [['dig', 90], ['recv', 90]], perk: { dig: 'catReflex', recv: 'platform' } },
       { id: 'all', n: 'All-round', t: [] }
     ] },
-  // P7 campaign (js/campaign.js): stages = shop skins (SKINS ids) with rising OVR; focus = skill kept `lead` levels above the rest;
-  // c = bonus coins on the first win (on top of the normal match coins), later wins pay round(c x repeat). Opponent AI: level
-  // (G.level arrays) 0 below lv[0] OVR, 1 below lv[1], else 2; D() base 60 -> 99 = d. Bonus pool ~6% of totalCost(): with it
-  // tests/sim-progress.js (stage cleared once OVR >= ovr - plan.campEdge, worst-case replays) stays >= plan.campMin days
+  // power-ups (js/powers.js, singleplayer): a full skull bar (BAL.meterMax, Hot Hand shorter) drops one random item (weights w,
+  // on the floor of your court in another lane: walk within reach m of it to pick it up, it fades after life s;
+  // Fireball x fireUnlock with the Spike 85 unlock), used with the item button. fire: next spike (not lob) is a fireball;
+  // ghost: the next ball that would drop on your side is dug by a ghost; wall: Power Block until the next point, they can only
+  // tip over; slow: Bone Time, their balls fly slowK x longer until the next point. Campaign opponents from chapter opp.from:
+  // an item after round(meter[0] + meter[1] x chapter) (min meter[2]) points they win, bosses x bossMul faster; their
+  // fireball flies fireT x faster and cannot be dived or saved late (a ghost dig still saves it, it burns through a wall)
+  items: {
+    kinds: ['fire', 'ghost', 'wall', 'slow'],
+    names: { fire: 'Fireball', ghost: 'Ghost Dig', wall: 'Power Block', slow: 'Bone Time' },
+    short: { fire: 'FIRE', ghost: 'GHOST', wall: 'BLOCK', slow: 'SLOW' },
+    w: { fire: 1, ghost: 1, wall: 1, slow: 1 }, fireUnlock: 2.5, slowK: 1.5, reach: 0.6, life: 14,
+    // floor coins: chance p per rally that one (value v) appears in a lane of your court, max on the floor, fades after life s;
+    // expected pick-ups per match are in plan.floor (tests/sim-progress.js)
+    coin: { p: 0.15, v: 1, max: 2, life: 9 },
+    opp: { kinds: ['fire', 'ghost', 'wall'], from: 1, meter: [9, -0.5, 4], bossMul: 1.5, fireT: 0.7 }
+  },
+  // P7 campaign (js/campaign.js): 10 chapters = shop skins, `per` stages each (last = boss with the chapter focus, the others
+  // cycle SKILLS.ids), stage OVR 60 -> 99 (+1 per stage). Coins on the first win: round(c[0] + c[1] x chapter), boss x boss;
+  // later wins round(c x repeat). Goals: 2 per stage (stars 2 + 3, the win is star 1), kinds cycle through `goals` (k = G.stats
+  // key, or 'held' = opponent points <= v, 'margin' = win by >= v); v = round(a + b x chapter); each new goal star pays `star`
+  // coins (only in a won match). Beating a boss gives its skin for free (kept if already owned). bossD = extra D() pressure for
+  // bosses. focus = skill kept `lead` levels above the rest. AI level (G.level) 0 below lv[0] OVR, 1 below lv[1], else 2;
+  // D() base 60 -> 99 = d. tests/sim-progress.js (worst case: all stars on the first win) stays >= plan.campMin days
   camp: {
-    stages: [
-      { skin: 'knochen', ovr: 60, c: 1 }, { skin: 'neon', ovr: 64, focus: 'recv', c: 1 }, { skin: 'nacht', ovr: 68, focus: 'dig', c: 2 },
-      { skin: 'eis', ovr: 72, focus: 'block', c: 2 }, { skin: 'lava', ovr: 76, focus: 'spike', c: 3 }, { skin: 'pirat', ovr: 80, focus: 'lob', c: 3 },
-      { skin: 'teufel', ovr: 85, focus: 'serve', c: 4 }, { skin: 'kuerbis', ovr: 90, focus: 'dig', c: 4 }, { skin: 'geist', ovr: 95, focus: 'lob', c: 5 },
-      { skin: 'koenig', ovr: 99, c: 7 }
+    // ab = the chapter boss ability (js/powers.js); the Elite stage (j = per - 2) previews it at elite x its chances.
+    // wind: an item when trailing by gap (cooldown cd points); strobe: their spike is invisible from hide[0] to hide[1] of the
+    // flight; dark: lights out for a rally (r = light radius, share of the width); freeze: you cannot move for t s after their
+    // hit; meteor: their spike is a fireball; plunder: cannon serve (flight x T) + steals your item when they score;
+    // hellwall: power block on your attack; decoy: a fake pumpkin ball to another lane; phase: the spike jumps a lane at
+    // `at` of the flight; decree: every rally one of the other abilities (not wind). p = chance per hit / rally
+    chapters: [
+      { skin: 'knochen', ab: { id: 'wind', n: 'Second Wind', d: 'Gets an item when behind', gap: 3, cd: 4 } },
+      { skin: 'neon', focus: 'recv', ab: { id: 'strobe', n: 'Strobe', d: 'Spikes vanish in flight', p: 0.55, hide: [0.2, 0.8] } },
+      { skin: 'nacht', focus: 'dig', ab: { id: 'dark', n: 'Blackout', d: 'Lights out for a rally', p: 0.4, r: 0.2 } },
+      { skin: 'eis', focus: 'block', ab: { id: 'freeze', n: 'Deep Freeze', d: 'Freezes you on their hit', p: 0.45, t: 0.3 } },
+      { skin: 'lava', focus: 'spike', ab: { id: 'meteor', n: 'Meteor', d: 'Fireball spikes: no dive, no late save', p: 0.35 } },
+      { skin: 'pirat', focus: 'lob', ab: { id: 'plunder', n: 'Cannon & Plunder', d: 'Cannon serves, steals your item', p: 0.5, T: 0.72 } },
+      { skin: 'teufel', focus: 'serve', ab: { id: 'hellwall', n: 'Hellwall', d: 'Blocks the whole net: lob it', p: 0.35 } },
+      { skin: 'kuerbis', focus: 'dig', ab: { id: 'decoy', n: 'Pumpkin Decoy', d: 'Fake ball, the real one has a shadow', p: 0.5 } },
+      { skin: 'geist', focus: 'lob', ab: { id: 'phase', n: 'Phase Shift', d: 'Spikes jump a lane mid-air', p: 0.45, at: 0.42 } },
+      { skin: 'koenig', ab: { id: 'decree', n: 'Royal Decree', d: 'A new boss power every rally', p: 1 } }
     ],
-    lead: 12, repeat: 0.1, lv: [72, 86], d: [0.1, 0.55]
+    elite: 0.5,
+    per: 4, rank: ['Rookies', 'Squad', 'Elite'], c: [2, 1], boss: 3, star: 2, bossD: 0.05,
+    goals: [
+      { k: 'kills', a: 8, b: 0.7, t: 'Attack points: N' }, { k: 'held', a: 11, b: -0.35, t: 'Opponent max N points' },
+      { k: 'aces', a: 1, b: 0.3, t: 'Aces: N' }, { k: 'perfect', a: 5, b: 1, t: 'Perfect timings: N' },
+      { k: 'saves', a: 2, b: 0.35, t: 'Diving saves: N' }, { k: 'margin', a: 3, b: 0.4, t: 'Win by N+' },
+      { k: 'lobs', a: 1, b: 0.3, t: 'Lob points: N' }, { k: 'maxRally', a: 6, b: 0.6, t: 'Rally: N+ touches' },
+      { k: 'bout', a: 1, b: 0.25, t: 'Block-outs: N' }, { k: 'fires', a: 1, b: 0.12, t: 'Fireballs: N' }
+    ],
+    lead: 12, repeat: 0.05, lv: [72, 86], d: [0.1, 0.55]
   },
   // skill badge at 90: pick one perk in the same area; v = effect value for the engine:
   // hotHand: fireball bar length x v; heavyArm: + v spike quality; feather: lob dig chance x (1 - v); sneaky: lobs feed
@@ -152,7 +195,7 @@ const totalCost = () => costTo(SKILLS.min, SKILLS.max) * SKILLS.ids.length;
 function skillsNew(lv) {
   const sk = {};
   for (const id of SKILLS.ids) sk[id] = lv == null ? SKILLS.min : lv;
-  return { v: 1, sk, badge: {} };
+  return { v: SKILLS.reset.v, sk, badge: {} };
 }
 function ovr(p) {
   let s = 0, w = 0;
@@ -175,16 +218,21 @@ function trySkillUp(p, id, have) {
   p.sk[id]++; return c;
 }
 function skillsLoad(st) {
-  const p = skillsNew(), raw = st.get('skills', null);
+  const p = skillsNew(), raw = st.get('skills', null), R = SKILLS.reset;
+  const old = raw && !(raw.v >= R.v); // saved before the setback: map once, save right away
   if (raw && raw.sk) for (const id of SKILLS.ids) {
-    const v = Math.round(+raw.sk[id]);
-    if (v >= SKILLS.min) p.sk[id] = Math.min(SKILLS.max, v);
+    let v = Math.round(+raw.sk[id]);
+    if (!(v >= SKILLS.min)) continue;
+    v = Math.min(SKILLS.max, v);
+    if (old) v = SKILLS.min + Math.round((v - SKILLS.min) * (R.to - SKILLS.min) / (SKILLS.max - SKILLS.min));
+    p.sk[id] = v;
   }
   if (raw && raw.badge) for (const id of SKILLS.ids) if (raw.badge[id]) pickPerk(p, id, raw.badge[id]);
+  if (old && raw.sk) skillsSave(p, st);
   return p;
 }
 // tmp profiles (?ovr= debug) are never saved
-function skillsSave(p, st) { if (!p.tmp) st.set('skills', { v: 1, sk: p.sk, badge: p.badge }); }
+function skillsSave(p, st) { if (!p.tmp) st.set('skills', { v: SKILLS.reset.v, sk: p.sk, badge: p.badge }); }
 
 /* ---------------- P3 decisions: pure, rng passed in (engine: RNG) ---------------- */
 // mulberry32: small seeded RNG (?seed=N)
