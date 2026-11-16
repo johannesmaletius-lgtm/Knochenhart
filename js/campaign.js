@@ -21,7 +21,8 @@ function caStages() {
     });
     // ab: boss ability (full), previewed on the Elite stage at camp.elite x its chances
     const ab = boss || j === k.per - 2 ? C.ab : null, abK = boss ? 1 : k.elite;
-    out.push({ ch, j, boss, skin: C.skin, ovr: Math.round(SKILLS.min + (SKILLS.max - SKILLS.min) * i / (n - 1)),
+    const o = Math.round(SKILLS.min + (SKILLS.max - SKILLS.min) * i / (n - 1));
+    out.push({ ch, j, boss, skin: C.skin, ovr: o, pOvr: Math.min(SKILLS.max, o + (boss ? k.bossOvr : 0)),
       focus: boss ? C.focus : i ? SKILLS.ids[i % SKILLS.ids.length] : undefined, c, goals, ab, abK, items: ch >= SKILLS.items.opp.from });
   }
   return (CA_ST = out);
@@ -109,7 +110,7 @@ function caDraw() {
     const head = s.j ? '' : '<p class="ca-ch">Chapter ' + (s.ch + 1) + ' · ' + k.n + (owned.has(k.id) ? '' : ' · boss gives skin') + '</p>';
     const em = st === 'locked' ? 'Locked' : (n ? '<span class="coin"></span>+' + n : '');
     return head + '<button class="ca-row ' + st + (s.boss ? ' boss' : '') + '" style="--rc:' + RARITY(k.p)[1] + '" data-i="' + i + '" aria-pressed="' + (i === CA.sel) + '"' + (st === 'locked' ? ' disabled' : '') + '>'
-      + '<span class="ca-n">' + (s.ch + 1) + '-' + (s.j + 1) + '</span><img class="px" alt="" src="' + skinIcon(k) + '"><span class="ca-t"><b>' + caName(s) + (s.boss ? ' <u>Boss</u>' : '') + '</b><i>OVR ' + s.ovr + ' · ' + CA_FOCUS(s.focus) + '</i></span>'
+      + '<span class="ca-n">' + (s.ch + 1) + '-' + (s.j + 1) + '</span><img class="px" alt="" src="' + skinIcon(k) + '"><span class="ca-t"><b>' + caName(s) + (s.boss ? ' <u>Boss</u>' : '') + '</b><i>OVR ' + s.pOvr + ' · ' + CA_FOCUS(s.focus) + '</i></span>'
       + '<em>' + CA_STAR(caStars(c, i)) + em + '</em></button>';
   }).join('');
   list.scrollTop = sc;
@@ -125,9 +126,9 @@ function caDraw() {
 function caStart(i) {
   const c = caProg(), s = caStages()[i];
   if (!s || caStatus(c, i) === 'locked') return;
-  const df = caDiff(s.ovr, s.boss);
+  const df = caDiff(s.pOvr, s.boss);
   if (!CA.on) CA.lvReal = G.level;
-  CA.on = true; CA.i = i; CA.again = i; CA.d = df.d; CA.opp = caProfile(s.ovr, s.focus); G.level = df.lv;
+  CA.on = true; CA.i = i; CA.again = i; CA.d = df.d; CA.opp = caProfile(s.pOvr, s.focus); G.level = df.lv;
   oA.skin = oB.skin = s.skin;
   startGame();
 }

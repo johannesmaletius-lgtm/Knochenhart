@@ -572,6 +572,7 @@ function resolveDefense() {
   const inc = G.incoming; if (!inc || inc.done) return;
   if (inc.type === 'out') { resolveOut(inc); return; }
   inc.done = true; G.incoming = null;
+  after(0, () => pwDefDone(inc)); // Ghost Dig / Power Block last one attack
   const dx = Math.abs(me.x - inc.x), dz = Math.abs(me.z - inc.z), dzOk = dz < (inc.type === 'tip' ? 1.0 : 1.5);
   const ok = dx < 0.95 && dzOk;
   me.dash = false;
@@ -764,6 +765,7 @@ function swipeAttack(dir, aim = 0) {
   setHint('');
   rallyTick();
   const sideX = dir === 'L' ? -1 : 1;
+  pwAttackDone();
   if (G.fire && dir !== 'LOB') { fireball(sideX); return; } // Fireball item: burns through any block
   if (dir === 'LOB') { lob(q, aim); return; }
   if (PW.oWall) { doBlocked(sideX); return; } // their Power Block stops every spike
@@ -781,7 +783,7 @@ function swipeAttack(dir, aim = 0) {
 }
 function lateHit() {
   const A = G.attack; if (!A || A.hit || G.mode !== 'play') return;
-  A.hit = true; G.phase = 'over'; setHint(''); G.combo = 0;
+  A.hit = true; G.phase = 'over'; setHint(''); G.combo = 0; pwAttackDone();
   burst(C.bad, false); SFX.err();
   setPose(me, 'lob', 0.25); setBase(me, 'follow');
   me.onLand = () => { setBase(me, 'ready'); me.tz = DZ; me.sz = 6; };
