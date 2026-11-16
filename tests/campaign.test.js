@@ -78,18 +78,20 @@ ok(df.every((x, i) => !i || (x.lv >= df[i - 1].lv && x.d > df[i - 1].d)), 'AI le
 ok(Math.abs(C.caDiff(80, true).d - C.caDiff(80).d - K.bossD) < 1e-9, 'bosses press bossD harder');
 ok(df[0].lv === 0 && df[df.length - 1].lv === 2 && df[0].d === SKILLS.camp.d[0] && Math.abs(df[df.length - 1].d - SKILLS.camp.d[1]) < 1e-9, 'first stage easy, last hard, D base from SKILLS.camp.d');
 
-// save / load roundtrip through a fake store; bad data is cleaned; v1 saves map to whole chapters
+// save / load roundtrip through a fake store; bad data is cleaned; saves older than camp.v are reset
 const mem = {}, store = { get: (k, dv) => k in mem ? JSON.parse(mem[k]) : dv, set: (k, v) => { mem[k] = JSON.stringify(v); } };
 const e = C.caNew(); C.caWin(e, 0, 2); C.caWin(e, 1); C.caWin(e, 1); C.caSave(e, store);
 const e2 = C.caLoad(store);
 ok(JSON.stringify(e2.w) === JSON.stringify(e.w) && JSON.stringify(e2.s) === JSON.stringify(e.s) && C.caStatus(e2, 2) === 'open' && C.caStatus(e2, 3) === 'locked', 'save/load roundtrip keeps wins, stars and unlocks');
 ok(JSON.stringify(C.caLoad({ get: () => null }).w) === JSON.stringify(C.caNew().w), 'nothing saved = fresh campaign');
-mem.camp = JSON.stringify({ v: 2, w: ['x', -3, 2.7, null], s: [7, 'y', 2] });
+mem.camp = JSON.stringify({ v: K.v, w: ['x', -3, 2.7, null], s: [7, 'y', 2] });
 const e3 = C.caLoad(store);
 ok(e3.w.length === st.length && e3.w[0] === 0 && e3.w[1] === 0 && e3.w[2] === 2 && e3.w[3] === 0 && e3.s.join().startsWith('3,0,2,0'), 'bad saved data cleaned (' + e3.w.slice(0, 4).join(',') + ')');
-mem.camp = JSON.stringify({ v: 1, w: [3, 1, 0] });
-const e4 = C.caLoad(store);
-ok(e4.w.slice(0, 2 * K.per).every(x => x === 1) && C.caStatus(e4, 2 * K.per) === 'open' && C.caStatus(e4, 2 * K.per + 1) === 'locked' && e4.s.every(x => !x), 'v1 save: old stage i = chapter i beaten, goal stars still open');
+for (const old of [{ v: 1, w: [3, 1, 0] }, { v: 2, w: new Array(st.length).fill(1), s: new Array(st.length).fill(3) }, { w: [1, 1] }]) {
+  mem.camp = JSON.stringify(old);
+  const e4 = C.caLoad(store);
+  ok(e4.w.every(x => x === 0) && e4.s.every(x => !x) && C.caNext(e4) === 0, 'old save v' + old.v + ' -> campaign reset to stage 1');
+}
 
 console.log((fails ? 'FAIL' : 'OK') + ': ' + (n - fails) + '/' + n + ' campaign checks');
 process.exit(fails ? 1 : 0);

@@ -133,6 +133,7 @@ const SKILLS = {
       { skin: 'koenig', ab: { id: 'decree', n: 'Royal Decree', d: 'A new boss power every rally', p: 1 } }
     ],
     elite: 0.5,
+    v: 3, // save version: older campaign saves are reset (everyone starts at stage 1-1 again)
     per: 4, rank: ['Rookies', 'Squad', 'Elite'], c: [2, 1], boss: 3, star: 2, bossD: 0.05,
     goals: [
       { k: 'kills', a: 8, b: 0.7, t: 'Attack points: N' }, { k: 'held', a: 11, b: -0.35, t: 'Opponent max N points' },
