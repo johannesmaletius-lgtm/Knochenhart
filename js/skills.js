@@ -9,9 +9,11 @@ const SKILLS = {
   min: 60, max: 99,
   // OVR = weighted mean of all skills
   weight: { spike: 1, lob: 1, recv: 1, dig: 1, block: 1, serve: 1 },
-  // coins to raise a skill from L to L+1, fixed per tier of `step` levels: 60-69 = 1, 70-79 = 2, 80-89 = 3, 90-98 = 4
-  // (one skill 60 -> 99 = 96, all six = 576). Costs are fixed; tests/sim-progress.js checks the income against plan.days
-  cost: { step: 10, tier: [1, 2, 3, 4] },
+  // coins to raise a skill from L to L+1, fixed per tier of `step` levels: 60-69 = 4, 70-79 = 12, 80-89 = 24, 90-98 = 45
+  // (one skill 60 -> 99 = 805, all six = 4830 = ~1 month). Costs are fixed; tests/sim-progress.js checks the income against plan.days
+  cost: { step: 10, tier: [4, 12, 24, 45] },
+  // one-time setback of saved profiles older than v (skillsLoad): every skill maps linearly 60..99 -> 60..to (99 -> 75)
+  reset: { v: 2, to: 75 },
   // coins per won match (daily.js earnWin): win x strength of the opponent. Normal singleplayer: lv[G.level] (Easy / Normal /
   // Hard); explicit opponent profile (campaign, Skill Games): ovr[0] at OVR 60 -> ovr[1] at 99, plus under per OVR point the
   // opponent is above you (max underMax). First win of the day x dailyMul. Multiplayer: x1. loss = coins for a lost match
@@ -38,7 +40,7 @@ const SKILLS = {
     hardOvr: 86 // campaign / Skill Games: a win vs. this OVR or more counts as Hard
   },
   // progression target: normal play (chal = expected daily challenge coins per day); campaign (P7): stage cleared once OVR >= stage OVR - campEdge, still >= campMin days
-  plan: { matchesPerDay: 20, winRate: 0.5, days: 3.5, campEdge: 4, campMin: 2.5, chal: 20 },
+  plan: { matchesPerDay: 20, winRate: 0.5, days: 30, campEdge: 4, campMin: 27, chal: 20 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
   // P8 (tests/balance.js): 99 a bit stricter than P3 (0.55 / 0.4): very bad timing at 99 = weak, ~14 % net faults (60: 30 %)
@@ -78,9 +80,9 @@ const SKILLS = {
   // the computer's auto spread (rest raises the lowest skill); MP: wait = s to spend, the phone auto-spends the rest grace s
   // before the end, the host waits grace s longer, then auto-spends for anyone missing; coinMul = coin reward x (1 = as normal)
   // presets (buttons on the spend screen, sgPreset): reset to 60, raise each [skill, target] in order, spread the rest evenly
-  // (lowest first); perk = badge picked for a skill that reaches 90. At budget 173: Attacker spike 99 / serve 80 / lob 75 / rest 69,
-  // Blocker block 99 / dig 80 / recv 75 / rest 69, Defender dig + recv 90 / rest ~71, All-round all ~79
-  sg: { share: 0.3, aiMix: 0.35, coinMul: 1,
+  // (lowest first); perk = badge picked for a skill that reaches 90. At budget 1208: Attacker spike 99 / serve 80 / lob 75 / rest ~70,
+  // Blocker block 99 / dig 80 / recv 75 / rest ~70, Defender dig + recv 90 / rest 75, All-round all ~81
+  sg: { share: 0.25, aiMix: 0.35, coinMul: 1,
     presets: [
       { id: 'att', n: 'Attacker', t: [['spike', 99], ['serve', 80], ['lob', 75]], perk: { spike: 'hotHand' } },
       { id: 'blk', n: 'Blocker', t: [['block', 99], ['dig', 80], ['recv', 75]], perk: { block: 'longArms' } },
@@ -152,7 +154,7 @@ const totalCost = () => costTo(SKILLS.min, SKILLS.max) * SKILLS.ids.length;
 function skillsNew(lv) {
   const sk = {};
   for (const id of SKILLS.ids) sk[id] = lv == null ? SKILLS.min : lv;
-  return { v: 1, sk, badge: {} };
+  return { v: SKILLS.reset.v, sk, badge: {} };
 }
 function ovr(p) {
   let s = 0, w = 0;
@@ -175,16 +177,21 @@ function trySkillUp(p, id, have) {
   p.sk[id]++; return c;
 }
 function skillsLoad(st) {
-  const p = skillsNew(), raw = st.get('skills', null);
+  const p = skillsNew(), raw = st.get('skills', null), R = SKILLS.reset;
+  const old = raw && !(raw.v >= R.v); // saved before the setback: map once, save right away
   if (raw && raw.sk) for (const id of SKILLS.ids) {
-    const v = Math.round(+raw.sk[id]);
-    if (v >= SKILLS.min) p.sk[id] = Math.min(SKILLS.max, v);
+    let v = Math.round(+raw.sk[id]);
+    if (!(v >= SKILLS.min)) continue;
+    v = Math.min(SKILLS.max, v);
+    if (old) v = SKILLS.min + Math.round((v - SKILLS.min) * (R.to - SKILLS.min) / (SKILLS.max - SKILLS.min));
+    p.sk[id] = v;
   }
   if (raw && raw.badge) for (const id of SKILLS.ids) if (raw.badge[id]) pickPerk(p, id, raw.badge[id]);
+  if (old && raw.sk) skillsSave(p, st);
   return p;
 }
 // tmp profiles (?ovr= debug) are never saved
-function skillsSave(p, st) { if (!p.tmp) st.set('skills', { v: 1, sk: p.sk, badge: p.badge }); }
+function skillsSave(p, st) { if (!p.tmp) st.set('skills', { v: SKILLS.reset.v, sk: p.sk, badge: p.badge }); }
 
 /* ---------------- P3 decisions: pure, rng passed in (engine: RNG) ---------------- */
 // mulberry32: small seeded RNG (?seed=N)
