@@ -28,12 +28,12 @@ if (typeof module !== 'undefined' && typeof document === 'undefined') module.exp
 // item = our held item; ghost/wall/slow = our active effects; oArm = their armed item; oWall = their power block (until the
 // point); om = their item meter; ab/abK = stage ability; dec = Royal Decree pick of this rally; dark = blackout rally;
 // frozen = G.t until you cannot move; hide = [t0, t1] ball invisible; decoy = fake ball; windAt = score sum of the last wind
-const PW = { item: null, ghost: false, wall: false, slow: false, oArm: null, oWall: false, om: 0, ab: null, abK: 1, boss: false,
+const PW = { item: null, drop: null, coins: [], ghost: false, wall: false, slow: false, oArm: null, oWall: false, om: 0, ab: null, abK: 1, boss: false,
   items: false, ch: 0, dec: null, dark: false, frozen: 0, hide: null, decoy: null, windAt: -9 };
 const pwSP = () => G.mode === 'play';
 function pwReset() {
   const s = CA.on ? caStages()[CA.i] : null;
-  Object.assign(PW, { item: null, ghost: false, wall: false, slow: false, oArm: null, oWall: false, om: 0, dec: null, dark: false,
+  Object.assign(PW, { item: null, drop: null, coins: [], ghost: false, wall: false, slow: false, oArm: null, oWall: false, om: 0, dec: null, dark: false,
     frozen: 0, hide: null, decoy: null, windAt: -9, ab: s && s.ab, abK: s ? s.abK : 1, boss: !!(s && s.boss), items: !!(s && s.items), ch: s ? s.ch : 0 });
   pwUI();
   if (PW.ab) after(1.2, () => popup((PW.boss ? 'BOSS: ' : '') + PW.ab.n.toUpperCase(), C.bad, 1, null, H * 0.36, 2.2));
@@ -48,7 +48,30 @@ const pwAbV = id => SKILLS.camp.chapters.find(c => c.ab && c.ab.id === id).ab;
 const pwRoll = id => { const p = pwAb(id); return p > 0 && Math.random() < p; };
 const pwSay = (s, col, y = 0.4) => popup(s, col || C.accent, 1, null, H * y, 1.3);
 
-/* our items */
+/* our items: a full bar drops one on the floor of your court, in another lane; walk over it to pick it up */
+const PW_COL = { fire: '#f39a3c', ghost: '#bfe3ff', wall: '#6fb8ff', slow: '#c08bff' };
+function pwDrop() {
+  if (!pwSP() || PW.item || PW.drop) return;
+  const kind = pwPick(pwWeights(unlocked(PROFILE, 'fireball')), Math.random()), lane = pick([0, 1, 2].filter(l => l !== me.lane));
+  PW.drop = { kind, lane, x: LX[lane], z: DZ, t0: G.t };
+  SFX.tick(); pwSay(SKILLS.items.short[kind] + ' ON THE FLOOR', PW_COL[kind], 0.4);
+}
+// every frame (render.js update): pick up, or the drop fades after items.life s
+function pwTick() {
+  if (!pwSP()) return;
+  // floor coins (SKILLS.items.coin): walk over them, they fade after coin.life s
+  const K = SKILLS.items.coin;
+  for (let i = PW.coins.length - 1; i >= 0; i--) {
+    const c = PW.coins[i];
+    if (Math.abs(me.x - c.x) < SKILLS.items.reach && Math.abs(me.z - c.z) < 1.4) {
+      PW.coins.splice(i, 1); addCoins(c.v); G.stats.coins = (G.stats.coins || 0) + c.v; SFX.tick();
+      sparks(c.x, 0.3, c.z, 6, ['#f5c85f', '#ffffff']); const p = pv(c.x, 0.6, c.z); popup('+' + c.v, '#f5c85f', 1, p.x, p.y - 6, 0.7);
+    } else if (G.t - c.t0 > K.life) PW.coins.splice(i, 1);
+  }
+  const d = PW.drop; if (!d) return;
+  if (Math.abs(me.x - d.x) < SKILLS.items.reach && Math.abs(me.z - d.z) < 1.4) { PW.drop = null; pwGive(d.kind); sparks(d.x, 0.3, d.z, 10, [PW_COL[d.kind], '#ffffff']); }
+  else if (G.t - d.t0 > SKILLS.items.life) { PW.drop = null; G.meter = 0; }
+}
 function pwGive(kind) {
   PW.item = kind || pwPick(pwWeights(unlocked(PROFILE, 'fireball')), Math.random());
   G.flash = 0.25; SFX.fire(); pwSay(SKILLS.items.names[PW.item].toUpperCase() + '!', C.fire2, 0.32);
@@ -94,6 +117,9 @@ function pwOppItem(kind) {
 // new rally: blackout, Royal Decree pick
 function pwRally() {
   if (!pwSP()) return;
+  // floor coin: sometimes one lies in a lane of your court
+  const K = SKILLS.items.coin;
+  if (PW.coins.length < K.max && Math.random() < K.p) { const l = (Math.random() * 3) | 0; PW.coins.push({ x: LX[l] + rand(-0.2, 0.2), z: DZ + rand(-0.3, 0.3), t0: G.t, v: K.v }); }
   PW.hide = null; PW.decoy = null; PW.frozen = 0;
   PW.dec = PW.ab && PW.ab.id === 'decree' ? pick(PW_DECREE()) : null;
   if (PW.dec) after(0.6, () => pwSay('DECREE: ' + pwAbV(PW.dec).n.toUpperCase(), '#ffd75a', 0.34));
@@ -167,6 +193,23 @@ const pwHidden = () => pwSP() && PW.hide && G.t > PW.hide[0] && G.t < PW.hide[1]
 /* drawing (render.js) */
 function pwDraw() {
   if (!pwSP()) return;
+  // floor coins: spinning gold, blink before they fade
+  for (const c of PW.coins) {
+    if (SKILLS.items.coin.life - (G.t - c.t0) < 2 && ((G.t * 10) | 0) % 2) continue;
+    const p = pv(c.x, 0.15, c.z), s = Math.max(3, Math.round(0.17 * p.s)), w = Math.max(1, Math.round(s * (0.35 + 0.65 * Math.abs(Math.cos(G.t * 4 + c.x)))));
+    rect(p.x - w, p.y - s, 2 * w, 2 * s, '#b8862a'); if (w > 1) rect(p.x - w + 1, p.y - s + 1, 2 * w - 2, 2 * s - 2, '#f5c85f');
+  }
+  // item on the floor: blinking box with its short name, blinks faster before it fades
+  const fd = PW.drop;
+  if (fd) {
+    const left = SKILLS.items.life - (G.t - fd.t0), bl = left < 3 ? ((G.t * 10) | 0) % 2 : 1;
+    if (bl) {
+      const p = pv(fd.x, 0.15 + 0.08 * Math.sin(G.t * 5), fd.z), s = Math.max(3, Math.round(0.22 * p.s));
+      ctx.globalAlpha = 0.4; ellipse(p.x, Math.round(pv(fd.x, 0, fd.z).y), s + 2, Math.max(1, (s + 2) >> 2), C.shade); ctx.globalAlpha = 1;
+      rect(p.x - s, p.y - s, 2 * s, 2 * s, C.ink); rect(p.x - s + 1, p.y - s + 1, 2 * s - 2, 2 * s - 2, PW_COL[fd.kind]);
+      text(SKILLS.items.short[fd.kind], p.x, p.y - s - 9, PW_COL[fd.kind], 1, 'c');
+    }
+  }
   // power blocks: a glowing wall over the net (ours blue, theirs red)
   for (const [on, col] of [[PW.wall, '#6fb8ff'], [PW.oWall, C.bad]]) if (on) {
     const a = proj(-4.6, 2.45, 0), b = proj(4.6, 3.6, 0);

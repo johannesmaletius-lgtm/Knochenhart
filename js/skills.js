@@ -9,9 +9,9 @@ const SKILLS = {
   min: 60, max: 99,
   // OVR = weighted mean of all skills
   weight: { spike: 1, lob: 1, recv: 1, dig: 1, block: 1, serve: 1 },
-  // coins to raise a skill from L to L+1, fixed per tier of `step` levels: 60-69 = 4, 70-79 = 12, 80-89 = 24, 90-98 = 45
-  // (one skill 60 -> 99 = 805, all six = 4830 = ~1 month). Costs are fixed; tests/sim-progress.js checks the income against plan.days
-  cost: { step: 10, tier: [4, 12, 24, 45] },
+  // coins to raise a skill from L to L+1, fixed per tier of `step` levels: 60-69 = 5, 70-79 = 15, 80-89 = 30, 90-98 = 56
+  // (one skill 60 -> 99 = 1004, all six = 6024 = ~1 month). Costs are fixed; tests/sim-progress.js checks the income against plan.days
+  cost: { step: 10, tier: [5, 15, 30, 56] },
   // one-time setback of saved profiles older than v (skillsLoad): every skill maps linearly 60..99 -> 60..to (99 -> 75)
   reset: { v: 2, to: 75 },
   // coins per won match (daily.js earnWin): win x strength of the opponent. Normal singleplayer: lv[G.level] (Easy / Normal /
@@ -40,7 +40,7 @@ const SKILLS = {
     hardOvr: 86 // campaign / Skill Games: a win vs. this OVR or more counts as Hard
   },
   // progression target: normal play (chal = expected daily challenge coins per day); campaign (P7): stage cleared once OVR >= stage OVR - campEdge, still >= campMin days
-  plan: { matchesPerDay: 20, winRate: 0.5, days: 30, campEdge: 4, campMin: 25, chal: 20 },
+  plan: { matchesPerDay: 20, winRate: 0.5, days: 30, campEdge: 4, campMin: 25, chal: 20, floor: 2 },
   // timing: x = skill progress 0..1, err = timing error 0 (perfect) .. 1 (very bad)
   // quality = max(floor, 1 - err * pen): low skill punishes bad timing hard, high skill keeps a decent result
   // P8 (tests/balance.js): 99 a bit stricter than P3 (0.55 / 0.4): very bad timing at 99 = weak, ~14 % net faults (60: 30 %)
@@ -80,7 +80,7 @@ const SKILLS = {
   // the computer's auto spread (rest raises the lowest skill); MP: wait = s to spend, the phone auto-spends the rest grace s
   // before the end, the host waits grace s longer, then auto-spends for anyone missing; coinMul = coin reward x (1 = as normal)
   // presets (buttons on the spend screen, sgPreset): reset to 60, raise each [skill, target] in order, spread the rest evenly
-  // (lowest first); perk = badge picked for a skill that reaches 90. At budget 1208: Attacker spike 99 / serve 80 / lob 75 / rest ~70,
+  // (lowest first); perk = badge picked for a skill that reaches 90. At budget 1506: Attacker spike 99 / serve 80 / lob 75 / rest ~70,
   // Blocker block 99 / dig 80 / recv 75 / rest ~70, Defender dig + recv 90 / rest 75, All-round all ~81
   sg: { share: 0.25, aiMix: 0.35, coinMul: 1,
     presets: [
@@ -89,7 +89,8 @@ const SKILLS = {
       { id: 'def', n: 'Defender', t: [['dig', 90], ['recv', 90]], perk: { dig: 'catReflex', recv: 'platform' } },
       { id: 'all', n: 'All-round', t: [] }
     ] },
-  // power-ups (js/powers.js, singleplayer): a full skull bar (BAL.meterMax, Hot Hand shorter) gives one random item (weights w,
+  // power-ups (js/powers.js, singleplayer): a full skull bar (BAL.meterMax, Hot Hand shorter) drops one random item (weights w,
+  // on the floor of your court in another lane: walk within reach m of it to pick it up, it fades after life s;
   // Fireball x fireUnlock with the Spike 85 unlock), used with the item button. fire: next spike (not lob) is a fireball;
   // ghost: the next ball that would drop on your side is dug by a ghost; wall: Power Block until the next point, they can only
   // tip over; slow: Bone Time, their balls fly slowK x longer until the next point. Campaign opponents from chapter opp.from:
@@ -99,7 +100,10 @@ const SKILLS = {
     kinds: ['fire', 'ghost', 'wall', 'slow'],
     names: { fire: 'Fireball', ghost: 'Ghost Dig', wall: 'Power Block', slow: 'Bone Time' },
     short: { fire: 'FIRE', ghost: 'GHOST', wall: 'BLOCK', slow: 'SLOW' },
-    w: { fire: 1, ghost: 1, wall: 1, slow: 1 }, fireUnlock: 2.5, slowK: 1.5,
+    w: { fire: 1, ghost: 1, wall: 1, slow: 1 }, fireUnlock: 2.5, slowK: 1.5, reach: 0.6, life: 14,
+    // floor coins: chance p per rally that one (value v) appears in a lane of your court, max on the floor, fades after life s;
+    // expected pick-ups per match are in plan.floor (tests/sim-progress.js)
+    coin: { p: 0.15, v: 1, max: 2, life: 9 },
     opp: { kinds: ['fire', 'ghost', 'wall'], from: 1, meter: [9, -0.5, 4], bossMul: 1.5, fireT: 0.7 }
   },
   // P7 campaign (js/campaign.js): 10 chapters = shop skins, `per` stages each (last = boss with the chapter focus, the others

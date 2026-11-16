@@ -183,7 +183,7 @@ function updBoard() {
   if (BD.el.hidden === on) BD.el.hidden = !on;
   if (!on) { BD.last = [-1, -1]; return; }
   const mpv = G.mode === 'mp' && MP.view;
-  const SC = mpv ? mpv.score : G.score, SV = mpv ? mpv.server : G.server, MT = mpv ? mpv.meter : G.meter, FI = mpv ? mpv.fire : G.fire || !!PW.item;
+  const SC = mpv ? mpv.score : G.score, SV = mpv ? mpv.server : G.server, MT = mpv ? mpv.meter : G.meter, FI = mpv ? mpv.fire : G.fire || !!PW.item || !!PW.drop;
   const oppSk = !mpv && CA.on ? caStages()[CA.i].skin : ''; // P7 campaign: the stage skin on the right
   if (BD.skin !== mySkin || BD.mp !== !!mpv || BD.opp !== oppSk) {
     BD.skin = mySkin; BD.mp = !!mpv; BD.opp = oppSk;
@@ -331,6 +331,7 @@ function update(dt) {
   runEv();
   for (const f of FIGS) updFig(f, gdt);
   updBall(gdt);
+  pwTick();
   updParts(gdt);
   updCam(dt);
   G.shake = Math.max(0, G.shake - dt * 16);

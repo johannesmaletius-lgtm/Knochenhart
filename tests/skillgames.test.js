@@ -11,7 +11,7 @@ const ok = (c, msg) => { n++; if (!c) { fails++; console.log('FAIL', msg); } };
 // budget: share (0.3) of the coins for all six skills 60 -> 99, from the cost curve
 const B = G.sgBudget();
 ok(SKILLS.sg.share === 0.25, 'share parameter is 0.25');
-ok(B === Math.round(totalCost() * 0.25) && B === 1208, 'budget = 25% of the max cost (' + B + ' of ' + totalCost() + ')');
+ok(B === Math.round(totalCost() * 0.25) && B === 1506, 'budget = 25% of the max cost (' + B + ' of ' + totalCost() + ')');
 const sh = SKILLS.sg.share; SKILLS.sg.share = 0.2; ok(G.sgBudget() === Math.round(totalCost() / 5), 'budget follows the share parameter'); SKILLS.sg.share = sh;
 
 // start at 60, spend up to the budget, never over it

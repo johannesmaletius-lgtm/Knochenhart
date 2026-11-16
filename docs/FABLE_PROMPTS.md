@@ -10,7 +10,7 @@
 
 ## Festgelegte Regeln
 **Skills (je 60→99, kein Respec):** Schlag, Lob, Annahme, Abwehr, Block, Aufschlag. **OVR** = Durchschnitt (Gewichtung in `SKILLS`).
-Münzen sind dieselben wie im Shop. **Kosten pro Level fest nach Zehnerstufe:** 60→70 je 4, 70→80 je 12, 80→90 je 24, 90→99 je 45 (ein Skill 805, alle sechs 4830). Einnahme: Sieg ~10 (nach Gegnerstärke), **Niederlage 3, wenn man mind. 5 Punkte gemacht hat**. Ziel ca. 30 Tage (1 Monat) bei ~20 Matches/Tag. Einmaliger Reset (`SKILLS.reset`): alte Profile werden linear 60..99 → 60..75 abgebildet (99 → 75).
+Münzen sind dieselben wie im Shop. **Kosten pro Level fest nach Zehnerstufe:** 60→70 je 5, 70→80 je 15, 80→90 je 30, 90→99 je 56 (ein Skill 1004, alle sechs 6024; inkl. ~2 Bodenmünzen pro Match). Einnahme: Sieg ~10 (nach Gegnerstärke), **Niederlage 3, wenn man mind. 5 Punkte gemacht hat**. Ziel ca. 30 Tage (1 Monat) bei ~20 Matches/Tag. Einmaliger Reset (`SKILLS.reset`): alte Profile werden linear 60..99 → 60..75 abgebildet (99 → 75).
 
 | Schwelle | Freischaltung |
 |---|---|
@@ -33,7 +33,7 @@ Münzen sind dieselben wie im Shop. **Kosten pro Level fest nach Zehnerstufe:** 
 - Lob links/rechts (kurzer Ball) als Alternative zum Schlag.
 - **Early/Late-Anzeige** bei jedem Treffer. Keine Vibration.
 
-**Modi:** Normal (eigener OVR) · Skill Games (extra Modus: alle starten mit 60er-Char, bekommen **25 % der Münzen für Max 99 (1208)**, Vorlagen Angreifer/Blocker/Verteidiger/Allrounder als Startpunkt, verteilen sie vor dem Match, dann Match) · Singleplayer-Kampagne (auch hier skillen; Gegner = die einzelnen Skins mit eigenem OVR, aufsteigend).
+**Modi:** Normal (eigener OVR) · Skill Games (extra Modus: alle starten mit 60er-Char, bekommen **25 % der Münzen für Max 99 (1506)**, Vorlagen Angreifer/Blocker/Verteidiger/Allrounder als Startpunkt, verteilen sie vor dem Match, dann Match) · Singleplayer-Kampagne (auch hier skillen; Gegner = die einzelnen Skins mit eigenem OVR, aufsteigend).
 **Social (lokal, kein Backend):** Rangliste lokal (alle bisher getroffenen Spieler + man selbst), Skill-Chart (Radar) mit allen Skills; tritt jemand der Lobby bei, sieht man seine Skills/OVR. Emotes über Schnellmenü in den oberen Ecken.
 
 ## Phasen

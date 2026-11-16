@@ -484,9 +484,9 @@ const oppProf = () => SG.on && SG.opp ? SG.opp : CA.on && CA.opp ? CA.opp : aiPr
 // P8: their spike / serve fault chance: campaign / Skill Games opponents by their profile (SKILLS.ai.err), else the level table lv
 const oppErr = (kind, lv) => SG.on && SG.opp || CA.on && CA.opp ? aiErr(oppProf(), kind) : lv[G.level] || lv[1];
 function addMeter(n) {
-  if (G.mode !== 'play' || G.fire || PW.item) return;
+  if (G.mode !== 'play' || G.fire || PW.item || PW.drop) return;
   G.meter = clamp(G.meter + n, 0, meterMax());
-  if (G.meter >= meterMax()) after(0.4, () => { if (G.mode === 'play' && !PW.item) pwGive(); });
+  if (G.meter >= meterMax()) after(0.4, pwDrop);
 }
 // long rallies: the skeletons start to sweat
 function sweat() {
@@ -1095,7 +1095,7 @@ function point(w, txt) {
     react(oA, mirP(oA, pick(LOSEP)), 1.1, 10); react(oB, mirP(oB, pick(['sad', 'headHands'])), 1.1, 10);
     addMeter(long ? 2 : 1);
   } else {
-    if (!G.fire && !PW.item) G.meter = Math.max(0, G.meter - 3);
+    if (!G.fire && !PW.item && !PW.drop) G.meter = Math.max(0, G.meter - 3);
     G.combo = 0;
     celebrate(me, false, long); react(mate, pick(['sad', 'headHands']), 1.1, 10); SFX.lose();
     celebrate(oB, true, long); after(0.1, () => { celebrate(oA, true, long); if (Math.random() < 0.3) react(oA, 'taunt', 0.8, 14); });
