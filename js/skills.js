@@ -63,9 +63,9 @@ const SKILLS = {
   // MP block jump tier -> [tool x, touch x, + stuff chance] on a blocked spike (mp.js mpAttack / mpStuff); good = the recycle curve
   // as is; P8: a perfect jump stuffs more (+0.4, was +0.15) so a Block 60 player gets ~ the pre-P5 block points (tests/balance.js)
   blockQ: { perfect: [0.3, 0.5, 0.4], good: [1, 1, 0], weak: [1.6, 1.5, -0.15] },
-  // threshold unlocks: feature -> [skill, level]
+  // threshold unlocks: feature -> [skill, level] (fireball: Fireball items drop items.fireUnlock x as often)
   unlock: { lobAim: ['lob', 75], splitBlock: ['block', 75], float: ['serve', 75], dive: ['dig', 70], fireball: ['spike', 85] },
-  unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball' },
+  unlockNames: { lobAim: 'Lob aim', splitBlock: 'Split block', float: 'Float serve', dive: 'Dive', fireball: 'Fireball x2.5' },
   // local leaderboard (profile.js): stored entries, player name length
   board: { max: 50, nameMax: 12 },
   // P5 MP social (social.js): emotes = pixel-text quick messages, dur = s shown over the player; rate limit per player
@@ -89,6 +89,19 @@ const SKILLS = {
       { id: 'def', n: 'Defender', t: [['dig', 90], ['recv', 90]], perk: { dig: 'catReflex', recv: 'platform' } },
       { id: 'all', n: 'All-round', t: [] }
     ] },
+  // power-ups (js/powers.js, singleplayer): a full skull bar (BAL.meterMax, Hot Hand shorter) gives one random item (weights w,
+  // Fireball x fireUnlock with the Spike 85 unlock), used with the item button. fire: next spike (not lob) is a fireball;
+  // ghost: the next ball that would drop on your side is dug by a ghost; wall: Power Block until the next point, they can only
+  // tip over; slow: Bone Time, their balls fly slowK x longer until the next point. Campaign opponents from chapter opp.from:
+  // an item after round(meter[0] + meter[1] x chapter) (min meter[2]) points they win, bosses x bossMul faster; their
+  // fireball flies fireT x faster and cannot be dived or saved late (a ghost dig still saves it, it burns through a wall)
+  items: {
+    kinds: ['fire', 'ghost', 'wall', 'slow'],
+    names: { fire: 'Fireball', ghost: 'Ghost Dig', wall: 'Power Block', slow: 'Bone Time' },
+    short: { fire: 'FIRE', ghost: 'GHOST', wall: 'BLOCK', slow: 'SLOW' },
+    w: { fire: 1, ghost: 1, wall: 1, slow: 1 }, fireUnlock: 2.5, slowK: 1.5,
+    opp: { kinds: ['fire', 'ghost', 'wall'], from: 1, meter: [9, -0.5, 4], bossMul: 1.5, fireT: 0.7 }
+  },
   // P7 campaign (js/campaign.js): 10 chapters = shop skins, `per` stages each (last = boss with the chapter focus, the others
   // cycle SKILLS.ids), stage OVR 60 -> 99 (+1 per stage). Coins on the first win: round(c[0] + c[1] x chapter), boss x boss;
   // later wins round(c x repeat). Goals: 2 per stage (stars 2 + 3, the win is star 1), kinds cycle through `goals` (k = G.stats
@@ -97,11 +110,25 @@ const SKILLS = {
   // bosses. focus = skill kept `lead` levels above the rest. AI level (G.level) 0 below lv[0] OVR, 1 below lv[1], else 2;
   // D() base 60 -> 99 = d. tests/sim-progress.js (worst case: all stars on the first win) stays >= plan.campMin days
   camp: {
+    // ab = the chapter boss ability (js/powers.js); the Elite stage (j = per - 2) previews it at elite x its chances.
+    // wind: an item when trailing by gap (cooldown cd points); strobe: their spike is invisible from hide[0] to hide[1] of the
+    // flight; dark: lights out for a rally (r = light radius, share of the width); freeze: you cannot move for t s after their
+    // hit; meteor: their spike is a fireball; plunder: cannon serve (flight x T) + steals your item when they score;
+    // hellwall: power block on your attack; decoy: a fake pumpkin ball to another lane; phase: the spike jumps a lane at
+    // `at` of the flight; decree: every rally one of the other abilities (not wind). p = chance per hit / rally
     chapters: [
-      { skin: 'knochen' }, { skin: 'neon', focus: 'recv' }, { skin: 'nacht', focus: 'dig' }, { skin: 'eis', focus: 'block' },
-      { skin: 'lava', focus: 'spike' }, { skin: 'pirat', focus: 'lob' }, { skin: 'teufel', focus: 'serve' }, { skin: 'kuerbis', focus: 'dig' },
-      { skin: 'geist', focus: 'lob' }, { skin: 'koenig' }
+      { skin: 'knochen', ab: { id: 'wind', n: 'Second Wind', d: 'Gets an item when behind', gap: 3, cd: 4 } },
+      { skin: 'neon', focus: 'recv', ab: { id: 'strobe', n: 'Strobe', d: 'Spikes vanish in flight', p: 0.55, hide: [0.2, 0.8] } },
+      { skin: 'nacht', focus: 'dig', ab: { id: 'dark', n: 'Blackout', d: 'Lights out for a rally', p: 0.4, r: 0.2 } },
+      { skin: 'eis', focus: 'block', ab: { id: 'freeze', n: 'Deep Freeze', d: 'Freezes you on their hit', p: 0.45, t: 0.3 } },
+      { skin: 'lava', focus: 'spike', ab: { id: 'meteor', n: 'Meteor', d: 'Fireball spikes: no dive, no late save', p: 0.35 } },
+      { skin: 'pirat', focus: 'lob', ab: { id: 'plunder', n: 'Cannon & Plunder', d: 'Cannon serves, steals your item', p: 0.5, T: 0.72 } },
+      { skin: 'teufel', focus: 'serve', ab: { id: 'hellwall', n: 'Hellwall', d: 'Blocks the whole net: lob it', p: 0.35 } },
+      { skin: 'kuerbis', focus: 'dig', ab: { id: 'decoy', n: 'Pumpkin Decoy', d: 'Fake ball, the real one has a shadow', p: 0.5 } },
+      { skin: 'geist', focus: 'lob', ab: { id: 'phase', n: 'Phase Shift', d: 'Spikes jump a lane mid-air', p: 0.45, at: 0.42 } },
+      { skin: 'koenig', ab: { id: 'decree', n: 'Royal Decree', d: 'A new boss power every rally', p: 1 } }
     ],
+    elite: 0.5,
     per: 4, rank: ['Rookies', 'Squad', 'Elite'], c: [2, 1], boss: 3, star: 2, bossD: 0.05,
     goals: [
       { k: 'kills', a: 8, b: 0.7, t: 'Attack points: N' }, { k: 'held', a: 11, b: -0.35, t: 'Opponent max N points' },

@@ -6,7 +6,8 @@
 // Progress: store 'camp' ({ v: 2, w: wins per stage, s: star bits per stage }). Pure part also runs in Node (tests/campaign.test.js).
 if (typeof SKILLS === 'undefined' && typeof require === 'function') Object.assign(globalThis, require('./skills.js'));
 /* ---------------- pure ---------------- */
-// stage list built from SKILLS.camp: { ch, j (stage in chapter), boss, skin, ovr, focus, c, goals: [{ k, v, t }] }
+// stage list built from SKILLS.camp: { ch, j (stage in chapter), boss, skin, ovr, focus, c, goals: [{ k, v, t }], ab (ability),
+// abK (its strength), items (they use items) }
 let CA_ST = null;
 function caStages() {
   if (CA_ST) return CA_ST;
@@ -18,8 +19,10 @@ function caStages() {
       const v = Math.max(g.k === 'held' ? 0 : 1, Math.round(g.a + g.b * ch));
       return { k: g.k, v, t: g.t.replace('N', v) };
     });
+    // ab: boss ability (full), previewed on the Elite stage at camp.elite x its chances
+    const ab = boss || j === k.per - 2 ? C.ab : null, abK = boss ? 1 : k.elite;
     out.push({ ch, j, boss, skin: C.skin, ovr: Math.round(SKILLS.min + (SKILLS.max - SKILLS.min) * i / (n - 1)),
-      focus: boss ? C.focus : i ? SKILLS.ids[i % SKILLS.ids.length] : undefined, c, goals });
+      focus: boss ? C.focus : i ? SKILLS.ids[i % SKILLS.ids.length] : undefined, c, goals, ab, abK, items: ch >= SKILLS.items.opp.from });
   }
   return (CA_ST = out);
 }
@@ -114,6 +117,8 @@ function caDraw() {
   if (!CA.drawn) { CA.drawn = true; const b = list.querySelector('[aria-pressed="true"]'); if (b) list.scrollTop = Math.max(0, b.offsetTop - list.clientHeight / 2); }
   const s = all[CA.sel], bits = c.s[CA.sel];
   $('#caGoals').innerHTML = '<b>' + caName(s) + '</b>' + s.goals.map((g, b) => '<span' + (bits >> b & 1 ? ' class="ok"' : '') + '>★ ' + g.t + (bits >> b & 1 ? '' : ' (+' + K.star + ')') + '</span>').join('')
+    + (s.ab ? '<span class="ab">' + (s.boss ? 'Boss power' : 'Preview') + ': ' + s.ab.n + ' – ' + s.ab.d + '</span>' : '')
+    + (s.items ? '<span>They use items too</span>' : '')
     + (s.boss && !owned.has(s.skin) ? '<span class="gift">Win: ' + SKIN[s.skin].n + ' skin for free</span>' : '');
   $('#caGo').textContent = 'Start: ' + caName(s);
   $('#caGo').disabled = caStatus(c, CA.sel) === 'locked';

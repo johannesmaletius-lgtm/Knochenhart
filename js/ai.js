@@ -126,10 +126,11 @@ function oppServeHit() {
     sHammer: (d > 0.35 ? 0.3 : 0.08 * k) * AI.adapt('sHammer')
   });
   const float = kind === 'sFloat', hammer = kind === 'sHammer';
-  const T = lerp(BAL.oppServeT[0], BAL.oppServeT[1], d) * (hammer ? 0.8 : 1) * (1 - AI.speed());
+  const T = lerp(BAL.oppServeT[0], BAL.oppServeT[1], d) * (hammer ? 0.8 : 1) * (1 - AI.speed()) * pwSlow() * pwCannon();
   const o = float ? { wob: rand(0.9, 1.4) * (Math.random() < 0.5 ? -1 : 1), wobF: Math.PI * 2 * rand(1.0, 1.6), spin: 1 } : { spin: hammer ? 26 : 12 };
   launch({ x: LX[lane], y: 0.85, z: DZ + 0.1 }, T, o);
-  incoming('serve', lane, LX[lane], DZ + 0.1, T, float ? T * 0.5 : lerp(0, 0.15, d)).tac = kind;
+  const inc = incoming('serve', lane, LX[lane], DZ + 0.1, T, float ? T * 0.5 : lerp(0, 0.15, d)); inc.tac = kind;
+  pwOppHit(inc, T, 'serve');
   if (hammer) { shake(2); SFX.spike(); }
   after(0.35, () => { oA.tx = pick([-2.4, 0, 2.4]); oA.tz = LIB_Z; oA.sx = oA.sz = 6; setBase(oA, 'ready'); });
 }
@@ -171,7 +172,9 @@ function oppSet(hl, easy) {
   const k = AI.k();
   // a tip right after a tip is predictable; the brain mixes it up
   const tipAgain = AI.lastTip ? 0.5 : 1;
-  const tip = Math.random() < clamp((BAL.tip[0] + BAL.tip[1] * d) * AI.adapt('aTip') * tipAgain, 0.04, 0.42);
+  // powers.js: their fireball (item / Meteor) is never a tip; our Power Block leaves them only the tip
+  const hot = pwOppHot();
+  const tip = !hot && (PW.wall && G.mode === 'play' || Math.random() < clamp((BAL.tip[0] + BAL.tip[1] * d) * AI.adapt('aTip') * tipAgain, 0.04, 0.42));
   AI.lastTip = tip;
   const al = pickAttackLane(hl);
   const lean = Math.sign(al - hl);
@@ -179,9 +182,9 @@ function oppSet(hl, easy) {
   const pFake = (d > 0.5 ? 0.3 * d : 0) + k * 0.5 * Math.max(0, AI.followRate() - 0.35) * AI.adapt('aFake');
   const fake = !tip && Math.random() < clamp(pFake, 0, [0.15, 0.35, 0.5][G.level]);
   const tellLean = fake ? pick([-1, 0, 1].filter(v => v !== lean)) : lean;
-  const O = G.oppAtk = { tc, al, hl, tip, fake, tellLean, tellLane: me.lane };
+  const O = G.oppAtk = { tc, al, hl, tip, fake, tellLean, tellLane: me.lane, hot };
   // our net blocker (mate): graze (BAL.blockGraze) or stuff (your Block skill, split block); jumps only when it gets a hand on it
-  O.blk = tip ? '' : blockRoll(BAL.blockGraze, stuffChance(PROFILE), RNG);
+  O.blk = tip || hot ? '' : blockRoll(BAL.blockGraze, stuffChance(PROFILE), RNG);
   if (O.blk) {
     at(tc - Math.min(0.5, T - 0.05), () => { mate.tx = clamp(LX[al] * 0.8, -2.6, 2.6); mate.tz = 0.45; mate.sx = mate.sz = 9; });
     at(tc - 0.25, () => { jump(mate, 3.4); setPose(mate, 'block', 0.5, 22); });
@@ -203,13 +206,25 @@ function oppAttack(O, d) {
   if (!tip && O.tellLean) { const mv = Math.sign(me.lane - O.tellLane); AI.sawTell(mv === O.tellLean); }
   if (tip) {
     setPose(oA, 'lobM', 0.3); setBase(oA, 'followM'); SFX.lob();
-    launch({ x: LX[al] * 0.85, y: 0.45, z: 2.1 }, 0.82, { spin: 2 });
-    incoming('tip', al, LX[al] * 0.85, 2.1, 0.82, 0.1).tac = 'aTip';
+    if (PW.wall && G.mode === 'play') { G.netWob = 0.8; popup('BLOCKED OUT', C.accent, 1, null, H * 0.42, 0.9); }
+    const tT = 0.82 * pwSlow();
+    launch({ x: LX[al] * 0.85, y: 0.45, z: 2.1 }, tT, { spin: 2 });
+    incoming('tip', al, LX[al] * 0.85, 2.1, tT, 0.1).tac = 'aTip';
     return;
   }
   setPose(oA, 'spikeM', 0.14, 40); setBase(oA, 'followM'); SFX.spike(); shake(2); G.stop = 0.04;
   sparks(ball.x, ball.y, ball.z, 5, [C.bone, C.bad]);
-  const T = lerp(BAL.oppSpikeT[0], BAL.oppSpikeT[1], d) * (1 - AI.speed());
+  const T = lerp(BAL.oppSpikeT[0], BAL.oppSpikeT[1], d) * (1 - AI.speed()) * pwSlow();
+  const md0 = lerp(BAL.markDelay[0], BAL.markDelay[1], d);
+  if (O.hot) {
+    // their fireball (powers.js): faster, no dive, no late save
+    const TF = T * SKILLS.items.opp.fireT;
+    SFX.fire(); shake(5); G.flash = 0.6; sparks(ball.x, ball.y, ball.z, 14, [C.fire1, C.fire2, C.fire3]);
+    launch({ x: LX[al], y: 0.85, z: DZ + 0.1 }, TF, { spin: 30, fire: true });
+    const inc = incoming('spike', al, LX[al], DZ + 0.1, TF, md0); inc.fire = true; inc.tac = 'aFar';
+    pwOppHit(inc, TF, 'spike');
+    return;
+  }
   const err = oppErr('spike', [0.09, 0.06, 0.04]), r = Math.random();
   if (r < err * 0.45) { intoNet(-1, LX[al] * 0.5, () => point(0, 'NET')); after(0.6, () => react(oA, 'headHands', 1, 12)); G.phase = 'over'; return; }
   if (r < err) { outBall(Math.random() < 0.6 ? me.lane : al, T * 1.2, lerp(BAL.markDelay[0], BAL.markDelay[1], d)); return; }
@@ -217,7 +232,8 @@ function oppAttack(O, d) {
   if (O.blk === 'stuff') { mateStuff(); return; }
   if (O.blk === 'graze') { mateGraze(al, T, md, tac); return; }
   launch({ x: LX[al], y: 0.85, z: DZ + 0.1 }, T, { spin: 22 });
-  incoming('spike', al, LX[al], DZ + 0.1, T, md).tac = tac;
+  const inc = incoming('spike', al, LX[al], DZ + 0.1, T, md); inc.tac = tac;
+  pwOppHit(inc, T, 'spike');
 }
 // Block-Anschlag on our side: the spike brushes our blocker's hands and comes slower
 function mateGraze(al, T, md, tac) {
@@ -239,7 +255,7 @@ function mateStuff() {
     SFX.block(); shake(4); G.netWob = 1; G.stop = 0.08;
     sparks(ball.x, ball.y, ball.z, 8, [C.bone, C.accent]); burst(C.accent, true);
     const sx = clamp(hx + rand(-0.6, 0.6), -3, 3), sz = -rand(0.8, 1.6);
-    if (RNG() < recycleP(PROFILE)) {
+    if (RNG() < recycleP(PROFILE) || pwOppGhost()) {
       launch({ x: sx, y: 0.5, z: sz }, 0.34, { spin: -16 });
       oA.onLand = null; oA.tx = sx; oA.tz = sz - 0.15; oA.sx = oA.sz = 12;
       after(0.34, () => { defAnim(oA, 'reflex', 1); SFX.dig(); oppPass(false, true); });
